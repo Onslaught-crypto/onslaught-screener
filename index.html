@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Onslaught Screener</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%2064%2064%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22og%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%238a529c%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23642372%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d%3D%22M32%203%2057%2017.5v29L32%2061%207%2046.5v-29Z%22%20fill%3D%22url%28%23og%29%22%20stroke%3D%22%23bcacd4%22%20stroke-width%3D%222%22/%3E%3Cpath%20d%3D%22M32%2032%2052%2021%22%20stroke%3D%22%23bcacd4%22%20stroke-width%3D%221.5%22%20opacity%3D%22.55%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2217%22%20fill%3D%22none%22%20stroke%3D%22%23bcacd4%22%20stroke-width%3D%221.2%22%20opacity%3D%22.35%22/%3E%3Crect%20x%3D%2218%22%20y%3D%2233%22%20width%3D%225%22%20height%3D%2211%22%20rx%3D%221%22%20fill%3D%22%23e94c2a%22/%3E%3Cpath%20d%3D%22M20.5%2030v17%22%20stroke%3D%22%23e94c2a%22%20stroke-width%3D%221.5%22/%3E%3Crect%20x%3D%2229.5%22%20y%3D%2227%22%20width%3D%225%22%20height%3D%2212%22%20rx%3D%221%22%20fill%3D%22%239eff00%22/%3E%3Cpath%20d%3D%22M32%2024v18%22%20stroke%3D%22%239eff00%22%20stroke-width%3D%221.5%22/%3E%3Crect%20x%3D%2241%22%20y%3D%2218%22%20width%3D%225%22%20height%3D%2215%22%20rx%3D%221%22%20fill%3D%22%239eff00%22/%3E%3Cpath%20d%3D%22M43.5%2014v22%22%20stroke%3D%22%239eff00%22%20stroke-width%3D%221.5%22/%3E%3C/svg%3E">
 <style>
 :root{
-  --bg:#0b0e13; --panel:#121720; --panel2:#171d28; --line:#232b3a; --text:#e6e9ef; --muted:#8a94a7;
-  --bull:#22c55e; --bull-bg:rgba(34,197,94,.14); --bear:#ef4444; --bear-bg:rgba(239,68,68,.14);
-  --accent:#f0b90b; --warn:#f59e0b; --neutral:#4b5563;
+  /* Netceed palette */
+  --bg:#000000; --panel:#1f212b; --panel2:#2f3034; --line:#2f3034; --text:#f2f0f6; --muted:#8b8b90; --dim:#585a60;
+  --bull:#9eff00; --bull-bg:rgba(158,255,0,.12); --bear:#e94c2a; --bear-bg:rgba(233,76,42,.15);
+  --accent:#8a529c; --accent-dk:#642372; --accent-lt:#bcacd4; --warn:#ff7a0a; --neutral:#585a60; --info:#59a0d8;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
@@ -16,11 +18,17 @@ body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-a
 a{color:inherit}
 .wrap{max-width:1500px;margin:0 auto;padding:16px}
 header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;margin-bottom:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{width:40px;height:40px;flex:none;filter:drop-shadow(0 0 10px rgba(138,82,156,.55))}
+.brand .name{font:800 20px/1.1 system-ui,sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--text)}
+.brand .name span{color:var(--accent-lt)}
+.brand .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.brand .sub b{color:var(--bull);font-weight:600}
 h1{font-size:18px;margin:0;letter-spacing:.2px}
 h1 small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
 .status{font-size:12px;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--neutral);display:inline-block}
-.dot.run{background:var(--accent);animation:p 1s infinite}
+.dot.run{background:var(--accent-lt);animation:p 1s infinite}
 .dot.ok{background:var(--bull)} .dot.err{background:var(--bear)}
 @keyframes p{50%{opacity:.3}}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
@@ -30,19 +38,24 @@ label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
 select,input[type=number],input[type=search]{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px}
 input[type=number]{width:64px}
 button{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
-button:hover{border-color:#3a4558}
-button.primary{background:var(--accent);color:#111;border-color:var(--accent);font-weight:600}
+button:hover{border-color:var(--accent)}
+select:focus,input:focus{outline:1px solid var(--accent);border-color:var(--accent)}
+input[type=checkbox]{accent-color:var(--accent)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+button.primary:hover{background:var(--accent-dk);border-color:var(--accent-lt)}
 button:disabled{opacity:.5;cursor:default}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .seg button{border:0;border-radius:0;padding:6px 11px}
-.seg button.on{background:var(--accent);color:#111;font-weight:600}
+.seg button.on{background:var(--accent-dk);color:#fff;font-weight:600;box-shadow:inset 0 -2px 0 var(--accent-lt)}
 .sep{width:1px;height:22px;background:var(--line)}
 .progress{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:12px}
-.progress>div{height:100%;width:0;background:var(--accent);transition:width .2s}
+.progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--bull));transition:width .2s}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .stat .v{font:600 22px var(--mono);margin-top:2px}
+.stat{border-top:2px solid var(--accent-dk)}
+.stat.bull{border-top-color:var(--bull)} .stat.bear{border-top-color:var(--bear)}
 .stat .s{font-size:11px;color:var(--muted)}
 .stat.bull .v{color:var(--bull)} .stat.bear .v{color:var(--bear)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
@@ -50,18 +63,19 @@ table{border-collapse:collapse;width:100%;min-width:1100px}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th{position:sticky;top:0;background:var(--panel2);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;cursor:pointer;user-select:none}
 th.l,td.l{text-align:left} th.c,td.c{text-align:center}
-th.sorted{color:var(--accent)}
-tbody tr:hover{background:var(--panel2)}
+th.sorted{color:var(--accent-lt)}
+tbody tr:hover{background:rgba(138,82,156,.12)}
 td{font-family:var(--mono);font-size:13px}
 td.pair{font-family:inherit;font-weight:600}
-td.pair a{text-decoration:none} td.pair a:hover{color:var(--accent)}
+td.pair a{text-decoration:none} td.pair a:hover{color:var(--accent-lt)}
 .tag{font:11px system-ui;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-right:3px}
-.new{font:600 10px system-ui;background:var(--accent);color:#111;border-radius:3px;padding:1px 4px;margin-left:6px;vertical-align:1px}
+.new{font:600 10px system-ui;background:var(--bull);color:#000;border-radius:3px;padding:1px 4px;margin-left:6px;vertical-align:1px}
 .up{color:var(--bull)} .dn{color:var(--bear)} .mu{color:var(--muted)}
 .chk{font-size:14px}
+.ext{color:var(--warn);font-weight:600}
 .score{display:inline-block;min-width:26px;padding:1px 6px;border-radius:4px;text-align:center;font-weight:600}
 .score.b4{background:var(--bull-bg);color:var(--bull)} .score.r4{background:var(--bear-bg);color:var(--bear)}
-.score.b5{background:var(--bull);color:#06210f} .score.r5{background:var(--bear);color:#2a0606}
+.score.b5{background:var(--bull);color:#000} .score.r5{background:var(--bear);color:#fff}
 tr.inc td{opacity:.45}
 .empty{text-align:center;color:var(--muted);padding:40px;font-family:inherit}
 details{color:var(--muted);font-size:13px}
@@ -75,7 +89,10 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 <body>
 <div class="wrap">
   <header>
-    <h1>Trend Confirmation <small>Binance USDT-M Perpetuals</small></h1>
+    <div class="brand"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="og" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a529c"/><stop offset="1" stop-color="#642372"/></linearGradient></defs><path d="M32 3 57 17.5v29L32 61 7 46.5v-29Z" fill="url(#og)" stroke="#bcacd4" stroke-width="2"/><path d="M32 32 52 21" stroke="#bcacd4" stroke-width="1.5" opacity=".55"/><circle cx="32" cy="32" r="17" fill="none" stroke="#bcacd4" stroke-width="1.2" opacity=".35"/><rect x="18" y="33" width="5" height="11" rx="1" fill="#e94c2a"/><path d="M20.5 30v17" stroke="#e94c2a" stroke-width="1.5"/><rect x="29.5" y="27" width="5" height="12" rx="1" fill="#9eff00"/><path d="M32 24v18" stroke="#9eff00" stroke-width="1.5"/><rect x="41" y="18" width="5" height="15" rx="1" fill="#9eff00"/><path d="M43.5 14v22" stroke="#9eff00" stroke-width="1.5"/></svg>
+      <div><div class="name">Onslaught <span>Screener</span></div>
+      <div class="sub"><b>Trend Confirmation</b> · Binance USDT-M Perpetuals</div></div>
+    </div>
     <div class="status">
       <span><span id="dot" class="dot"></span> <span id="statusText">Idle</span></span>
       <span>Last scan: <span id="lastScan">—</span></span>
@@ -136,7 +153,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div class="tablewrap">
     <table>
       <thead><tr id="thead"></tr></thead>
-      <tbody id="tbody"><tr><td class="empty" colspan="15">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
+      <tbody id="tbody"><tr><td class="empty" colspan="16">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
     </table>
   </div>
 
@@ -148,6 +165,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <li><b>RSI &gt; EMA</b>: RSI(14) above its own EMA means momentum is improving. <b>RSI &gt; 50</b>: momentum regime.</li>
         <li><b>OBV &gt; EMA50</b>: volume flow is confirming price.</li>
         <li><b>OI rising</b>: open interest grew by at least the threshold over N candles. New positions are fuelling the move, so it counts toward <i>both</i> the bull and the bear score.</li>
+        <li><b>Ext (ATR)</b>: how far the close is from EMA20, measured in ATRs. Above +3 or below −3 (⚠) means the move is stretched. The trend may be real, but entries there have poor risk/reward, so wait for a pullback.</li>
         <li><b>Aligned</b> = 4 or 5 of 5 checks in one direction. <b>NEW</b> = alignment appeared on the latest candle (it wasn't aligned on the one before).</li>
         <li>Hover any check to see the raw values. Click a pair to open its TradingView chart.</li>
       </ul>
@@ -217,6 +235,18 @@ function obv(c, v){
   for (let i = 1; i < c.length; i++) out[i] = out[i-1] + (c[i] > c[i-1] ? v[i] : c[i] < c[i-1] ? -v[i] : 0);
   return out;
 }
+function atr(h, l, c, p = 14){
+  const out = new Array(c.length).fill(NaN);
+  if (c.length <= p) return out;
+  let s = 0;
+  for (let i = 1; i <= p; i++) s += Math.max(h[i] - l[i], Math.abs(h[i] - c[i-1]), Math.abs(l[i] - c[i-1]));
+  let a = s / p; out[p] = a;
+  for (let i = p + 1; i < c.length; i++){
+    const tr = Math.max(h[i] - l[i], Math.abs(h[i] - c[i-1]), Math.abs(l[i] - c[i-1]));
+    a = (a * (p - 1) + tr) / p; out[i] = a;
+  }
+  return out;
+}
 const sgn = (a, b) => a > b ? 1 : a < b ? -1 : 0;
 
 /* Evaluate the four TA checks at bar index i. Candle = [openTime,o,h,l,c,v] */
@@ -237,7 +267,10 @@ function evaluate(candles, cfg){
   const ind = {r, re, d, o, oe}, L = c.length - 1;
   const now = taAt(ind, L, cfg), prev = taAt(ind, L - 1, cfg);
   if (!now) return {incomplete: true};
-  return {incomplete: false, ...now, prevBull: prev ? prev.bull : 0, prevBear: prev ? prev.bear : 0, lastClose: c[L], lastTime: candles[L][0]};
+  // Extension: distance of close from EMA20, in ATR(14) units. |ext| >= 3 = stretched, chasing risk.
+  const e20 = ema(c, 20), at = atr(h, l, c, 14);
+  const ext = Number.isFinite(e20[L]) && at[L] > 0 ? (c[L] - e20[L]) / at[L] : null;
+  return {incomplete: false, ...now, ext, prevBull: prev ? prev.bull : 0, prevBear: prev ? prev.bear : 0, lastClose: c[L], lastTime: candles[L][0]};
 }
 function oiDelta(oiArr, n){
   if (!oiArr || oiArr.length < n + 1) return null;
@@ -256,16 +289,17 @@ const OI_POINTS = 11;         // enough for N up to 10
 
 /* Sector tags (edit freely). Base asset → tags. Coins not listed show as "Other". */
 const SECTORS = {
-  L1:['BTC','ETH','SOL','BNB','ADA','AVAX','DOT','NEAR','APT','SUI','SEI','TIA','TON','TRX','XRP','LTC','BCH','ETC','ATOM','ALGO','HBAR','ICP','KAS','EGLD','S','XLM','XTZ','EOS','INJ','BERA','HYPE','KAIA','MOVE','FTM','NEO','VET','IOTA','QTUM','ONE','ZIL','CFX','FLOW','MINA','ROSE','CELO','KAVA','BB','AVAIL'],
+  L1:['BTC','ETH','SOL','BNB','ADA','AVAX','DOT','NEAR','APT','SUI','SEI','TIA','TON','TRX','XRP','LTC','BCH','ETC','ATOM','ALGO','HBAR','ICP','KAS','EGLD','S','XLM','XTZ','EOS','INJ','BERA','HYPE','KAIA','MOVE','FTM','NEO','VET','IOTA','QTUM','ONE','ZIL','CFX','FLOW','MINA','ROSE','CELO','KAVA','BB','AVAIL','MOVR','GLMR','XDC','IP','PI'],
   L2:['ARB','OP','POL','MATIC','STRK','IMX','MANTA','ZK','MNT','METIS','BLAST','SCR','STX','LRC','CELR','SKL','CTSI','ZRO','OMNI','SAGA','DYM','ALT','LINEA'],
-  DeFi:['UNI','AAVE','MKR','SKY','CRV','LDO','COMP','SNX','DYDX','GMX','PENDLE','JUP','RAY','CAKE','SUSHI','1INCH','ENA','ETHFI','JTO','EIGEN','MORPHO','AERO','INJ','YFI','BAL','CVX','FXS','LQTY','RUNE','UMA','ONDO','REZ','LISTA','BANANA','ORCA','DRIFT','KMNO','USUAL','RSR','SSV','SUN','JST','HYPE'],
-  AI:['FET','TAO','RENDER','RNDR','WLD','ARKM','AI16Z','VIRTUAL','GRASS','IO','NEAR','AIXBT','GRIFFAIN','COOKIE','PHB','AGLD','NFP','AI','ZEREBRO','ACT','SWARMS','KAITO','VANA','NMR','CGPT','PROMPT','TURBO'],
+  DeFi:['UNI','AAVE','MKR','SKY','CRV','LDO','COMP','SNX','DYDX','GMX','PENDLE','JUP','RAY','CAKE','SUSHI','1INCH','ENA','ETHFI','JTO','EIGEN','MORPHO','AERO','INJ','YFI','BAL','CVX','FXS','LQTY','RUNE','UMA','ONDO','REZ','LISTA','BANANA','ORCA','DRIFT','KMNO','USUAL','RSR','SSV','SUN','JST','HYPE','FLUID','EUL','SYRUP','RESOLV','HUMA','AVNT','ASTER'],
+  AI:['FET','TAO','RENDER','RNDR','WLD','ARKM','AI16Z','VIRTUAL','GRASS','IO','NEAR','AIXBT','GRIFFAIN','COOKIE','PHB','AGLD','NFP','AI','ZEREBRO','ACT','SWARMS','KAITO','VANA','NMR','CGPT','PROMPT','TURBO','AIN','RLC','NIL','ALCH','SAHARA','NEWT'],
   Meme:['DOGE','SHIB','PEPE','WIF','BONK','FLOKI','BOME','MEME','POPCAT','MEW','TURBO','NEIRO','PNUT','MOODENG','GOAT','BRETT','TRUMP','FARTCOIN','PENGU','MOG','BABYDOGE','SPX','CAT','CHILLGUY','DOGS','PEOPLE','SATS','RATS','ORDI','1000SATS','BAN','HIPPO','BROCCOLI','MELANIA'],
   Gaming:['AXS','SAND','MANA','GALA','IMX','APE','ILV','BEAM','PIXEL','YGG','ENJ','RON','SUPER','MAGIC','PORTAL','XAI','ACE','GMT','NOT','CATI','HMSTR','MAVIA','PRIME'],
-  Oracle:['LINK','PYTH','API3','BAND','GRT','TRB','UMA'],
-  DePIN:['FIL','AR','HNT','IOTX','THETA','AKT','RENDER','STORJ','IO','GRASS','ATH','GLM','ANKR','POWR','JASMY','LPT'],
-  RWA:['ONDO','OM','POLYX','TRU','PLUME','MKR','SKY','USUAL','PENDLE','CFG'],
-  Privacy:['XMR','ZEC','DASH','ROSE','SCRT','ZEN'],
+  Oracle:['LINK','PYTH','API3','BAND','GRT','TRB','UMA','RED'],
+  Infra:['GTC','ENS','ARKM','W','AXL','QNT','LAYER','HOME','WAL'],
+  DePIN:['FIL','AR','HNT','IOTX','THETA','AKT','RENDER','STORJ','IO','GRASS','ATH','GLM','ANKR','POWR','JASMY','LPT','RLC'],
+  RWA:['ONDO','OM','POLYX','TRU','PLUME','MKR','SKY','USUAL','PENDLE','CFG','PAXG','XAUT'],
+  Privacy:['XMR','ZEC','DASH','ROSE','SCRT','ZEN','NIL'],
   Payments:['XRP','XLM','LTC','BCH','ACH','XNO','COTI','REQ']
 };
 const TAGS = {};
@@ -432,7 +466,7 @@ function showErr(msg){ const e = $('err'); e.textContent = msg || ''; e.style.di
 
 /* ---------- Formatting ---------- */
 const fmtPrice = p => !Number.isFinite(p) ? '—' : p >= 1000 ? p.toLocaleString('en-US', {maximumFractionDigits: 1}) : p >= 1 ? p.toFixed(3) : p >= 0.01 ? p.toFixed(5) : p.toPrecision(4);
-const fmtBig = v => !Number.isFinite(v) || v <= 0 ? '—' : v >= 1e9 ? (v/1e9).toFixed(2) + 'B' : v >= 1e6 ? (v/1e6).toFixed(1) + 'M' : (v/1e3).toFixed(0) + 'K';
+const fmtBig = v => !Number.isFinite(v) || v <= 0 ? '—' : v >= 1e12 ? (v/1e12).toFixed(2) + 'T' : v >= 1e9 ? (v/1e9).toFixed(2) + 'B' : v >= 1e6 ? (v/1e6).toFixed(1) + 'M' : (v/1e3).toFixed(0) + 'K';
 const fmtPct = v => v == null || !Number.isFinite(v) ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + '%';
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : 'mu';
 const chk = (s, title) => `<td class="c chk ${s === 1 ? 'up' : s === -1 ? 'dn' : 'mu'}" title="${title}">${s === 1 ? '▲' : s === -1 ? '▼' : '·'}</td>`;
@@ -444,13 +478,13 @@ function derive(r, c){
   const oiUp = oiD != null && oiD >= c.oiThr ? 1 : 0;
   const bull = d ? d.bull + oiUp : 0, bear = d ? d.bear + oiUp : 0;
   const isNew = d ? ((bull >= 4 && d.prevBull + oiUp < 4) || (bear >= 4 && d.prevBear + oiUp < 4)) : false;
-  return {...r, d, oiD, oiUp, bull, bear, isNew, inc: !d || r.oi == null, score: Math.max(bull, bear) + (bull >= 4 || bear >= 4 ? 10 : 0)};
+  return {...r, d, ext: d ? d.ext : null, oiD, oiUp, bull, bear, isNew, inc: !d || r.oi == null, score: Math.max(bull, bear) + (bull >= 4 || bear >= 4 ? 10 : 0)};
 }
 
 const COLS = [
   {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA50', c:'c'},
-  {k:'oiUp', t:'OI rising', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}
+  {k:'oiUp', t:'OI rising', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'ext', t:'Ext (ATR)'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}
 ];
 function sortVal(r, k){
   if (['dmi','rsiEma','rsi50','obv'].includes(k)) return r.d ? r.d.s[k] : -9;
@@ -511,6 +545,7 @@ function render(){
       ${d ? chk(d.s.obv, `OBV ${fmtBig(Math.abs(v.obv))}${v.obv < 0 ? ' (neg)' : ''} vs EMA ${fmtBig(Math.abs(v.obvEma))}`) : '<td class="c mu">—</td>'}
       ${r.oi == null ? '<td class="c mu" title="No OI history">—</td>' : `<td class="c chk ${r.oiUp ? 'up' : 'mu'}">${r.oiUp ? '●' : '·'}</td>`}
       <td class="${cls(r.oiD)}">${fmtPct(r.oiD)}</td>
+      <td class="${r.ext != null && Math.abs(r.ext) >= 3 ? 'ext' : 'mu'}" title="Close vs EMA20 in ATR units. 3 or more = stretched, high chase risk">${r.ext == null ? '—' : (r.ext > 0 ? '+' : '') + r.ext.toFixed(1)}${r.ext != null && Math.abs(r.ext) >= 3 ? ' ⚠' : ''}</td>
       <td><span class="score ${sb}">${d ? r.bull : '—'}</span></td>
       <td><span class="score ${sr}">${d ? r.bear : '—'}</span></td>
     </tr>`;
@@ -565,11 +600,11 @@ function setAuto(){
 }
 
 function exportCSV(){
-  const rows = filtered(), head = ['pair','sectors','price','chg24h','vol24h','mcap','dmi','rsi_gt_ema','rsi_gt_50','obv_gt_ema50','oi_rising','oi_delta_pct','bull','bear','new','rsi','adx','pdi','mdi'];
+  const rows = filtered(), head = ['pair','sectors','price','chg24h','vol24h','mcap','dmi','rsi_gt_ema','rsi_gt_50','obv_gt_ema50','oi_rising','oi_delta_pct','ext_atr','bull','bear','new','rsi','adx','pdi','mdi'];
   const lines = [head.join(',')].concat(rows.map(r => {
     const d = r.d, v = d ? d.vals : {};
     return [r.sym, tagsOf(r.base).join('|'), r.price, r.chg, r.qv, r.mcap ?? '', d?.s.dmi ?? '', d?.s.rsiEma ?? '', d?.s.rsi50 ?? '', d?.s.obv ?? '',
-      r.oiUp, r.oiD?.toFixed(2) ?? '', r.bull, r.bear, r.isNew ? 1 : 0, v.rsi?.toFixed(2) ?? '', v.adx?.toFixed(2) ?? '', v.pdi?.toFixed(2) ?? '', v.mdi?.toFixed(2) ?? ''].join(',');
+      r.oiUp, r.oiD?.toFixed(2) ?? '', r.ext?.toFixed(2) ?? '', r.bull, r.bear, r.isNew ? 1 : 0, v.rsi?.toFixed(2) ?? '', v.adx?.toFixed(2) ?? '', v.pdi?.toFixed(2) ?? '', v.mdi?.toFixed(2) ?? ''].join(',');
   }));
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type: 'text/csv'}));
