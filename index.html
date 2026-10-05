@@ -56,6 +56,14 @@ button:disabled{opacity:.5;cursor:default}
 .stat .v{font:600 22px var(--mono);margin-top:2px}
 .stat{border-top:2px solid var(--accent-dk)}
 .stat.bull{border-top-color:var(--bull)} .stat.bear{border-top-color:var(--bear)}
+.stat{cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.stat:hover{border-color:var(--accent);transform:translateY(-1px)}
+.stat.active{background:rgba(138,82,156,.20);border-color:var(--accent-lt);box-shadow:0 0 0 1px var(--accent-lt) inset}
+.pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+.pager .pinfo{color:var(--muted);font-size:12px;margin-right:auto}
+.pager button{font-family:var(--mono);font-size:12px;padding:5px 10px}
+.pager button.on{background:var(--accent-dk);border-color:var(--accent-lt);color:#fff}
+.pager .gap{color:var(--muted);padding:0 2px}
 .stat .s{font-size:11px;color:var(--muted)}
 .stat.bull .v{color:var(--bull)} .stat.bear .v{color:var(--bear)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
@@ -135,19 +143,20 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <button id="clearBtn">Clear filters</button>
       <span class="sep"></span>
       <input id="search" type="search" placeholder="Search pair…" style="width:130px">
+      <label>Rows <select id="pageSize"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="0">All</option></select></label>
       <button id="csvBtn">Export CSV</button>
     </div>
   </div>
 
   <div class="progress"><div id="prog"></div></div>
 
-  <div class="stats">
-    <div class="stat"><div class="k">Pairs scanned</div><div class="v" id="sScanned">0</div><div class="s" id="sOf">of 0 perpetuals</div></div>
-    <div class="stat bull"><div class="k">Bullish aligned</div><div class="v" id="sBull">0</div><div class="s">4–5 of 5 bull checks</div></div>
-    <div class="stat bear"><div class="k">Bearish aligned</div><div class="v" id="sBear">0</div><div class="s">4–5 of 5 bear checks</div></div>
-    <div class="stat"><div class="k">New alignments</div><div class="v" id="sNew">0</div><div class="s">aligned on the latest candle</div></div>
-    <div class="stat"><div class="k">OI rising</div><div class="v" id="sOi">0</div><div class="s" id="sOiS">threshold met</div></div>
-    <div class="stat"><div class="k">Incomplete</div><div class="v" id="sInc">0</div><div class="s">missing data / new listing</div></div>
+  <div class="stats" id="stats">
+    <div class="stat" data-f="all" title="Show all (clear filters)"><div class="k">Pairs scanned</div><div class="v" id="sScanned">0</div><div class="s" id="sOf">of 0 perpetuals</div></div>
+    <div class="stat bull" data-f="bull" title="Filter: bullish aligned"><div class="k">Bullish aligned</div><div class="v" id="sBull">0</div><div class="s">4–5 of 5 bull checks</div></div>
+    <div class="stat bear" data-f="bear" title="Filter: bearish aligned"><div class="k">Bearish aligned</div><div class="v" id="sBear">0</div><div class="s">4–5 of 5 bear checks</div></div>
+    <div class="stat" data-f="new" title="Filter: new alignments"><div class="k">New alignments</div><div class="v" id="sNew">0</div><div class="s">aligned on the latest candle</div></div>
+    <div class="stat" data-f="oi" title="Filter: OI rising"><div class="k">OI rising</div><div class="v" id="sOi">0</div><div class="s" id="sOiS">threshold met</div></div>
+    <div class="stat" data-f="inc" title="Filter: incomplete data"><div class="k">Incomplete</div><div class="v" id="sInc">0</div><div class="s">missing data / new listing</div></div>
   </div>
 
   <div class="tablewrap">
@@ -156,6 +165,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <tbody id="tbody"><tr><td class="empty" colspan="16">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
     </table>
   </div>
+  <div class="pager" id="pager"></div>
 
   <div class="panel" style="margin-top:12px">
     <details>
@@ -440,7 +450,7 @@ async function getOI(sym, tf){
 
 /* ---------- UI state ---------- */
 const $ = id => document.getElementById(id);
-const S = {tf: '4h', show: 'all', sort: {k: 'score', dir: -1}, rows: [], total: 0, scanning: false, timer: null, mf: {}};
+const S = {tf: '4h', show: 'all', sort: {k: 'score', dir: -1}, rows: [], total: 0, scanning: false, timer: null, mf: {}, page: 0, sig: '', incOnly: false};
 const store = {
   get(){ try { return JSON.parse(localStorage.getItem('onslaught-tc') || '{}'); } catch { return {}; } },
   set(o){ try { localStorage.setItem('onslaught-tc', JSON.stringify(o)); } catch {} }
@@ -452,13 +462,13 @@ function cfg(){
 }
 function saveSettings(){
   const o = {tf: S.tf, auto: $('auto').value, universe: $('universe').value, mcap: $('mcap').value, oiThr: $('oiThr').value, oiN: $('oiN').value,
-    closed: $('closed').checked, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value};
+    closed: $('closed').checked, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value};
   store.set(o);
 }
 function loadSettings(){
   const o = store.get();
   if (o.tf && TFS.includes(o.tf)) S.tf = o.tf;
-  for (const k of ['auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) if (o[k] != null) $(k).value = o[k];
+  for (const k of ['pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) if (o[k] != null) $(k).value = o[k];
   if (o.closed != null) $('closed').checked = o.closed;
 }
 function setStatus(kind, text){ $('dot').className = 'dot ' + (kind || ''); $('statusText').textContent = text; }
@@ -503,6 +513,7 @@ function filtered(){
     if (S.show === 'bull' && r.bull < 4) return false;
     if (S.show === 'bear' && r.bear < 4) return false;
     if (newOnly && !r.isNew) return false;
+    if (S.incOnly && !r.inc) return false;
     for (const [k, v] of Object.entries(S.mf)){
       if (v === '') continue;
       if (k === 'oi'){ if (r.oiUp !== +v) return false; }
@@ -512,6 +523,29 @@ function filtered(){
   });
 }
 
+function renderPager(total, size, pages, start, n){
+  const el = $('pager');
+  if (!total){ el.innerHTML = ''; return; }
+  const lbl = i => `${i * size + 1}–${Math.min((i + 1) * size, total)}`;
+  const idx = pages <= 9 ? [...Array(pages).keys()]
+    : [...new Set([0, 1, S.page - 1, S.page, S.page + 1, pages - 1].filter(i => i >= 0 && i < pages))].sort((a, b) => a - b);
+  let h = `<span class="pinfo">Showing ${start + 1}–${start + n} of ${total}</span>`;
+  if (pages > 1){
+    h += `<button data-p="${S.page - 1}" ${S.page === 0 ? 'disabled' : ''} aria-label="Previous page">‹</button>`;
+    let prev = -1;
+    for (const i of idx){ if (i - prev > 1) h += '<span class="gap">…</span>'; h += `<button data-p="${i}" class="${i === S.page ? 'on' : ''}">${lbl(i)}</button>`; prev = i; }
+    h += `<button data-p="${S.page + 1}" ${S.page === pages - 1 ? 'disabled' : ''} aria-label="Next page">›</button>`;
+  }
+  el.innerHTML = h;
+}
+function anyFilter(){
+  return S.show !== 'all' || $('newOnly').checked || S.incOnly || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
+}
+function syncCards(){
+  const st = {all: !anyFilter(), bull: S.show === 'bull', bear: S.show === 'bear', new: $('newOnly').checked, oi: S.mf.oi === '1', inc: S.incOnly};
+  document.querySelectorAll('#stats .stat').forEach(c => c.classList.toggle('active', !!st[c.dataset.f]));
+}
+function setShow(v){ S.show = v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === v)); }
 function render(){
   const c = cfg(), all = S.rows.map(r => derive(r, c));
   $('sScanned').textContent = S.rows.length; $('sOf').textContent = `of ${S.total} perpetuals`;
@@ -524,11 +558,18 @@ function render(){
   $('thead').innerHTML = COLS.map(col => `<th class="${col.c || ''} ${S.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}">${col.t}${S.sort.k === col.k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
   const rows = filtered(), {k, dir} = S.sort;
   rows.sort((a, b) => { const x = sortVal(a, k), y = sortVal(b, k); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
+  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value]);
+  if (sig !== S.sig){ S.sig = sig; S.page = 0; }            // any filter/sort change → back to page 1
+  const size = +$('pageSize').value || rows.length || 1, pages = Math.max(1, Math.ceil(rows.length / size));
+  S.page = Math.min(S.page, pages - 1);
+  const start = S.page * size, pageRows = rows.slice(start, start + size);
+  renderPager(rows.length, size, pages, start, pageRows.length);
+  syncCards();
   if (!rows.length){
     $('tbody').innerHTML = `<tr><td class="empty" colspan="${COLS.length}">${S.rows.length ? 'No pairs match the current filters.' : 'Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.'}</td></tr>`;
     return;
   }
-  $('tbody').innerHTML = rows.map(r => {
+  $('tbody').innerHTML = pageRows.map(r => {
     const d = r.d, v = d ? d.vals : null, f = x => Number.isFinite(x) ? x.toFixed(1) : '—';
     const tv = `https://www.tradingview.com/chart/?symbol=BINANCE:${r.sym}.P`;
     const sb = r.bull >= 5 ? 'b5' : r.bull >= 4 ? 'b4' : '', sr = r.bear >= 5 ? 'r5' : r.bear >= 4 ? 'r4' : '';
@@ -627,7 +668,7 @@ $('tfSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('showSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   S.show = b.dataset.v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x === b)); render(); };
 document.querySelectorAll('.mf').forEach(s => s.onchange = () => { S.mf[s.dataset.k] = s.value; render(); });
-$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
+$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
   S.show = 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === 'all')); render(); };
 for (const id of ['oiThr','oiN','sector','mcap','newOnly']) $(id).onchange = () => { saveSettings(); render(); };
 $('search').oninput = render;
@@ -636,6 +677,16 @@ for (const id of ['rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) $(id).onchan
 $('auto').onchange = () => { saveSettings(); setAuto(); };
 $('scanBtn').onclick = scan;
 $('csvBtn').onclick = exportCSV;
+$('pageSize').onchange = () => { saveSettings(); render(); };
+$('pager').onclick = e => { const b = e.target.closest('button[data-p]'); if (!b || b.disabled) return;
+  S.page = +b.dataset.p; render(); document.querySelector('.tablewrap').scrollIntoView({block: 'start', behavior: 'smooth'}); };
+$('stats').onclick = e => { const c = e.target.closest('.stat'); if (!c) return; const f = c.dataset.f;
+  if (f === 'all'){ $('clearBtn').click(); return; }
+  if (f === 'bull' || f === 'bear') setShow(S.show === f ? 'all' : f);
+  if (f === 'new') $('newOnly').checked = !$('newOnly').checked;
+  if (f === 'oi'){ const sel = document.querySelector('.mf[data-k="oi"]'); sel.value = S.mf.oi === '1' ? '' : '1'; S.mf.oi = sel.value; }
+  if (f === 'inc') S.incOnly = !S.incOnly;
+  render(); };
 $('resetCache').onclick = async () => { await Cache.clear(); infoCache = null; setStatus('', 'Cache cleared'); };
 $('thead').onclick = e => { const th = e.target.closest('th'); if (!th) return; const k = th.dataset.k;
   S.sort = S.sort.k === k ? {k, dir: -S.sort.dir} : {k, dir: ['sym','sector'].includes(k) ? 1 : -1}; render(); };
