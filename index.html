@@ -189,14 +189,30 @@ td.trigs{white-space:nowrap}
 .rsc{font:600 10.5px var(--mono);padding:1px 4px;border-radius:3px;background:var(--panel2)}
 .rsc.up{color:var(--bull);background:var(--bull-bg)} .rsc.dn{color:var(--bear);background:var(--bear-bg)}
 .mapwrap{position:relative;padding:8px}
-.mapsvg .q.lead{fill:rgba(158,255,0,.06)} .mapsvg .q.imp{fill:rgba(89,160,216,.07)} .mapsvg .q.lag{fill:rgba(233,76,42,.06)} .mapsvg .q.weak{fill:rgba(255,122,10,.06)}
-.mapsvg .grid{stroke:rgba(255,255,255,.05)} .mapsvg .axis0{stroke:#585a60;stroke-width:1.2}
-.mapsvg .tick{fill:#8b8b90;font:10.5px var(--mono)} .mapsvg .axt{fill:#8b8b90;font:11.5px system-ui}
-.mapsvg .qlab{font:800 13px system-ui;letter-spacing:1px;text-transform:uppercase;opacity:.75}
-.qlab.lead{fill:var(--bull)} .qlab.imp{fill:var(--info)} .qlab.lag{fill:var(--bear)} .qlab.weak{fill:var(--warn)}
-.mapsvg .dot{cursor:pointer} .mapsvg .dot:hover circle{stroke:#fff;stroke-width:1.6}
-.mapsvg .mlab{fill:#e6e3ee;font:600 10.5px system-ui;pointer-events:none;paint-order:stroke;stroke:#000;stroke-width:3px}
-.maptip{position:absolute;pointer-events:none;background:#0b0b10;border:1px solid var(--accent);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;min-width:220px;z-index:5;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.mapsvg{display:block;user-select:none} .mapsvg .plotbg{fill:#07070b} .mapsvg .plotframe{fill:none;stroke:var(--line)}
+.mapsvg .grid{stroke:rgba(255,255,255,.045)} .mapsvg .axis0{stroke:rgba(188,172,212,.35);stroke-width:1;stroke-dasharray:4 4}
+.mapsvg .tick{fill:#6f7076;font:10.5px var(--mono)} .mapsvg .axt{fill:#8b8b90;font:11.5px system-ui;letter-spacing:.2px}
+.mapsvg .origin circle{fill:#0b0b10;stroke:rgba(188,172,212,.5)} .mapsvg .origin text{fill:var(--accent-lt);font:700 11px system-ui}
+.mapsvg .pills{pointer-events:none} .mapsvg .qpill rect{fill:rgba(7,7,11,.8);stroke-width:1} .mapsvg .qpill text{font:800 10.5px system-ui;letter-spacing:1.2px} .mapsvg .qpill .qn{font-family:var(--mono);opacity:.8}
+.qpill.lead rect{stroke:rgba(158,255,0,.4)} .qpill.lead text{fill:var(--bull)} .qpill.imp rect{stroke:rgba(89,160,216,.45)} .qpill.imp text{fill:var(--info)}
+.qpill.lag rect{stroke:rgba(233,76,42,.45)} .qpill.lag text{fill:var(--bear)} .qpill.weak rect{stroke:rgba(255,122,10,.45)} .qpill.weak text{fill:var(--warn)}
+.mapsvg .dot{cursor:pointer;transition:opacity .15s} .mapsvg .dots:hover .dot{opacity:.28} .mapsvg .dots .dot:hover{opacity:1}
+.mapsvg .core{stroke:rgba(0,0,0,.85);stroke-width:.8} .mapsvg .gA .core{fill-opacity:.95} .mapsvg .gB .core{fill-opacity:.9} .mapsvg .gC .core{fill-opacity:.7} .mapsvg .gN .core{fill-opacity:.5}
+.mapsvg .core.clip{stroke:#bcacd4;stroke-width:1.3;stroke-dasharray:2 2}
+.mapsvg .dot:hover .core{stroke:#fff;stroke-width:1.8}
+.mapsvg .ring{stroke-width:1.7} .mapsvg .ring.b{stroke:var(--bull)} .mapsvg .ring.s{stroke:var(--bear)}
+.mapsvg .glow{filter:url(#mapBlur);opacity:.45} .mapsvg .glow.b{fill:var(--bull)} .mapsvg .glow.s{fill:var(--bear)}
+.mapsvg .mlab{fill:#d9d5e3;font:600 10.5px system-ui;pointer-events:none;paint-order:stroke;stroke:#07070b;stroke-width:3.2px;stroke-linejoin:round} .mapsvg .mlab.set{fill:#fff;font-weight:700}
+.mapsvg .guide{stroke:rgba(188,172,212,.55);stroke-dasharray:3 3;pointer-events:none} .mapsvg .gpill{fill:#1f212b;stroke:var(--accent)} .mapsvg .gtxt{fill:#fff;font:600 10px var(--mono)}
+.mapsvg .mapsel{fill:rgba(138,82,156,.15);stroke:var(--accent-lt);stroke-dasharray:4 3}
+.mapsvg.enter .dot{animation:dotIn .5s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:var(--d);transform-box:fill-box;transform-origin:center}
+@keyframes dotIn{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:none}}
+.tth{display:flex;gap:6px;align-items:center;margin-bottom:5px} .tth .gr{min-width:0;font-size:10px;padding:0 5px} .tth .setup{font-size:9px;padding:1px 5px;margin:0}
+.ttg{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:2px 8px;font-family:var(--mono);font-size:11.5px}
+.qcount{font:700 12px var(--mono);color:var(--text);background:var(--panel2);border-radius:9px;padding:0 7px}
+.qbar{height:3px;background:var(--panel2);border-radius:2px;margin-top:6px;overflow:hidden} .qbar i{display:block;height:100%;border-radius:2px}
+.quad.lead .qbar i{background:var(--bull)} .quad.imp .qbar i{background:var(--info)} .quad.lag .qbar i{background:var(--bear)} .quad.weak .qbar i{background:var(--warn)}
+.maptip{position:absolute;pointer-events:none;background:rgba(11,11,16,.94);backdrop-filter:blur(6px);border:1px solid var(--accent);border-radius:10px;padding:9px 11px;font-size:12px;line-height:1.5;min-width:230px;z-index:5;box-shadow:0 8px 24px rgba(0,0,0,.6)}
 .maplegend{font-size:11.5px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:auto}
 .lg{display:inline-block;width:10px;height:10px;border-radius:50%} .lg.A{background:var(--bull)} .lg.B{background:var(--accent)} .lg.C{background:#6b6d75} .lg.N{background:#3d3f47}
 .lg.ring{background:none;border:2px solid} .lg.ring.b{border-color:var(--bull)} .lg.ring.s{border-color:var(--bear)}
@@ -481,8 +497,10 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="row">
         <span class="mu">Compare with</span>
         <div class="seg" id="mapVs"><button data-v="b" class="on">₿ BTC</button><button data-v="e">Ξ ETH</button></div>
-        <label>Show <select id="mapShow"><option value="all">All scanned pairs</option><option value="al">Aligned only</option><option value="set">Setups only</option></select></label>
+        <label title="Trend aligned = 4–5 of 5 bull or bear checks, no trigger needed (your watchlist). Triggered setups = aligned AND a trigger fired in the last few candles (actionable now).">Show <select id="mapShow"><option value="all">All scanned pairs</option><option value="al">Trend aligned (4–5/5)</option><option value="set">Triggered setups</option></select></label>
+        <span class="mu">Scale</span><div class="seg" id="mapScale"><button data-v="spread" class="on" title="Square-root scale: spreads out the crowded centre and keeps outliers on the chart">Spread</button><button data-v="linear" title="Plain linear scale; extremes are pinned to the edge">Linear</button></div>
         <label><input id="mapLabels" type="checkbox" checked> Labels</label>
+        <button id="mapReset" hidden>Reset zoom</button>
         <span class="maplegend"><i class="lg A"></i>A <i class="lg B"></i>B <i class="lg C"></i>C <i class="lg N"></i>no grade · <i class="lg ring b"></i>long setup <i class="lg ring s"></i>short setup · size = 24h volume</span>
       </div>
     </div>
@@ -493,7 +511,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li><b>Up and down</b>: relative strength over the last 24 hours, the recent momentum of that strength.</li>
       <li><b>Leading</b> (top right): strong and still gaining. <b>Weakening</b> (bottom right): strong but fading, often taking profit. <b>Lagging</b> (bottom left): weak and still losing. <b>Improving</b> (top left): weak but turning up, where early rotations show first.</li>
       <li>Coins tend to rotate clockwise: Improving → Leading → Weakening → Lagging. Improving coins with an A or B long setup are early candidates; Weakening coins with a short setup are early fade candidates.</li>
-      <li>Click any dot or name to open its trade plan. Extreme values are pinned to the edge (dashed outline).</li>
+      <li>Click any dot or name to open its trade plan. Drag a box on the chart to zoom in; double-click or <b>Reset zoom</b> to go back.</li><li><b>Spread</b> scale uses a square root so the crowded middle opens up; <b>Linear</b> shows true distances. Values off the chart are pinned to the edge with a dashed outline and their value in the label.</li><li>A soft glow marks A-grade triggered setups.</li>
     </ul></details></div>
   </div><!-- /viewMap -->
 
@@ -1229,11 +1247,22 @@ function sortVal(r, k){
   const v = r[k]; return v == null || !Number.isFinite(v) ? -Infinity : v;
 }
 
+// Scope = the universe the cards count: market cap and sector filters apply to the cards too
+function inScope(r, mcapMin = +$('mcap').value, sec = $('sector').value){
+  if (mcapMin && !(r.mcap >= mcapMin)) return false;
+  if (sec && !tagsOf(r.base).includes(sec)) return false;
+  return true;
+}
+function scopeLabel(){
+  const m = $('mcap'), sec = $('sector').value, p = [];
+  if (+m.value) p.push('mcap ' + m.options[m.selectedIndex].text);
+  if (sec) p.push(sec);
+  return p.join(' · ');
+}
 function filtered(){
   const c = cfg(), sec = $('sector').value, q = $('search').value.trim().toUpperCase(), mcapMin = +$('mcap').value, newOnly = $('newOnly').checked;
   return S.rows.map(r => derive(r, c)).filter(r => {
-    if (mcapMin && !(r.mcap >= mcapMin)) return false;
-    if (sec && !tagsOf(r.base).includes(sec)) return false;
+    if (!inScope(r, mcapMin, sec)) return false;
     if (q && !r.sym.includes(q)) return false;
     if (S.show === 'bull' && r.bull < 4) return false;
     if (S.show === 'bear' && r.bear < 4) return false;
@@ -1336,8 +1365,8 @@ function syncCards(){
 function setShow(v){ S.show = v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === v)); }
 function render(){
   if (S.view === 'map') queueMicrotask(renderMap);
-  const c = cfg(), all = S.rows.map(r => derive(r, c));
-  setNum('sScanned', S.rows.length); $('sOf').textContent = `of ${S.total} perpetuals`;
+  const c = cfg(), market = S.rows.map(r => derive(r, c)), all = market.filter(r => inScope(r)), scope = scopeLabel();
+  setNum('sScanned', all.length); $('sOf').textContent = scope ? `${scope} · of ${S.rows.length} scanned` : `of ${S.total} perpetuals`;
   setNum('sBull', all.filter(r => r.bull >= 4).length);
   setNum('sBear', all.filter(r => r.bear >= 4).length);
   setNum('sNew', all.filter(r => r.isNew).length);
@@ -1345,7 +1374,7 @@ function render(){
   setNum('sInc', all.filter(r => r.inc).length);
   { const ws = all.filter(r => WATCH.has(r.sym)); setNum('sStar', ws.length); $('sStarS').textContent = `${ws.filter(r => r.bull >= 4 || r.bear >= 4).length} aligned · ${ws.filter(r => r.setup).length} triggered`; }
   setNum('sSetup', all.filter(r => r.setup).length); $('sSetupS').textContent = `aligned + trigger in last ${c.trigN} · ${all.filter(r => r.setup && r.G && r.G.grade === 'A').length} A-grade`;
-  renderRegime(all, c);
+  renderRegime(market, c);   // regime reads the whole market, not the scope
 
   $('thead').innerHTML = COLS.map(col => `<th class="${col.c || ''} ${S.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}" title="${(COL_HELP[col.k] || '').replace(/"/g, '&quot;')} (click to sort)">${col.t}${S.sort.k === col.k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
   const rows = filtered(), {k, dir} = S.sort;
@@ -1483,7 +1512,7 @@ function setView(v){
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   if (v === 'journal') renderJournal();
-  if (v === 'map') renderMap();
+  if (v === 'map'){ MAP.anim = true; renderMap(); }
 }
 
 /* ---------- Sector Flow ---------- */
@@ -1993,57 +2022,136 @@ function planText(){
 }
 
 /* ---------- Market Map (relative rotation) ---------- */
-const MAP = {vs: 'b'};
+const MAP = {vs: 'b', scale: 'spread', zoom: null, anim: true};
 function renderMap(){
   const box = $('mapBox'); if (!box || $('viewMap').hidden) return;
-  const c = cfg(), show = $('mapShow').value, vs = MAP.vs;
+  const c = cfg(), show = $('mapShow').value, vs = MAP.vs, spread = MAP.scale === 'spread';
   let rows = S.rows.map(r => derive(r, c)).filter(r => r.rs && r.rs[vs + '7'] != null && r.rs[vs + '1'] != null && r.sym !== (vs === 'b' ? 'BTCUSDT' : 'ETHUSDT'));
   if (show === 'al') rows = rows.filter(r => r.bull >= 4 || r.bear >= 4);
   if (show === 'set') rows = rows.filter(r => r.setup);
+  $('mapReset').hidden = !MAP.zoom; $('mapTip').hidden = true;
   if (!rows.length){ box.innerHTML = `<div class="dload" style="height:300px">${S.rows.length ? 'No pairs with relative strength data match.' : 'Run a Trend Confirmation scan to fill the map.'}</div>`; $('mapQuads').innerHTML = ''; return; }
-  const W = Math.max(320, box.clientWidth), H = Math.min(620, Math.max(360, Math.round(W * 0.48))), m = {l: 54, r: 18, t: 18, b: 40};
+  const W = Math.max(320, box.clientWidth), H = Math.min(700, Math.max(420, Math.round(W * 0.5))), m = {l: 50, r: 16, t: 14, b: 42};
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
   const xs = rows.map(r => r.rs[vs + '7']), ys = rows.map(r => r.rs[vs + '1']);
   const q = (a, p) => { const v = a.map(Math.abs).sort((x, y) => x - y); return v[Math.min(v.length - 1, Math.floor(p * (v.length - 1)))] || 0; };
-  const xM = Math.max(5, q(xs, .95) * 1.15), yM = Math.max(2, q(ys, .95) * 1.15);
-  const X = v => m.l + (Math.max(-xM, Math.min(xM, v)) + xM) / (2 * xM) * (W - m.l - m.r), Y = v => m.t + (yM - Math.max(-yM, Math.min(yM, v))) / (2 * yM) * (H - m.t - m.b);
-  const maxV = Math.max(...rows.map(r => r.qv || 0)) || 1, rad = r => 3.5 + 11 * Math.sqrt((r.qv || 0) / maxV);
-  const ticks = (M, n) => { const st = [1, 2, 2.5, 5, 10, 20, 25, 50, 100].find(s => M / s <= n) || 100; const out = []; for (let v = -Math.floor(M / st) * st; v <= M + 1e-9; v += st) out.push(+v.toFixed(2)); return out; };
+  // Spread = signed square root: pulls the crowded centre apart and keeps outliers on the chart
+  const f = v => spread ? Math.sign(v) * Math.sqrt(Math.abs(v)) : v, fi = u => spread ? Math.sign(u) * u * u : u;
+  const xM = Math.max(5, q(xs, spread ? .99 : .95) * 1.08), yM = Math.max(2, q(ys, spread ? .99 : .95) * 1.08);
+  const dom = MAP.zoom || {x: [-xM, xM], y: [-yM, yM]};
+  const [xa, xb] = dom.x.map(f), [ya, yb] = dom.y.map(f);
+  const cx_ = v => Math.max(dom.x[0], Math.min(dom.x[1], v)), cy_ = v => Math.max(dom.y[0], Math.min(dom.y[1], v));
+  const X = v => m.l + (f(cx_(v)) - xa) / (xb - xa) * pw, Y = v => m.t + (yb - f(cy_(v))) / (yb - ya) * ph;
+  MAP.inv = {x: px => fi(xa + (px - m.l) / pw * (xb - xa)), y: py => fi(yb - (py - m.t) / ph * (yb - ya))};
+  MAP.X = X; MAP.Y = Y; MAP.m = m; MAP.W = W; MAP.H = H;
+  const niceTicks = (a, b, px) => {   // candidate values, keep those at least `px` apart on screen
+    const cand = [0, .5, 1, 2, 3, 5, 10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 500].flatMap(v => v ? [v, -v] : [0]).filter(v => v >= a && v <= b).sort((x, y) => Math.abs(x) - Math.abs(y));
+    if (!spread || cand.length < 3){ const span = b - a, st = [.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100].find(s => span / s <= px) || 100, out = []; for (let v = Math.ceil(a / st) * st; v <= b + 1e-9; v += st) out.push(+v.toFixed(2)); return out; }
+    return cand;
+  };
+  const pick = (vals, P, gap) => { const kept = []; for (const v of vals) if (kept.every(k => Math.abs(P(k) - P(v)) >= gap)) kept.push(v); return kept.sort((a, b) => a - b); };
+  const xt = pick(niceTicks(dom.x[0], dom.x[1], 8), X, 46), yt = pick(niceTicks(dom.y[0], dom.y[1], 6), Y, 30);
   const x0 = X(0), y0 = Y(0), fill = {A: 'var(--bull)', B: 'var(--accent)', C: '#6b6d75'};
-  const labelSet = new Set(rows.slice().sort((a, b) => b.qv - a.qv).slice(0, 14).map(r => r.sym).concat(rows.filter(r => r.setup && r.G && r.G.grade === 'A').map(r => r.sym)));
-  const dots = rows.slice().sort((a, b) => b.qv - a.qv).map(r => {
-    const x = r.rs[vs + '7'], y = r.rs[vs + '1'], cx = X(x), cy = Y(y), clip = Math.abs(x) > xM || Math.abs(y) > yM, R = rad(r);
-    const ring = r.setup ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(R + 2.5).toFixed(1)}" fill="none" stroke="${r.setup > 0 ? 'var(--bull)' : 'var(--bear)'}" stroke-width="1.6"/>` : '';
-    return `<g class="dot" data-sym="${r.sym}">${ring}<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${R.toFixed(1)}" fill="${r.G ? fill[r.G.grade] : '#3d3f47'}" fill-opacity="${r.G ? .85 : .55}" stroke="${clip ? '#bcacd4' : '#000'}" stroke-width="${clip ? 1.2 : .6}" ${clip ? 'stroke-dasharray="2 2"' : ''}/>${$('mapLabels').checked && labelSet.has(r.sym) ? `<text x="${(cx + R + 3).toFixed(1)}" y="${(cy + 3.5).toFixed(1)}" class="mlab">${r.sym.replace('USDT', '')}</text>` : ''}</g>`;
-  }).join('');
-  const qd = [['Improving', m.l + 8, m.t + 16, 'imp'], ['Leading', W - m.r - 8, m.t + 16, 'lead', 'end'], ['Lagging', m.l + 8, H - m.b - 8, 'lag'], ['Weakening', W - m.r - 8, H - m.b - 8, 'weak', 'end']];
-  box.innerHTML = `<svg class="mapsvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Market map: relative strength vs ${vs === 'b' ? 'BTC' : 'ETH'}">
-    <rect x="${x0}" y="${m.t}" width="${W - m.r - x0}" height="${y0 - m.t}" class="q lead"/><rect x="${m.l}" y="${m.t}" width="${x0 - m.l}" height="${y0 - m.t}" class="q imp"/>
-    <rect x="${m.l}" y="${y0}" width="${x0 - m.l}" height="${H - m.b - y0}" class="q lag"/><rect x="${x0}" y="${y0}" width="${W - m.r - x0}" height="${H - m.b - y0}" class="q weak"/>
-    ${ticks(xM, 6).map(v => `<line x1="${X(v)}" x2="${X(v)}" y1="${m.t}" y2="${H - m.b}" class="grid"/><text x="${X(v)}" y="${H - m.b + 15}" class="tick" text-anchor="middle">${v > 0 ? '+' : ''}${v}</text>`).join('')}
-    ${ticks(yM, 5).map(v => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" class="grid"/><text x="${m.l - 6}" y="${Y(v) + 3.5}" class="tick" text-anchor="end">${v > 0 ? '+' : ''}${v}</text>`).join('')}
-    <line x1="${x0}" x2="${x0}" y1="${m.t}" y2="${H - m.b}" class="axis0"/><line x1="${m.l}" x2="${W - m.r}" y1="${y0}" y2="${y0}" class="axis0"/>
-    ${qd.map(([t, x, y, k, a]) => `<text x="${x}" y="${y}" class="qlab ${k}" text-anchor="${a || 'start'}">${t}</text>`).join('')}
-    <text x="${(m.l + W - m.r) / 2}" y="${H - 6}" class="axt" text-anchor="middle">Relative strength vs ${vs === 'b' ? 'BTC' : 'ETH'}, 7 days (pp) →</text>
-    <text transform="translate(14 ${(m.t + H - m.b) / 2}) rotate(-90)" class="axt" text-anchor="middle">24h momentum (pp) →</text>
-    ${dots}</svg>`;
+  const maxV = Math.max(...rows.map(r => r.qv || 0)) || 1, rad = r => (r.G ? 4 : 3) + 11 * Math.sqrt((r.qv || 0) / maxV);
   const quad = r => { const x = r.rs[vs + '7'], y = r.rs[vs + '1']; return x >= 0 ? (y >= 0 ? 'lead' : 'weak') : (y >= 0 ? 'imp' : 'lag'); };
   const groups = {lead: [], imp: [], weak: [], lag: []}; for (const r of rows) groups[quad(r)].push(r);
+
+  // label placement: priority (A/B setups, outliers, volume), tried right/left/above/below, no overlaps
+  const P = rows.map(r => { const x = r.rs[vs + '7'], y = r.rs[vs + '1'];
+    const R = rad(r), px = Math.max(m.l + R + 2, Math.min(W - m.r - R - 2, X(x))), py = Math.max(m.t + R + 2, Math.min(H - m.b - R - 2, Y(y)));
+    return {r, x, y, px, py, R, clip: x < dom.x[0] || x > dom.x[1] || y < dom.y[0] || y > dom.y[1]}; });
+  if (MAP.zoom) for (let i = P.length - 1; i >= 0; i--) if (P[i].clip) P.splice(i, 1);   // zoomed: only what is inside the box
+  const prio = p => (p.r.setup && p.r.G && p.r.G.grade !== 'C' ? 1e13 : 0) + (p.clip && !MAP.zoom ? 5e12 : 0) + (p.r.G && p.r.G.grade === 'A' ? 1e12 : 0) + (p.r.qv || 0);
+  const placed = [[m.l + 10, m.t + 10], [W - m.r - 140, m.t + 10], [m.l + 10, H - m.b - 30], [W - m.r - 140, H - m.b - 30]].map(([x, y]) => ({x, y, w: 130, h: 20})), labels = new Map(), maxLab = MAP.zoom ? 60 : Math.round(W / 45);
+  if ($('mapLabels').checked) for (const p of P.slice().sort((a, b) => prio(b) - prio(a))){
+    if (labels.size >= maxLab) break;
+    const txt = p.r.sym.replace('USDT', '') + (p.clip ? ` ${ppf(p.x)}` : ''), w = txt.length * 6.4 + 4, h = 12;
+    const opts = [[p.px + p.R + 3, p.py - h / 2, 'start'], [p.px - p.R - 3 - w, p.py - h / 2, 'end'], [p.px - w / 2, p.py - p.R - h - 1, 'middle'], [p.px - w / 2, p.py + p.R + 1, 'middle']];
+    for (const [lx, ly, a] of opts){
+      if (lx < m.l + 2 || lx + w > W - m.r - 2 || ly < m.t + 2 || ly + h > H - m.b - 2) continue;
+      const box2 = {x: lx, y: ly, w, h};
+      if (placed.some(b => b.x < box2.x + box2.w && box2.x < b.x + b.w && b.y < box2.y + box2.h && box2.y < b.y + b.h)) continue;
+      if (P.some(o => o !== p && o.R > 3 && o.px + o.R * .7 > lx && o.px - o.R * .7 < lx + w && o.py + o.R * .7 > ly && o.py - o.R * .7 < ly + h)) continue;   // don't print over another dot
+      placed.push(box2);
+      labels.set(p.r.sym, {x: a === 'start' ? lx : a === 'end' ? lx + w : lx + w / 2, y: ly + 9.5, a, txt}); break;
+    }
+  }
+  const dots = P.slice().sort((a, b) => b.R - a.R).map(p => {
+    const {r, px, py, R, clip} = p, g = r.G ? r.G.grade : 'N', L = labels.get(r.sym);
+    const glow = r.setup && g === 'A' ? `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${(R + 7).toFixed(1)}" class="glow ${r.setup > 0 ? 'b' : 's'}"/>` : '';
+    const ring = r.setup ? `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${(R + 2.6).toFixed(1)}" fill="none" class="ring ${r.setup > 0 ? 'b' : 's'}"/>` : '';
+    return `<g class="dot g${g}" data-sym="${r.sym}" style="--d:${Math.min(600, Math.round((Math.abs(px - x0) + Math.abs(py - y0)) * .6))}ms">${glow}${ring}<circle class="core${clip ? ' clip' : ''}" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${R.toFixed(1)}" fill="${r.G ? fill[g] : '#454752'}"/>${L ? `<text x="${L.x.toFixed(1)}" y="${L.y.toFixed(1)}" text-anchor="${L.a}" class="mlab${r.setup ? ' set' : ''}">${L.txt}</text>` : ''}</g>`;
+  }).join('');
+  const inX = x0 > m.l && x0 < W - m.r, inY = y0 > m.t && y0 < H - m.b;
+  const qx0 = inX ? x0 : (dom.x[0] >= 0 ? m.l : W - m.r), qy0 = inY ? y0 : (dom.y[0] >= 0 ? H - m.b : m.t);
   const names = {lead: ['Leading', 'strong and still gaining'], imp: ['Improving', 'weak but turning up'], weak: ['Weakening', 'strong but fading'], lag: ['Lagging', 'weak and still losing']};
-  $('mapQuads').innerHTML = ['imp', 'lead', 'lag', 'weak'].map(k => `<div class="quad ${k}"><div class="qh"><b>${names[k][0]}</b> <span class="mu">${groups[k].length} · ${names[k][1]}</span></div>
-    ${groups[k].sort((a, b) => (!!b.setup - !!a.setup) || (b.qv - a.qv)).slice(0, 10).map(r => `<button class="qchip" data-open="${r.sym}">${r.sym.replace('USDT', '')}${r.G ? ` <span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'L' : 'S'}</span>` : ''}</button>`).join('') || '<span class="mu">none</span>'}</div>`).join('');
+  const pill = (k, x, y, a) => { const t = names[k][0].toUpperCase(), n = groups[k].length, w = t.length * 8.2 + String(n).length * 7 + 26, bx = a === 'end' ? x - w : x;
+    return `<g class="qpill ${k}"><rect x="${bx}" y="${y}" width="${w}" height="20" rx="10"/><text x="${bx + 10}" y="${y + 14}">${t} <tspan class="qn">${n}</tspan></text></g>`; };
+  const sym = vs === 'b' ? '₿' : 'Ξ';
+  box.innerHTML = `<svg class="mapsvg${MAP.anim && !RM() ? ' enter' : ''}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Market map: relative strength vs ${vs === 'b' ? 'BTC' : 'ETH'}">
+    <defs>
+      ${[['lead', '0', '1', '1', '0', '158,255,0'], ['imp', '1', '1', '0', '0', '89,160,216'], ['lag', '1', '0', '0', '1', '233,76,42'], ['weak', '0', '0', '1', '1', '255,122,10']].map(([k, a, b, c2, d, rgb]) =>
+        `<linearGradient id="qg-${k}" x1="${a}" y1="${b}" x2="${c2}" y2="${d}"><stop offset="0" stop-color="rgb(${rgb})" stop-opacity=".015"/><stop offset="1" stop-color="rgb(${rgb})" stop-opacity=".13"/></linearGradient>`).join('')}
+      <clipPath id="mapClip"><rect x="${m.l}" y="${m.t}" width="${pw}" height="${ph}" rx="8"/></clipPath>
+      <filter id="mapBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.5"/></filter>
+    </defs>
+    <rect x="${m.l}" y="${m.t}" width="${pw}" height="${ph}" rx="8" class="plotbg"/>
+    <g clip-path="url(#mapClip)">
+      <rect x="${qx0}" y="${m.t}" width="${Math.max(0, W - m.r - qx0)}" height="${Math.max(0, qy0 - m.t)}" fill="url(#qg-lead)"/>
+      <rect x="${m.l}" y="${m.t}" width="${Math.max(0, qx0 - m.l)}" height="${Math.max(0, qy0 - m.t)}" fill="url(#qg-imp)"/>
+      <rect x="${m.l}" y="${qy0}" width="${Math.max(0, qx0 - m.l)}" height="${Math.max(0, H - m.b - qy0)}" fill="url(#qg-lag)"/>
+      <rect x="${qx0}" y="${qy0}" width="${Math.max(0, W - m.r - qx0)}" height="${Math.max(0, H - m.b - qy0)}" fill="url(#qg-weak)"/>
+      ${xt.map(v => `<line x1="${X(v)}" x2="${X(v)}" y1="${m.t}" y2="${H - m.b}" class="grid"/>`).join('')}
+      ${yt.map(v => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" class="grid"/>`).join('')}
+      ${inX ? `<line x1="${x0}" x2="${x0}" y1="${m.t}" y2="${H - m.b}" class="axis0"/>` : ''}${inY ? `<line x1="${m.l}" x2="${W - m.r}" y1="${y0}" y2="${y0}" class="axis0"/>` : ''}
+      ${inX && inY ? `<g class="origin"><circle cx="${x0}" cy="${y0}" r="11"/><text x="${x0}" y="${y0 + 4}" text-anchor="middle">${sym}</text></g>` : ''}
+      <g class="dots">${dots}</g>
+      <g class="pills">${pill('imp', m.l + 10, m.t + 10)}${pill('lead', W - m.r - 10, m.t + 10, 'end')}${pill('lag', m.l + 10, H - m.b - 30)}${pill('weak', W - m.r - 10, H - m.b - 30, 'end')}</g>
+      <g id="mapGuide"></g>
+    </g>
+    <rect x="${m.l}" y="${m.t}" width="${pw}" height="${ph}" rx="8" class="plotframe"/>
+    ${xt.map(v => `<text x="${X(v)}" y="${H - m.b + 15}" class="tick" text-anchor="middle">${v > 0 ? '+' : ''}${v}</text>`).join('')}
+    ${yt.map(v => `<text x="${m.l - 7}" y="${Y(v) + 3.5}" class="tick" text-anchor="end">${v > 0 ? '+' : ''}${v}</text>`).join('')}
+    <text x="${m.l + pw / 2}" y="${H - 8}" class="axt" text-anchor="middle">← weaker · Relative strength vs ${vs === 'b' ? 'BTC' : 'ETH'}, 7 days (pp) · stronger →</text>
+    <text transform="translate(13 ${m.t + ph / 2}) rotate(-90)" class="axt" text-anchor="middle">← fading · 24h momentum (pp) · rising →</text>
+    <rect id="mapSel" class="mapsel" x="0" y="0" width="0" height="0" hidden/>
+  </svg>`;
+  MAP.anim = false;
+  const tot = rows.length || 1;
+  $('mapQuads').innerHTML = ['imp', 'lead', 'lag', 'weak'].map(k => { const g = groups[k], ns = g.filter(r => r.setup).length;
+    return `<div class="quad ${k}"><div class="qh"><b>${names[k][0]}</b> <span class="qcount">${g.length}</span> <span class="mu">${names[k][1]}${ns ? ` · ${ns} setup${ns > 1 ? 's' : ''}` : ''}</span>
+      <div class="qbar"><i style="width:${(100 * g.length / tot).toFixed(1)}%"></i></div></div>
+    ${g.sort((a, b) => (!!b.setup - !!a.setup) || ((b.G ? 'CBA'.indexOf(b.G.grade) : -1) - (a.G ? 'CBA'.indexOf(a.G.grade) : -1)) || (b.qv - a.qv)).slice(0, 10).map(r => `<button class="qchip" data-open="${r.sym}">${r.sym.replace('USDT', '')}${r.G ? ` <span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'L' : 'S'}</span>` : ''}</button>`).join('') || '<span class="mu">none</span>'}</div>`; }).join('');
   MAP.rows = new Map(rows.map(r => [r.sym, r]));
 }
 function mapTip(e){
-  const g = e.target.closest('.dot'), tip = $('mapTip');
-  if (!g){ tip.hidden = true; return; }
+  const g = e.target.closest('.dot'), tip = $('mapTip'), guide = document.getElementById('mapGuide');
+  if (!g){ tip.hidden = true; if (guide) guide.innerHTML = ''; return; }
   const r = MAP.rows.get(g.dataset.sym); if (!r) return;
-  const vs = MAP.vs;
-  tip.innerHTML = `<b>${r.sym.replace('USDT', '')}</b> ${fmtPrice(r.price)} <span class="${cls(r.chg)}">${fmtPct(r.chg)}</span><br>
-    RS 7d ${vs === 'b' ? '₿' : 'Ξ'} <b class="${cls(r.rs[vs + '7'])}">${ppf(r.rs[vs + '7'])} pp</b> · 24h <b class="${cls(r.rs[vs + '1'])}">${ppf(r.rs[vs + '1'])} pp</b><br>
-    ${r.G ? `Grade <b>${r.G.grade}</b> · ` : ''}Bull ${r.bull}/5 · Bear ${r.bear}/5${r.setup ? ` · <b class="${r.setup > 0 ? 'up' : 'dn'}">${r.setup > 0 ? 'LONG' : 'SHORT'} setup</b>` : ''}<br><span class="mu">Vol ${fmtBig(r.qv)} · click for trade plan</span>`;
+  const vs = MAP.vs, x = r.rs[vs + '7'], y = r.rs[vs + '1'];
+  if (guide){ const c0 = g.querySelector('.core'), px = +c0.getAttribute('cx'), py = +c0.getAttribute('cy'), m = MAP.m;
+    guide.innerHTML = `<line x1="${px}" x2="${px}" y1="${py}" y2="${MAP.H - m.b}" class="guide"/><line x1="${m.l}" x2="${px}" y1="${py}" y2="${py}" class="guide"/>
+      <rect x="${px - 24}" y="${MAP.H - m.b - 17}" width="48" height="15" rx="4" class="gpill"/><text x="${px}" y="${MAP.H - m.b - 6}" text-anchor="middle" class="gtxt">${ppf(x)}</text>
+      <rect x="${m.l + 2}" y="${py - 8}" width="44" height="15" rx="4" class="gpill"/><text x="${m.l + 24}" y="${py + 3}" text-anchor="middle" class="gtxt">${ppf(y)}</text>`; }
+  tip.innerHTML = `<div class="tth"><b>${r.sym.replace('USDT', '')}</b>${r.G ? ` <span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? ` <span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}<span class="mu" style="margin-left:auto">${fmtPrice(r.price)} <span class="${cls(r.chg)}">${fmtPct(r.chg)}</span></span></div>
+    <div class="ttg"><span class="mu">RS 7d ${vs === 'b' ? '₿' : 'Ξ'}</span><b class="${cls(x)}">${ppf(x)} pp</b><span class="mu">24h</span><b class="${cls(y)}">${ppf(y)} pp</b>
+    <span class="mu">Checks</span><b>${r.bull}▲ ${r.bear}▼</b><span class="mu">Vol</span><b>${fmtBig(r.qv)}</b></div><div class="mu" style="margin-top:4px">Click for the trade plan</div>`;
   const wrap = $('mapBox').getBoundingClientRect(); tip.hidden = false;
-  let x = e.clientX - wrap.left + 14, y = e.clientY - wrap.top + 14; if (x + 240 > wrap.width) x -= 260;
-  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  let tx = e.clientX - wrap.left + 16, ty = e.clientY - wrap.top + 16; if (tx + 250 > wrap.width) tx -= 270; if (ty + 120 > wrap.height) ty -= 130;
+  tip.style.left = tx + 'px'; tip.style.top = ty + 'px';
+}
+// drag a box on the map to zoom in; double-click or Reset zoom to go back
+function mapDrag(){
+  const box = $('mapBox'); let st = null;
+  const pt = e => { const s = box.querySelector('svg'), b = s.getBoundingClientRect(); return [(e.clientX - b.left) * MAP.W / b.width, (e.clientY - b.top) * MAP.H / b.height]; };
+  box.addEventListener('mousedown', e => { if (e.button || e.target.closest('.dot') || !MAP.inv) return; st = pt(e); e.preventDefault(); });
+  window.addEventListener('mousemove', e => { if (!st) return; const [x, y] = pt(e), r = document.getElementById('mapSel'); if (!r) return;
+    r.hidden = false; r.setAttribute('x', Math.min(st[0], x)); r.setAttribute('y', Math.min(st[1], y)); r.setAttribute('width', Math.abs(x - st[0])); r.setAttribute('height', Math.abs(y - st[1])); });
+  window.addEventListener('mouseup', e => { if (!st) return; const [x, y] = pt(e), a = st; st = null;
+    if (Math.abs(x - a[0]) < 12 || Math.abs(y - a[1]) < 12){ const r = document.getElementById('mapSel'); if (r) r.hidden = true; return; }
+    const xs = [MAP.inv.x(a[0]), MAP.inv.x(x)].sort((p, q) => p - q), ys = [MAP.inv.y(a[1]), MAP.inv.y(y)].sort((p, q) => p - q);
+    MAP.zoom = {x: xs, y: ys}; MAP.anim = true; renderMap(); });
+  box.addEventListener('dblclick', () => { if (MAP.zoom){ MAP.zoom = null; MAP.anim = true; renderMap(); } });
 }
 
 /* ---------- Sector heatmap (squarified treemap) ---------- */
@@ -2259,9 +2367,12 @@ loadAcct();
 $('tbody').onclick = e => { const sb = e.target.closest('[data-star]'); if (sb){ toggleStar(sb.dataset.star); return; } if (e.target.closest('a')) return; const tr = e.target.closest('tr[data-sym]'); if (tr) openDrawer(tr.dataset.sym); };
 $('scrim').onclick = closeDrawer; $('dClose').onclick = closeDrawer;
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && D.sym) closeDrawer(); });
-$('mapVs').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAP.vs = b.dataset.v; [...$('mapVs').children].forEach(x => x.classList.toggle('on', x === b)); renderMap(); };
-$('mapShow').onchange = renderMap; $('mapLabels').onchange = renderMap;
-$('mapBox').addEventListener('mousemove', mapTip); $('mapBox').addEventListener('mouseleave', () => $('mapTip').hidden = true);
+$('mapVs').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAP.vs = b.dataset.v; MAP.zoom = null; MAP.anim = true; [...$('mapVs').children].forEach(x => x.classList.toggle('on', x === b)); renderMap(); };
+$('mapShow').onchange = () => { MAP.anim = true; renderMap(); }; $('mapLabels').onchange = renderMap;
+$('mapScale').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAP.scale = b.dataset.v; MAP.zoom = null; MAP.anim = true; [...$('mapScale').children].forEach(x => x.classList.toggle('on', x === b)); renderMap(); };
+$('mapReset').onclick = () => { MAP.zoom = null; MAP.anim = true; renderMap(); };
+mapDrag();
+$('mapBox').addEventListener('mousemove', mapTip); $('mapBox').addEventListener('mouseleave', () => { $('mapTip').hidden = true; const g = document.getElementById('mapGuide'); if (g) g.innerHTML = ''; });
 $('mapBox').addEventListener('click', e => { const g = e.target.closest('.dot'); if (g) openDrawer(g.dataset.sym); });
 let rsT = 0; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(() => { if (S.view === 'map') renderMap(); if (S.view === 'sectors') renderSecHeat(); }, 150); });
 $('secMode').onclick = e => { const b = e.target.closest('button'); if (!b) return; const heat = b.dataset.v === 'heat';
