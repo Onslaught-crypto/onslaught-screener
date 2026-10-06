@@ -59,6 +59,66 @@ button:disabled{opacity:.5;cursor:default}
 .stat{cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
 .stat:hover{border-color:var(--accent);transform:translateY(-1px)}
 .stat.active{background:rgba(138,82,156,.20);border-color:var(--accent-lt);box-shadow:0 0 0 1px var(--accent-lt) inset}
+.regime{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--dim);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.regime.on{border-left-color:var(--bull)} .regime.off{border-left-color:var(--bear)} .regime.mixed{border-left-color:var(--warn)}
+.regime .verdict{font:800 13px system-ui;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:5px;background:var(--panel2)}
+.regime.on .verdict{background:var(--bull);color:#000} .regime.off .verdict{background:var(--bear);color:#fff} .regime.mixed .verdict{background:var(--warn);color:#000}
+.regime .chip{font-size:12px;color:var(--muted);background:var(--panel2);border-radius:5px;padding:4px 9px;white-space:nowrap}
+.regime .chip b{font-family:var(--mono);color:var(--text);font-weight:600}
+.regime .note{font-size:12px;color:var(--accent-lt);flex-basis:100%}
+.regime:empty{display:none}
+.pos{font:600 11px system-ui;border-radius:4px;padding:2px 6px;white-space:nowrap}
+.pos.longs{background:var(--bull-bg);color:var(--bull)} .pos.shorts{background:var(--bear-bg);color:var(--bear)}
+.pos.cover{background:rgba(255,122,10,.14);color:var(--warn)} .pos.liq{background:rgba(245,158,92,.12);color:#f59e5c}
+.pos.flat{color:var(--muted)}
+.fhot{color:var(--warn);font-weight:600} .fneg{color:var(--info)}
+.score.against{outline:1px dashed var(--warn);outline-offset:1px}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:min(600px,100vw);background:var(--panel);border-left:2px solid var(--accent-dk);box-shadow:-12px 0 40px rgba(0,0,0,.6);transform:translateX(100%);transition:transform .22s ease;overflow-y:auto;z-index:50;padding:16px}
+.drawer.open{transform:none}
+body.noscroll{overflow:hidden}
+.dhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
+.dtitle{font:800 20px system-ui;letter-spacing:.5px}
+.dsub{font-size:12px;color:var(--muted);margin-top:2px}
+.dact{display:flex;gap:8px;align-items:center}
+.dact a{font-size:12px;color:var(--accent-lt);text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.dchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.dchips .chip{font-size:11.5px;background:var(--panel2);border-radius:5px;padding:3px 8px;color:var(--muted)}
+.dchips .chip b{color:var(--text);font-family:var(--mono)}
+.dchart{height:320px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.dload{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;text-align:center;padding:20px}
+.dlegend{display:flex;gap:14px;font-size:11px;color:var(--muted);margin:6px 2px 4px}
+.dlegend i{display:inline-block;width:12px;height:2px;margin-right:5px;vertical-align:3px}
+.dsec{border-top:1px solid var(--line);padding:12px 0}
+.ptable{width:100%;min-width:0;border-collapse:collapse}
+.ptable td,.ptable th{padding:6px 8px;border-bottom:1px solid var(--line);font-size:13px}
+.ptable th{position:static;cursor:default;background:none}
+.ptable tr.sl td:first-child{color:var(--bear);font-weight:600} .ptable tr.tp td:first-child{color:var(--bull);font-weight:600} .ptable tr.en td:first-child{color:var(--accent-lt);font-weight:600}
+.dsize{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.dsize div{background:var(--panel2);border-radius:6px;padding:8px}
+.dsize .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.dsize .v{font:600 15px var(--mono);margin-top:2px}
+.dwarn{list-style:none;margin:0;padding:0}
+.dwarn li{font-size:12.5px;padding:6px 10px;border-radius:6px;margin-bottom:6px;background:rgba(255,122,10,.10);color:var(--warn)}
+.dwarn li.ok{background:var(--bull-bg);color:var(--bull)}
+.dwarn li.bad{background:var(--bear-bg);color:var(--bear)}
+.dnote{font-size:11.5px;color:var(--muted);margin:8px 0 0}
+td.pair .tvl{margin-left:6px;color:var(--muted);text-decoration:none;font-size:12px}
+td.pair .tvl:hover{color:var(--accent-lt)}
+#tbody tr[data-sym]{cursor:pointer}
+#tbody tr.sel{background:rgba(138,82,156,.22)}
+@media (max-width:640px){.dsize{grid-template-columns:repeat(2,1fr)}.dchart{height:260px}}
+.mtf{display:inline-flex;gap:2px}
+.mtf i{font:600 10px var(--mono);font-style:normal;padding:2px 4px;border-radius:3px;background:var(--panel2);color:var(--muted)}
+.mtf i.b{background:var(--bull-bg);color:var(--bull)} .mtf i.s{background:var(--bear-bg);color:var(--bear)}
+td.trigs{white-space:nowrap}
+.tg{display:inline-block;font:600 10.5px var(--mono);padding:2px 5px;border-radius:3px;margin-right:3px;background:var(--panel2);color:var(--muted)}
+.tg.b{background:var(--bull-bg);color:var(--bull)} .tg.s{background:var(--bear-bg);color:var(--bear)} .tg.n{color:var(--accent-lt)}
+.tg sub{font-size:8.5px;opacity:.7;margin-left:1px}
+.setup{display:inline-block;font:800 10px system-ui;letter-spacing:.6px;padding:2px 6px;border-radius:3px;margin-right:5px}
+.setup.b{background:var(--bull);color:#000} .setup.s{background:var(--bear);color:#fff}
+.stat.trigcard{border-top-color:var(--accent-lt)}
 .pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .pager .pinfo{color:var(--muted);font-size:12px;margin-right:auto}
 .pager button{font-family:var(--mono);font-size:12px;padding:5px 10px}
@@ -128,6 +188,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <select id="oiN"><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles
       </label>
       <label><input id="closed" type="checkbox" checked> Closed candles only</label>
+      <label title="Also fetch 1D, 4H and 1H candles for the multi-timeframe column (more requests, cached)"><input id="mtfOn" type="checkbox" checked> MTF</label>
     </div>
     <div class="row">
       <div class="seg" id="showSeg">
@@ -140,6 +201,9 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <label>OBV&gt;EMA50 <select class="mf" data-k="obv"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
       <label>OI rising <select class="mf" data-k="oi"><option value="">Any</option><option value="1">Yes</option><option value="0">No</option></select></label>
       <label><input id="newOnly" type="checkbox"> New only</label>
+      <label>Trigger <select id="trigF"><option value="">Any</option><option value="b">Bull</option><option value="s">Bear</option><option value="none">None</option></select></label>
+      <label>within <select id="trigN"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles</label>
+      <label>MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
       <button id="clearBtn">Clear filters</button>
       <span class="sep"></span>
       <input id="search" type="search" placeholder="Search pair…" style="width:130px">
@@ -150,19 +214,22 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <div class="progress"><div id="prog"></div></div>
 
+  <div class="regime" id="regime"></div>
+
   <div class="stats" id="stats">
     <div class="stat" data-f="all" title="Show all (clear filters)"><div class="k">Pairs scanned</div><div class="v" id="sScanned">0</div><div class="s" id="sOf">of 0 perpetuals</div></div>
     <div class="stat bull" data-f="bull" title="Filter: bullish aligned"><div class="k">Bullish aligned</div><div class="v" id="sBull">0</div><div class="s">4–5 of 5 bull checks</div></div>
     <div class="stat bear" data-f="bear" title="Filter: bearish aligned"><div class="k">Bearish aligned</div><div class="v" id="sBear">0</div><div class="s">4–5 of 5 bear checks</div></div>
     <div class="stat" data-f="new" title="Filter: new alignments"><div class="k">New alignments</div><div class="v" id="sNew">0</div><div class="s">aligned on the latest candle</div></div>
     <div class="stat" data-f="oi" title="Filter: OI rising"><div class="k">OI rising</div><div class="v" id="sOi">0</div><div class="s" id="sOiS">threshold met</div></div>
+    <div class="stat trigcard" data-f="setup" title="Filter: aligned and triggered"><div class="k">Triggered setups</div><div class="v" id="sSetup">0</div><div class="s" id="sSetupS">aligned + trigger in last 3</div></div>
     <div class="stat" data-f="inc" title="Filter: incomplete data"><div class="k">Incomplete</div><div class="v" id="sInc">0</div><div class="s">missing data / new listing</div></div>
   </div>
 
   <div class="tablewrap">
     <table>
       <thead><tr id="thead"></tr></thead>
-      <tbody id="tbody"><tr><td class="empty" colspan="16">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
+      <tbody id="tbody"><tr><td class="empty" colspan="20">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
     </table>
   </div>
   <div class="pager" id="pager"></div>
@@ -175,9 +242,15 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <li><b>RSI &gt; EMA</b>: RSI(14) above its own EMA means momentum is improving. <b>RSI &gt; 50</b>: momentum regime.</li>
         <li><b>OBV &gt; EMA50</b>: volume flow is confirming price.</li>
         <li><b>OI rising</b>: open interest grew by at least the threshold over N candles. New positions are fuelling the move, so it counts toward <i>both</i> the bull and the bear score.</li>
+        <li><b>MTF</b>: trend direction on 1D, 4H and 1H (3+ of the 4 TA checks). All three agreeing with an aligned setup adds to its rank.</li>
+        <li><b>Triggers</b> are events in the last N candles (subscript = candles ago): DMI cross (ADX ≥ threshold − 5), RSI crossing 50, RSI crossing its EMA, OBV crossing its EMA, squeeze fired (Bollinger 20/2 leaving Keltner 20/1.5 ATR), Coil (squeeze still on), RVOL (volume ≥ 2× the 20-bar average), and regular or hidden RSI divergences from 3-bar pivots. Green = bullish, red = bearish.</li>
+        <li><b>LONG / SHORT badge</b> = a triggered setup: 4–5/5 aligned plus a trigger in the same direction. These rank first and have their own stat card.</li>
+        <li><b>Positioning</b> compares price and OI change over the same N candles: <b>New longs</b> (price ↑ OI ↑), <b>New shorts</b> (price ↓ OI ↑), <b>Short covering</b> (price ↑ OI ↓, a squeeze that often fades once covering ends), <b>Long liquidation</b> (price ↓ OI ↓). Moves under 0.5% count as flat.</li>
+        <li><b>Funding</b>: the last funding rate. 🔥 marks extremes: at or above the hot threshold longs are crowded, at or below the cold threshold shorts are crowded. Crowded sides are fuel for squeezes against them.</li>
+        <li><b>Regime bar</b>: BTC trend on 4H and 1D (3+ of the 4 TA checks), breadth across the scanned pairs, and median funding and OI. Aligned setups against the regime get a dashed outline on their score.</li>
         <li><b>Ext (ATR)</b>: how far the close is from EMA20, measured in ATRs. Above +3 or below −3 (⚠) means the move is stretched. The trend may be real, but entries there have poor risk/reward, so wait for a pullback.</li>
         <li><b>Aligned</b> = 4 or 5 of 5 checks in one direction. <b>NEW</b> = alignment appeared on the latest candle (it wasn't aligned on the one before).</li>
-        <li>Hover any check to see the raw values. Click a pair to open its TradingView chart.</li>
+        <li>Hover any check to see the raw values. Click a row to open its trade plan (chart, entry, stop, targets, sizing). The ↗ next to a pair opens TradingView.</li>
       </ul>
       <div class="row">
         <label>RSI length <input id="rsiLen" type="number" min="2" value="14"></label>
@@ -185,6 +258,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label>DMI length <input id="dmiLen" type="number" min="2" value="14"></label>
         <label>ADX threshold <input id="adxThr" type="number" min="0" value="20"></label>
         <label>OBV EMA <input id="obvLen" type="number" min="2" value="50"></label>
+        <label>Funding hot ≥ <input id="fundHot" type="number" step="0.005" value="0.05">%</label>
+        <label>Funding cold ≤ <input id="fundCold" type="number" step="0.005" value="-0.03">%</label>
         <button id="resetCache">Clear cache</button>
       </div>
       <p>Indicator lengths and ADX threshold apply on the next scan. Filters, OI threshold and N apply instantly.</p>
@@ -193,6 +268,41 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <footer>Data: <code>fapi.binance.com</code> klines (cached in your browser, topped up incrementally) · OI from <code>openInterestHist</code> · market cap from CoinGecko. Requests come from your own browser, no keys or backend. Not financial advice. Confirm on the chart.</footer>
 </div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Trade plan" aria-hidden="true">
+  <div class="dhead">
+    <div><div class="dtitle" id="dTitle"></div><div class="dsub" id="dSub"></div></div>
+    <div class="dact"><a id="dTv" target="_blank" rel="noopener">TradingView ↗</a><button id="dClose" aria-label="Close trade plan">✕</button></div>
+  </div>
+  <div class="dchips" id="dChips"></div>
+  <div class="dchart" id="dChart"></div>
+  <div class="dlegend"><span><i style="background:var(--accent-lt)"></i>EMA20</span><span><i style="background:var(--info)"></i>EMA50</span><span><i style="background:var(--bull)"></i>Targets</span><span><i style="background:var(--bear)"></i>Stop</span></div>
+  <div class="dsec">
+    <div class="row">
+      <div class="seg" id="dDir"><button data-v="1">Long</button><button data-v="-1">Short</button></div>
+      <label>Stop <select id="pSlMode"><option value="swing">Swing</option><option value="atr">ATR</option></select></label>
+      <label>ATR × <input id="pAtr" type="number" step="0.25" min="0.5" value="1.5"></label>
+    </div>
+    <div class="row">
+      <label>Entry <input id="pEntry" type="number" step="any" style="width:120px"></label>
+      <button id="pEntryLast" title="Use the last close">Last close</button>
+      <button id="pEntryEma" title="Limit entry at EMA20 (pullback)">EMA20 pullback</button>
+    </div>
+  </div>
+  <div class="dsec" id="dPlan"></div>
+  <div class="dsec">
+    <div class="row">
+      <label>Account $ <input id="pAcct" type="number" min="0" value="1000" style="width:96px"></label>
+      <label>Risk % <input id="pRisk" type="number" step="0.25" min="0" value="1"></label>
+      <label>Leverage × <input id="pLev" type="number" min="1" value="5"></label>
+    </div>
+    <div class="dsize" id="dSize"></div>
+  </div>
+  <div class="dsec"><ul class="dwarn" id="dWarn"></ul></div>
+  <div class="dsec row"><button id="dCopy" class="primary">Copy plan</button><span class="mu" id="dCopied" style="font-size:12px"></span></div>
+  <p class="dnote">Levels come from closed candles on the selected timeframe. Swing stop = nearest swing low/high beyond entry ± 0.25 ATR. Targets = nearest swing levels and 1.272 / 1.618 extensions of the last impulse, with R-multiples as fallback. A starting point for your own chart read, not advice.</p>
+</aside>
 
 <script>
 // ==ENGINE START==
@@ -269,6 +379,55 @@ function taAt(ind, i, cfg){
   const bull = Object.values(s).filter(x => x === 1).length, bear = Object.values(s).filter(x => x === -1).length;
   return {s, bull, bear, vals};
 }
+/* ---------- Triggers ---------- */
+function sma(src, p){ const out = new Array(src.length).fill(NaN); let s = 0;
+  for (let i = 0; i < src.length; i++){ s += src[i]; if (i >= p) s -= src[i - p]; if (i >= p - 1) out[i] = s / p; } return out; }
+function stdev(src, p){ const m = sma(src, p), out = new Array(src.length).fill(NaN);
+  for (let i = p - 1; i < src.length; i++){ let q = 0; for (let j = i - p + 1; j <= i; j++) q += (src[j] - m[i]) ** 2; out[i] = Math.sqrt(q / p); } return out; }
+/* most recent cross of a over b within the last `back` bars → {dir, ago} */
+function crossAgo(a, b, L, back, gate){
+  for (let j = 0; j < back && L - j - 1 >= 0; j++){
+    const i = L - j, now = sgn(a[i], b[i]), was = sgn(a[i-1], b[i-1]);
+    if (![a[i], b[i], a[i-1], b[i-1]].every(Number.isFinite)) return null;
+    if (now !== 0 && now !== was && (!gate || gate(i))) return {dir: now, ago: j};
+  }
+  return null;
+}
+const TRIG_BACK = 10;
+function triggers(cd, ind, cfg){
+  const o = cd.map(k => k[1]), h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), v = cd.map(k => k[5]), L = c.length - 1, out = [];
+  const {r, re, d, o: ob, oe} = ind, fifty = c.map(() => 50);
+  const push = (t, x, name) => { if (x) out.push({t, dir: x.dir, ago: x.ago, name}); };
+  push('dmi', crossAgo(d.pdi, d.mdi, L, TRIG_BACK, i => d.adx[i] >= cfg.adxThr - 5), 'DMI cross');
+  push('rsi50', crossAgo(r, fifty, L, TRIG_BACK), 'RSI 50 cross');
+  push('rsiema', crossAgo(r, re, L, TRIG_BACK), 'RSI/EMA cross');
+  push('obv', crossAgo(ob, oe, L, TRIG_BACK), 'OBV/EMA cross');
+  // Squeeze: Bollinger(20,2) inside Keltner(EMA20 ± 1.5 ATR20). Fire = squeeze ends.
+  const m = sma(c, 20), sd = stdev(c, 20), e = ema(c, 20), a20 = atr(h, l, c, 20);
+  const sq = i => Number.isFinite(sd[i]) && Number.isFinite(a20[i]) && m[i] + 2 * sd[i] < e[i] + 1.5 * a20[i] && m[i] - 2 * sd[i] > e[i] - 1.5 * a20[i];
+  let fired = null;
+  for (let j = 0; j < TRIG_BACK && L - j - 1 >= 0; j++){ const i = L - j; if (sq(i - 1) && !sq(i)){ fired = {dir: sgn(c[i], m[i]) || 1, ago: j}; break; } }
+  if (fired) push('sqz', fired, 'Squeeze fired');
+  else if (sq(L)){ let n = 0; while (n < 200 && L - n >= 0 && sq(L - n)) n++; out.push({t: 'coil', dir: 0, ago: 0, name: `Squeeze on (${n} bars)`}); }
+  // Relative volume: candle volume ≥ 2× the prior 20-bar average
+  for (let j = 0; j < TRIG_BACK && L - j - 20 >= 0; j++){
+    const i = L - j; let s = 0; for (let q = i - 20; q < i; q++) s += v[q];
+    const rv = s > 0 ? v[i] / (s / 20) : 0;
+    if (rv >= 2){ out.push({t: 'rvol', dir: sgn(c[i], o[i]), ago: j, name: `Volume ×${rv.toFixed(1)}`}); break; }
+  }
+  // RSI divergences from 3-bar pivots (confirmed 3 bars after the pivot)
+  const pv = pivots(h, l, 3), recent = p => L - p - 3 < TRIG_BACK, okGap = (a, b) => b - a >= 5 && b - a <= 60;
+  const [l1, l2] = pv.lo.slice(-2), [h1, h2] = pv.hi.slice(-2);
+  if (l2 != null && l1 != null && recent(l2) && okGap(l1, l2) && Number.isFinite(r[l1])){
+    if (l[l2] < l[l1] && r[l2] > r[l1]) out.push({t: 'div', dir: 1, ago: L - l2 - 3, name: 'Bullish divergence'});
+    else if (l[l2] > l[l1] && r[l2] < r[l1]) out.push({t: 'hdiv', dir: 1, ago: L - l2 - 3, name: 'Hidden bull divergence'});
+  }
+  if (h2 != null && h1 != null && recent(h2) && okGap(h1, h2) && Number.isFinite(r[h1])){
+    if (h[h2] > h[h1] && r[h2] < r[h1]) out.push({t: 'div', dir: -1, ago: L - h2 - 3, name: 'Bearish divergence'});
+    else if (h[h2] < h[h1] && r[h2] > r[h1]) out.push({t: 'hdiv', dir: -1, ago: L - h2 - 3, name: 'Hidden bear divergence'});
+  }
+  return out.sort((x, y) => x.ago - y.ago);
+}
 function evaluate(candles, cfg){
   const minBars = Math.max(cfg.obvLen, 2 * cfg.dmiLen, cfg.rsiLen + cfg.rsiEmaLen) + 20;
   if (candles.length < minBars) return {incomplete: true};
@@ -280,18 +439,103 @@ function evaluate(candles, cfg){
   // Extension: distance of close from EMA20, in ATR(14) units. |ext| >= 3 = stretched, chasing risk.
   const e20 = ema(c, 20), at = atr(h, l, c, 14);
   const ext = Number.isFinite(e20[L]) && at[L] > 0 ? (c[L] - e20[L]) / at[L] : null;
-  return {incomplete: false, ...now, ext, prevBull: prev ? prev.bull : 0, prevBear: prev ? prev.bear : 0, lastClose: c[L], lastTime: candles[L][0]};
+  const trig = cfg.noTrig ? [] : triggers(candles, ind, cfg);
+  return {incomplete: false, ...now, ext, trig, prevBull: prev ? prev.bull : 0, prevBear: prev ? prev.bear : 0, lastClose: c[L], lastTime: candles[L][0], tail: c.slice(-12)};
 }
+/* OI/price quadrant. dz = dead zone in % (moves smaller than this count as flat). */
+function positioning(pD, oD, dz = 0.5){
+  if (pD == null || oD == null) return null;
+  const p = pD >= dz ? 1 : pD <= -dz ? -1 : 0, o = oD >= dz ? 1 : oD <= -dz ? -1 : 0;
+  if (p > 0 && o > 0) return 'longs';     // new longs opening
+  if (p < 0 && o > 0) return 'shorts';    // new shorts opening
+  if (p > 0 && o < 0) return 'cover';     // short covering / squeeze
+  if (p < 0 && o < 0) return 'liq';       // long liquidation / de-risking
+  return 'flat';
+}
+function median(a){ const v = a.filter(Number.isFinite).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m-1] + v[m]) / 2; }
 function oiDelta(oiArr, n){
   if (!oiArr || oiArr.length < n + 1) return null;
   const a = oiArr[oiArr.length - 1 - n], b = oiArr[oiArr.length - 1];
   return a > 0 ? (b / a - 1) * 100 : null;
 }
+
+/* ---------- Trade plan ---------- */
+function pivots(h, l, k = 3){
+  const hi = [], lo = [];
+  for (let i = k; i < h.length - k; i++){
+    let isH = true, isL = true;
+    for (let j = i - k; j <= i + k; j++){
+      if (j === i) continue;
+      if (j < i ? h[j] >= h[i] : h[j] > h[i]) isH = false;   // ties: the first bar of an equal pair is the pivot
+      if (j < i ? l[j] <= l[i] : l[j] < l[i]) isL = false;
+    }
+    if (isH) hi.push(i); if (isL) lo.push(i);
+  }
+  return {hi, lo};
+}
+/* dir: 1 long / -1 short. o: {slMode:'swing'|'atr', atrMult, entry|null} */
+function tradePlan(candles, dir, o){
+  const h = candles.map(k => k[2]), l = candles.map(k => k[3]), c = candles.map(k => k[4]), L = c.length - 1;
+  const A = atr(h, l, c, 14)[L], e20 = ema(c, 20)[L];
+  const entry = Number.isFinite(o.entry) && o.entry > 0 ? o.entry : c[L];
+  const piv = pivots(h, l, 3), from = Math.max(0, L - 150);
+  const hiIdx = piv.hi.filter(i => i >= from), loIdx = piv.lo.filter(i => i >= from);
+  let sl, slNote;
+  if (dir > 0){
+    const sw = loIdx.map(i => l[i]).filter(x => x < entry - 0.2 * A);
+    if (o.slMode === 'swing' && sw.length){ sl = Math.max(...sw) - 0.25 * A; slNote = 'below swing low'; }
+    else { sl = entry - o.atrMult * A; slNote = `${o.atrMult}× ATR`; }
+  } else {
+    const sw = hiIdx.map(i => h[i]).filter(x => x > entry + 0.2 * A);
+    if (o.slMode === 'swing' && sw.length){ sl = Math.min(...sw) + 0.25 * A; slNote = 'above swing high'; }
+    else { sl = entry + o.atrMult * A; slNote = `${o.atrMult}× ATR`; }
+  }
+  const R = Math.abs(entry - sl);
+  // impulse for fib extensions
+  const win = Math.max(0, L - 100);
+  let fibs = [];
+  if (dir > 0){
+    let iH = win; for (let i = win; i <= L; i++) if (h[i] > h[iH]) iH = i;
+    let iL = Math.max(0, iH - 100); for (let i = iL; i <= iH; i++) if (l[i] < l[iL]) iL = i;
+    const rg = h[iH] - l[iL];
+    if (rg > 0) fibs = [[l[iL] + 1.272 * rg, 'Fib 1.272'], [l[iL] + 1.618 * rg, 'Fib 1.618']];
+  } else {
+    let iL = win; for (let i = win; i <= L; i++) if (l[i] < l[iL]) iL = i;
+    let iH = Math.max(0, iL - 100); for (let i = iH; i <= iL; i++) if (h[i] > h[iH]) iH = i;
+    const rg = h[iH] - l[iL];
+    if (rg > 0) fibs = [[h[iH] - 1.272 * rg, 'Fib 1.272'], [h[iH] - 1.618 * rg, 'Fib 1.618']];
+  }
+  const struct = (dir > 0 ? hiIdx.map(i => [h[i], 'Swing high']) : loIdx.map(i => [l[i], 'Swing low']));
+  const dist = p => (p - entry) * dir;
+  const cands = struct.concat(fibs).filter(([p]) => p > 0 && dist(p) > 0).sort((a, b) => dist(a[0]) - dist(b[0]));
+  const tps = []; let floor = 0.8 * R;
+  const fallbackR = [1.5, 2.5, 4];
+  for (let n = 0; n < 3; n++){
+    const hit = cands.find(([p]) => dist(p) >= floor);
+    let price, label;
+    if (hit){ [price, label] = hit; }
+    else { const m = Math.max(fallbackR[n], (tps.length ? tps.at(-1).r : 0) + 1); price = entry + dir * m * R; label = `${m}R`; }
+    if (dir < 0 && price <= 0) break;
+    const r = dist(price) / R;
+    tps.push({price, label, r});
+    floor = dist(price) + 0.5 * R;
+  }
+  return {entry, sl, slNote, atr: A, ema20: e20, R, tps, dir};
+}
+function sizing(acct, riskPct, lev, entry, sl){
+  const riskUsd = acct * riskPct / 100, d = Math.abs(entry - sl);
+  if (!(riskUsd > 0) || !(d > 0) || !(lev > 0)) return null;
+  const qty = riskUsd / d, notional = qty * entry, margin = notional / lev, slPct = d / entry * 100;
+  return {riskUsd, qty, notional, margin, slPct, liqWarn: slPct >= 90 / lev, marginWarn: margin > acct};
+}
+/* Higher-level trend direction on one timeframe: 3+ of the 4 TA checks */
+function tfDir(candles, cfg){ const e = evaluate(candles, {...cfg, noTrig: true}); return e.incomplete ? null : e.bull >= 3 ? 1 : e.bear >= 3 ? -1 : 0; }
 // ==ENGINE END==
 
 /* ---------- Config & constants ---------- */
 const FAPI = 'https://fapi.binance.com';
 const TFS = ['5m','15m','1h','4h','1d'];
+const MTF_TFS = ['1d','4h','1h'];
 const TF_MS = {'5m':3e5,'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5};
 const KLIMIT = 300;           // weight 2 per full request
 const CONCURRENCY = 8;
@@ -385,11 +629,15 @@ async function getUniverse(){
     const info = await getJSON(FAPI + '/fapi/v1/exchangeInfo', WEIGHT, 1);
     infoCache = {t: Date.now(), syms: info.symbols.filter(s => s.contractType === 'PERPETUAL' && s.quoteAsset === 'USDT' && s.status === 'TRADING').map(s => s.symbol)};
   }
-  const tick = await getJSON(FAPI + '/fapi/v1/ticker/24hr', WEIGHT, 40);
+  const [tick, prem] = await Promise.all([
+    getJSON(FAPI + '/fapi/v1/ticker/24hr', WEIGHT, 40),
+    getJSON(FAPI + '/fapi/v1/premiumIndex', WEIGHT, 10).catch(() => [])
+  ]);
   const tmap = new Map(tick.map(t => [t.symbol, t]));
+  const fmap = new Map(prem.map(x => [x.symbol, x.lastFundingRate === '' ? null : +x.lastFundingRate * 100]));
   return infoCache.syms.filter(s => tmap.has(s)).map(s => {
     const t = tmap.get(s);
-    return {sym: s, base: baseOf(s), price: +t.lastPrice, chg: +t.priceChangePercent, qv: +t.quoteVolume};
+    return {sym: s, base: baseOf(s), price: +t.lastPrice, chg: +t.priceChangePercent, qv: +t.quoteVolume, fund: fmap.get(s) ?? null};
   }).sort((a, b) => b.qv - a.qv);
 }
 
@@ -450,26 +698,27 @@ async function getOI(sym, tf){
 
 /* ---------- UI state ---------- */
 const $ = id => document.getElementById(id);
-const S = {tf: '4h', show: 'all', sort: {k: 'score', dir: -1}, rows: [], total: 0, scanning: false, timer: null, mf: {}, page: 0, sig: '', incOnly: false};
+const S = {tf: '4h', show: 'all', sort: {k: 'score', dir: -1}, rows: [], total: 0, scanning: false, timer: null, mf: {}, page: 0, sig: '', incOnly: false, setupOnly: false};
 const store = {
   get(){ try { return JSON.parse(localStorage.getItem('onslaught-tc') || '{}'); } catch { return {}; } },
   set(o){ try { localStorage.setItem('onslaught-tc', JSON.stringify(o)); } catch {} }
 };
 function cfg(){
   const n = (id, d) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : d; };
-  return {rsiLen: n('rsiLen',14), rsiEmaLen: n('rsiEmaLen',14), dmiLen: n('dmiLen',14), adxThr: n('adxThr',20), obvLen: n('obvLen',50),
+  return {rsiLen: n('rsiLen',14), rsiEmaLen: n('rsiEmaLen',14), dmiLen: n('dmiLen',14), adxThr: n('adxThr',20), obvLen: n('obvLen',50), fundHot: n('fundHot',0.05), fundCold: n('fundCold',-0.03), trigN: +$('trigN').value || 3,
           oiThr: n('oiThr',1), oiN: +$('oiN').value, closed: $('closed').checked};
 }
 function saveSettings(){
   const o = {tf: S.tf, auto: $('auto').value, universe: $('universe').value, mcap: $('mcap').value, oiThr: $('oiThr').value, oiN: $('oiN').value,
-    closed: $('closed').checked, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value};
+    closed: $('closed').checked, mtfOn: $('mtfOn').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value};
   store.set(o);
 }
 function loadSettings(){
   const o = store.get();
   if (o.tf && TFS.includes(o.tf)) S.tf = o.tf;
-  for (const k of ['pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) if (o[k] != null) $(k).value = o[k];
+  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold']) if (o[k] != null) $(k).value = o[k];
   if (o.closed != null) $('closed').checked = o.closed;
+  if (o.mtfOn != null) $('mtfOn').checked = o.mtfOn;
 }
 function setStatus(kind, text){ $('dot').className = 'dot ' + (kind || ''); $('statusText').textContent = text; }
 function showErr(msg){ const e = $('err'); e.textContent = msg || ''; e.style.display = msg ? 'block' : 'none'; }
@@ -488,19 +737,41 @@ function derive(r, c){
   const oiUp = oiD != null && oiD >= c.oiThr ? 1 : 0;
   const bull = d ? d.bull + oiUp : 0, bear = d ? d.bear + oiUp : 0;
   const isNew = d ? ((bull >= 4 && d.prevBull + oiUp < 4) || (bear >= 4 && d.prevBear + oiUp < 4)) : false;
-  return {...r, d, ext: d ? d.ext : null, oiD, oiUp, bull, bear, isNew, inc: !d || r.oi == null, score: Math.max(bull, bear) + (bull >= 4 || bear >= 4 ? 10 : 0)};
+  const trig = d && d.trig ? d.trig.filter(t => t.ago < c.trigN) : [];
+  const tB = trig.filter(t => t.dir > 0).length, tS = trig.filter(t => t.dir < 0).length;
+  const setup = bull >= 4 && tB ? 1 : bear >= 4 && tS ? -1 : 0;
+  const mv = r.mtf ? Object.values(r.mtf).filter(x => x != null) : [];
+  const mtfNet = mv.reduce((a, x) => a + x, 0), mtfAll = mv.length === MTF_TFS.length && Math.abs(mtfNet) === MTF_TFS.length ? Math.sign(mtfNet) : 0;
+  const t = d && d.tail, pD = t && t.length > c.oiN ? (t[t.length - 1] / t[t.length - 1 - c.oiN] - 1) * 100 : null;
+  const pos = positioning(pD, oiD);
+  const fFlag = r.fund == null ? 0 : r.fund >= c.fundHot ? 1 : r.fund <= c.fundCold ? -1 : 0;
+  const against = S.regimeDir && ((S.regimeDir < 0 && bull >= 4) || (S.regimeDir > 0 && bear >= 4));
+  return {...r, d, ext: d ? d.ext : null, pD, pos, fFlag, against, oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, inc: !d || r.oi == null, score: Math.max(bull, bear) + (bull >= 4 || bear >= 4 ? 10 : 0) + (setup ? 5 : 0) + (mtfAll && (mtfAll > 0 ? bull >= 4 : bear >= 4) ? 3 : 0)};
 }
 
+const MTF_LBL = {'1d': '1D', '4h': '4H', '1h': '1H'};
+function mtfCell(r){
+  if (!r.mtf) return '<span class="mu">—</span>';
+  return '<span class="mtf">' + MTF_TFS.map(t => { const x = r.mtf[t]; return `<i class="${x > 0 ? 'b' : x < 0 ? 's' : 'n'}" title="${MTF_LBL[t]}: ${x > 0 ? 'bull' : x < 0 ? 'bear' : x === 0 ? 'neutral' : 'no data'}">${MTF_LBL[t]}</i>`; }).join('') + '</span>';
+}
+const TRIG_SHORT = {dmi: 'DMI×', rsi50: 'RSI50×', rsiema: 'RSI×EMA', obv: 'OBV×', sqz: 'SQZ', coil: 'Coil', rvol: 'RVOL', div: 'Div', hdiv: 'H-Div'};
+function trigCell(r){
+  if (!r.trig.length) return '<span class="mu">—</span>';
+  const shown = r.trig.slice(0, 3).map(t => `<span class="tg ${t.dir > 0 ? 'b' : t.dir < 0 ? 's' : 'n'}" title="${t.name}${t.t === 'coil' ? '' : ', ' + (t.ago === 0 ? 'last candle' : t.ago + ' candle' + (t.ago > 1 ? 's' : '') + ' ago')}">${TRIG_SHORT[t.t]}${t.ago && t.t !== 'coil' ? '<sub>' + t.ago + '</sub>' : ''}</span>`).join('');
+  return shown + (r.trig.length > 3 ? `<span class="tg n" title="${r.trig.slice(3).map(t => t.name).join(', ')}">+${r.trig.length - 3}</span>` : '');
+}
 const COLS = [
   {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA50', c:'c'},
-  {k:'oiUp', t:'OI rising', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'ext', t:'Ext (ATR)'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}
+  {k:'oiUp', t:'OI rising', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Positioning', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
 ];
 function sortVal(r, k){
   if (['dmi','rsiEma','rsi50','obv'].includes(k)) return r.d ? r.d.s[k] : -9;
   if (k === 'sector') return tagsOf(r.base)[0];
   if (k === 'sym') return r.sym;
   if (k === 'score') return r.score * 1e13 + r.qv;
+  if (k === 'trig') return r.setup ? 100 + r.trig.length : r.trig.length;
+  if (k === 'pos') return {longs: 4, cover: 3, flat: 2, liq: 1, shorts: 0}[r.pos] ?? -1;
   const v = r[k]; return v == null || !Number.isFinite(v) ? -Infinity : v;
 }
 
@@ -514,6 +785,14 @@ function filtered(){
     if (S.show === 'bear' && r.bear < 4) return false;
     if (newOnly && !r.isNew) return false;
     if (S.incOnly && !r.inc) return false;
+    if (S.setupOnly && !r.setup) return false;
+    const tf2 = $('trigF').value;
+    if (tf2 === 'b' && !r.tB) return false;
+    if (tf2 === 's' && !r.tS) return false;
+    if (tf2 === 'none' && r.trig.some(t => t.dir)) return false;
+    const mf2 = $('mtfF').value;
+    if (mf2 === 'b' && r.mtfAll !== 1) return false;
+    if (mf2 === 's' && r.mtfAll !== -1) return false;
     for (const [k, v] of Object.entries(S.mf)){
       if (v === '') continue;
       if (k === 'oi'){ if (r.oiUp !== +v) return false; }
@@ -523,6 +802,34 @@ function filtered(){
   });
 }
 
+const POS = {longs: ['New longs', 'Price ↑ OI ↑: new positions opening on the long side'], shorts: ['New shorts', 'Price ↓ OI ↑: new positions opening on the short side'],
+  cover: ['Short covering', 'Price ↑ OI ↓: shorts closing; rallies on covering often fade'], liq: ['Long liquidation', 'Price ↓ OI ↓: longs closing or being liquidated'], flat: ['Flat', 'Price and OI both moved less than 0.5%']};
+function posCell(r){ if (!r.pos) return '<span class="mu">—</span>'; const [t, tip] = POS[r.pos]; return `<span class="pos ${r.pos}" title="${tip} (price ${fmtPct(r.pD)}, OI ${fmtPct(r.oiD)})">${t}</span>`; }
+function renderRegime(all, c){
+  const el = $('regime'), R = S.regime;
+  if (!R || !all.length){ el.innerHTML = ''; el.className = 'regime'; S.regimeDir = 0; return; }
+  const scored = all.filter(r => r.d), n = scored.length || 1;
+  const bullPct = 100 * scored.filter(r => r.bull >= 4).length / n, bearPct = 100 * scored.filter(r => r.bear >= 4).length / n;
+  const fMed = median(R.funds), oMed = median(all.map(r => r.oiD));
+  const arrow = x => !x ? '<span class="mu">—</span>' : x.dir > 0 ? '<b class="up">▲ Bull</b>' : x.dir < 0 ? '<b class="dn">▼ Bear</b>' : '<b class="mu">◆ Neutral</b>';
+  const br = bullPct - bearPct >= 15 ? 1 : bullPct - bearPct <= -15 ? -1 : 0;
+  const score = 2 * (R.d1?.dir || 0) + (R.h4?.dir || 0) + br;
+  const dir = score >= 2 ? 1 : score <= -2 ? -1 : 0;
+  S.regimeDir = dir;
+  const notes = [];
+  if (dir > 0) notes.push('Trend-following longs have the wind behind them. Be selective with shorts.');
+  if (dir < 0) notes.push('Alt longs fight the tape here. Favour shorts or wait for BTC to reclaim.');
+  if (dir === 0) notes.push('Mixed signals: reduce size, take profits faster, prefer the strongest relative names.');
+  if (fMed != null && fMed >= c.fundHot * 0.6) notes.push('Market-wide funding is hot: longs are crowded, watch for flushes.');
+  if (fMed != null && fMed <= c.fundCold * 0.6) notes.push('Market-wide funding is negative: shorts are crowded, squeezes are likely.');
+  el.className = 'regime ' + (dir > 0 ? 'on' : dir < 0 ? 'off' : 'mixed');
+  el.innerHTML = `<span class="verdict">${dir > 0 ? 'Risk-on' : dir < 0 ? 'Risk-off' : 'Mixed'}</span>
+    <span class="chip">BTC 1D ${arrow(R.d1)}</span><span class="chip">BTC 4H ${arrow(R.h4)}</span>
+    <span class="chip">Breadth <b class="up">${bullPct.toFixed(0)}%</b> bull · <b class="dn">${bearPct.toFixed(0)}%</b> bear</span>
+    <span class="chip">Funding median <b>${fMed == null ? '—' : (fMed > 0 ? '+' : '') + fMed.toFixed(4) + '%'}</b></span>
+    <span class="chip">OI median <b class="${cls(oMed)}">${fmtPct(oMed)}</b> over ${c.oiN} candles</span>
+    <span class="note">${notes.join(' ')}</span>`;
+}
 function renderPager(total, size, pages, start, n){
   const el = $('pager');
   if (!total){ el.innerHTML = ''; return; }
@@ -539,10 +846,10 @@ function renderPager(total, size, pages, start, n){
   el.innerHTML = h;
 }
 function anyFilter(){
-  return S.show !== 'all' || $('newOnly').checked || S.incOnly || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
+  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
 }
 function syncCards(){
-  const st = {all: !anyFilter(), bull: S.show === 'bull', bear: S.show === 'bear', new: $('newOnly').checked, oi: S.mf.oi === '1', inc: S.incOnly};
+  const st = {all: !anyFilter(), bull: S.show === 'bull', bear: S.show === 'bear', new: $('newOnly').checked, oi: S.mf.oi === '1', inc: S.incOnly, setup: S.setupOnly};
   document.querySelectorAll('#stats .stat').forEach(c => c.classList.toggle('active', !!st[c.dataset.f]));
 }
 function setShow(v){ S.show = v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === v)); }
@@ -554,11 +861,13 @@ function render(){
   $('sNew').textContent = all.filter(r => r.isNew).length;
   $('sOi').textContent = all.filter(r => r.oiUp).length; $('sOiS').textContent = `≥ ${c.oiThr}% over ${c.oiN} candles`;
   $('sInc').textContent = all.filter(r => r.inc).length;
+  $('sSetup').textContent = all.filter(r => r.setup).length; $('sSetupS').textContent = `aligned + trigger in last ${c.trigN}`;
+  renderRegime(all, c);
 
   $('thead').innerHTML = COLS.map(col => `<th class="${col.c || ''} ${S.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}">${col.t}${S.sort.k === col.k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
   const rows = filtered(), {k, dir} = S.sort;
   rows.sort((a, b) => { const x = sortVal(a, k), y = sortVal(b, k); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
-  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value]);
+  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value]);
   if (sig !== S.sig){ S.sig = sig; S.page = 0; }            // any filter/sort change → back to page 1
   const size = +$('pageSize').value || rows.length || 1, pages = Math.max(1, Math.ceil(rows.length / size));
   S.page = Math.min(S.page, pages - 1);
@@ -573,8 +882,8 @@ function render(){
     const d = r.d, v = d ? d.vals : null, f = x => Number.isFinite(x) ? x.toFixed(1) : '—';
     const tv = `https://www.tradingview.com/chart/?symbol=BINANCE:${r.sym}.P`;
     const sb = r.bull >= 5 ? 'b5' : r.bull >= 4 ? 'b4' : '', sr = r.bear >= 5 ? 'r5' : r.bear >= 4 ? 'r4' : '';
-    return `<tr class="${r.inc && !d ? 'inc' : ''}">
-      <td class="l pair"><a href="${tv}" target="_blank" rel="noopener">${r.sym.replace('USDT','')}</a>${r.isNew ? '<span class="new">NEW</span>' : ''}</td>
+    return `<tr data-sym="${r.sym}" class="${r.inc && !d ? 'inc' : ''} ${D.sym === r.sym ? 'sel' : ''}" title="Click for trade plan">
+      <td class="l pair">${r.sym.replace('USDT','')}${r.isNew ? '<span class="new">NEW</span>' : ''}<a class="tvl" href="${tv}" target="_blank" rel="noopener" title="Open on TradingView">↗</a></td>
       <td class="l">${tagsOf(r.base).slice(0,2).map(t => `<span class="tag">${t}</span>`).join('')}</td>
       <td>${fmtPrice(r.price)}</td>
       <td class="${cls(r.chg)}">${fmtPct(r.chg)}</td>
@@ -586,9 +895,13 @@ function render(){
       ${d ? chk(d.s.obv, `OBV ${fmtBig(Math.abs(v.obv))}${v.obv < 0 ? ' (neg)' : ''} vs EMA ${fmtBig(Math.abs(v.obvEma))}`) : '<td class="c mu">—</td>'}
       ${r.oi == null ? '<td class="c mu" title="No OI history">—</td>' : `<td class="c chk ${r.oiUp ? 'up' : 'mu'}">${r.oiUp ? '●' : '·'}</td>`}
       <td class="${cls(r.oiD)}">${fmtPct(r.oiD)}</td>
+      <td class="l">${posCell(r)}</td>
+      <td class="${r.fFlag ? 'fhot' : r.fund > 0 ? 'mu' : r.fund < 0 ? 'fneg' : 'mu'}" title="Last funding rate${r.fFlag === 1 ? ': longs crowded' : r.fFlag === -1 ? ': shorts crowded' : ''}">${r.fund == null ? '—' : (r.fund > 0 ? '+' : '') + r.fund.toFixed(4) + '%'}${r.fFlag ? ' 🔥' : ''}</td>
       <td class="${r.ext != null && Math.abs(r.ext) >= 3 ? 'ext' : 'mu'}" title="Close vs EMA20 in ATR units. 3 or more = stretched, high chase risk">${r.ext == null ? '—' : (r.ext > 0 ? '+' : '') + r.ext.toFixed(1)}${r.ext != null && Math.abs(r.ext) >= 3 ? ' ⚠' : ''}</td>
-      <td><span class="score ${sb}">${d ? r.bull : '—'}</span></td>
-      <td><span class="score ${sr}">${d ? r.bear : '—'}</span></td>
+      <td><span class="score ${sb} ${r.against && r.bull >= 4 ? 'against' : ''}" ${r.against && r.bull >= 4 ? 'title="Bullish setup against a risk-off regime"' : ''}>${d ? r.bull : '—'}</span></td>
+      <td><span class="score ${sr} ${r.against && r.bear >= 4 ? 'against' : ''}" ${r.against && r.bear >= 4 ? 'title="Bearish setup against a risk-on regime"' : ''}>${d ? r.bear : '—'}</span></td>
+      <td class="c">${mtfCell(r)}</td>
+      <td class="l trigs">${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}" title="Aligned and triggered on ${S.tf.toUpperCase()}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}${trigCell(r)}</td>
     </tr>`;
   }).join('');
 }
@@ -607,15 +920,24 @@ async function scan(){
     const n = +$('universe').value, mcapMin = +$('mcap').value;
     let list = n ? uni.slice(0, n) : uni;
     for (const u of list) u.mcap = mcaps[u.base];
+    try {
+      const [b4, b1] = await Promise.all([getKlines('BTCUSDT', '4h', true), getKlines('BTCUSDT', '1d', true)]);
+      const st = k => { const e = evaluate(k, c); return e.incomplete ? null : {dir: e.bull >= 3 ? 1 : e.bear >= 3 ? -1 : 0, e}; };
+      S.regime = {h4: st(b4), d1: st(b1), funds: uni.map(u => u.fund)};
+    } catch { S.regime = null; }
     if (mcapMin) list = list.filter(u => u.mcap >= mcapMin);   // don't spend requests on pairs that will be filtered out
     const out = new Array(list.length); let done = 0, i = 0;
     S.rows = [];
     async function worker(){
       while (i < list.length){
         const idx = i++, u = list[idx];
-        const [k, oi] = await Promise.all([getKlines(u.sym, tf, c.closed), getOI(u.sym, tf)]);
+        const others = $('mtfOn').checked ? MTF_TFS.filter(t => t !== tf) : [];
+        const [k, oi, ...ok] = await Promise.all([getKlines(u.sym, tf, c.closed), getOI(u.sym, tf), ...others.map(t => getKlines(u.sym, t, c.closed).catch(() => null))]);
         if (tf !== S.tf) return;                                  // timeframe changed mid-scan
-        out[idx] = {...u, ev: evaluate(k, c), oi};
+        const ev = evaluate(k, c);
+        let mtf = null;
+        if (others.length){ mtf = {}; for (const t of MTF_TFS) mtf[t] = t === tf ? (ev.incomplete ? null : ev.bull >= 3 ? 1 : ev.bear >= 3 ? -1 : 0) : (ok[others.indexOf(t)] ? tfDir(ok[others.indexOf(t)], c) : null); }
+        out[idx] = {...u, ev, oi, mtf};
         S.rows = out.filter(Boolean);
         done++; $('prog').style.width = (2 + 98 * done / list.length) + '%';
         setStatus('run', `Scanning ${done}/${list.length}…`);
@@ -641,16 +963,163 @@ function setAuto(){
 }
 
 function exportCSV(){
-  const rows = filtered(), head = ['pair','sectors','price','chg24h','vol24h','mcap','dmi','rsi_gt_ema','rsi_gt_50','obv_gt_ema50','oi_rising','oi_delta_pct','ext_atr','bull','bear','new','rsi','adx','pdi','mdi'];
+  const rows = filtered(), head = ['pair','sectors','price','chg24h','vol24h','mcap','dmi','rsi_gt_ema','rsi_gt_50','obv_gt_ema50','oi_rising','oi_delta_pct','price_delta_pct','positioning','funding_pct','ext_atr','bull','bear','new','setup','mtf_1d','mtf_4h','mtf_1h','triggers','rsi','adx','pdi','mdi'];
   const lines = [head.join(',')].concat(rows.map(r => {
     const d = r.d, v = d ? d.vals : {};
     return [r.sym, tagsOf(r.base).join('|'), r.price, r.chg, r.qv, r.mcap ?? '', d?.s.dmi ?? '', d?.s.rsiEma ?? '', d?.s.rsi50 ?? '', d?.s.obv ?? '',
-      r.oiUp, r.oiD?.toFixed(2) ?? '', r.ext?.toFixed(2) ?? '', r.bull, r.bear, r.isNew ? 1 : 0, v.rsi?.toFixed(2) ?? '', v.adx?.toFixed(2) ?? '', v.pdi?.toFixed(2) ?? '', v.mdi?.toFixed(2) ?? ''].join(',');
+      r.oiUp, r.oiD?.toFixed(2) ?? '', r.pD?.toFixed(2) ?? '', r.pos ?? '', r.fund ?? '', r.ext?.toFixed(2) ?? '', r.bull, r.bear, r.isNew ? 1 : 0, r.setup, r.mtf?.['1d'] ?? '', r.mtf?.['4h'] ?? '', r.mtf?.['1h'] ?? '', r.trig.map(t => t.name + (t.ago ? '@' + t.ago : '')).join('|'), v.rsi?.toFixed(2) ?? '', v.adx?.toFixed(2) ?? '', v.pdi?.toFixed(2) ?? '', v.mdi?.toFixed(2) ?? ''].join(',');
   }));
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type: 'text/csv'}));
   a.download = `trend-confirmation-${S.tf}-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'')}.csv`;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- Trade drawer ---------- */
+const PLAN_KEY = 'onslaught-plan';
+const D = {sym: null, dir: 1, entry: null, candles: null, row: null, plan: null, chart: null, series: null, lines: [], ro: null};
+let lwcLoading = null;
+function loadLWC(){
+  if (window.LightweightCharts) return Promise.resolve();
+  if (!lwcLoading) lwcLoading = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js';
+    sc.onload = res; sc.onerror = () => { lwcLoading = null; rej(new Error('chart library')); };
+    document.head.appendChild(sc);
+  });
+  return lwcLoading;
+}
+const decFor = p => p >= 1000 ? 2 : p >= 100 ? 3 : p >= 1 ? 4 : p >= 0.01 ? 6 : 8;
+const fp = (p, dec) => Number.isFinite(p) ? p.toFixed(dec) : '—';
+const usd = v => '$' + (v >= 1000 ? v.toLocaleString('en-US', {maximumFractionDigits: 0}) : v.toFixed(2));
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function loadAcct(){
+  let o = {}; try { o = JSON.parse(localStorage.getItem(PLAN_KEY) || '{}'); } catch {}
+  for (const [id, k] of [['pAcct','acct'],['pRisk','risk'],['pLev','lev'],['pSlMode','slMode'],['pAtr','atrMult']]) if (o[k] != null) $(id).value = o[k];
+}
+function saveAcct(){
+  try { localStorage.setItem(PLAN_KEY, JSON.stringify({acct: $('pAcct').value, risk: $('pRisk').value, lev: $('pLev').value, slMode: $('pSlMode').value, atrMult: $('pAtr').value})); } catch {}
+}
+async function openDrawer(sym){
+  const base = S.rows.find(r => r.sym === sym); if (!base) return;
+  const c = cfg();
+  Object.assign(D, {sym, row: derive(base, c), entry: null, candles: null, plan: null});
+  D.dir = D.row.bear >= 4 && D.row.bear > D.row.bull ? -1 : 1;
+  $('drawer').classList.add('open'); $('drawer').setAttribute('aria-hidden', 'false'); $('scrim').classList.add('open'); document.body.classList.add('noscroll');
+  $('dTitle').textContent = `${sym.replace('USDT', '')} · ${S.tf.toUpperCase()}`;
+  $('dSub').innerHTML = `${fmtPrice(base.price)} · <span class="${cls(base.chg)}">${fmtPct(base.chg)}</span> 24h · ${tagsOf(base.base).join(', ')}`;
+  $('dTv').href = `https://www.tradingview.com/chart/?symbol=BINANCE:${sym}.P`;
+  renderChips(); $('pEntry').value = ''; $('dPlan').innerHTML = ''; $('dSize').innerHTML = ''; $('dWarn').innerHTML = ''; $('dCopied').textContent = '';
+  $('dChart').innerHTML = '<div class="dload">Loading chart…</div>';
+  render();
+  try { D.candles = await getKlines(sym, S.tf, c.closed); } catch { D.candles = null; }
+  if (D.sym !== sym) return;
+  updatePlan(); drawChart();
+}
+function closeDrawer(){
+  $('drawer').classList.remove('open'); $('drawer').setAttribute('aria-hidden', 'true'); $('scrim').classList.remove('open'); document.body.classList.remove('noscroll');
+  if (D.ro) D.ro.disconnect(); if (D.chart) D.chart.remove();
+  Object.assign(D, {sym: null, chart: null, series: null, lines: [], ro: null});
+  render();
+}
+function renderChips(){
+  const r = D.row, chips = [
+    `Bull <b class="up">${r.d ? r.bull : '—'}/5</b>`, `Bear <b class="dn">${r.d ? r.bear : '—'}/5</b>`,
+    r.pos ? `Positioning <b>${POS[r.pos][0]}</b>` : null,
+    r.fund != null ? `Funding <b>${(r.fund > 0 ? '+' : '') + r.fund.toFixed(4)}%</b>${r.fFlag ? ' 🔥' : ''}` : null,
+    r.ext != null ? `Ext <b>${(r.ext > 0 ? '+' : '') + r.ext.toFixed(1)} ATR</b>` : null,
+    `OI Δ <b class="${cls(r.oiD)}">${fmtPct(r.oiD)}</b>`,
+    S.regime ? `Regime <b>${S.regimeDir > 0 ? 'Risk-on' : S.regimeDir < 0 ? 'Risk-off' : 'Mixed'}</b>` : null,
+    r.mtf ? `MTF ${MTF_TFS.map(t => `<b class="${r.mtf[t] > 0 ? 'up' : r.mtf[t] < 0 ? 'dn' : 'mu'}">${MTF_LBL[t]}${r.mtf[t] > 0 ? '▲' : r.mtf[t] < 0 ? '▼' : '◆'}</b>`).join(' ')}` : null,
+    ...r.trig.map(t => `<b class="${t.dir > 0 ? 'up' : t.dir < 0 ? 'dn' : 'mu'}">${t.name}</b>${t.t === 'coil' ? '' : ' · ' + (t.ago ? t.ago + ' ago' : 'last candle')}`)
+  ].filter(Boolean);
+  $('dChips').innerHTML = chips.map(x => `<span class="chip">${x}</span>`).join('');
+}
+function updatePlan(){
+  [...$('dDir').children].forEach(b => b.classList.toggle('on', +b.dataset.v === D.dir));
+  if (!D.candles || D.candles.length < 60){ $('dPlan').innerHTML = '<p class="mu">Not enough candle history for a plan.</p>'; return; }
+  const P = tradePlan(D.candles, D.dir, {slMode: $('pSlMode').value, atrMult: parseFloat($('pAtr').value) || 1.5, entry: D.entry});
+  D.plan = P;
+  const dec = decFor(P.entry), pct = x => fmtPct((x / P.entry - 1) * 100);
+  if (D.entry == null) $('pEntry').placeholder = fp(P.entry, dec);
+  $('dPlan').innerHTML = `<table class="ptable"><thead><tr><th class="l">Level</th><th>Price</th><th>From entry</th><th>R</th><th class="l">Basis</th></tr></thead><tbody>
+    ${P.tps.slice().reverse().map((t, j) => `<tr class="tp"><td class="l">TP${P.tps.length - j}</td><td>${fp(t.price, dec)}</td><td class="${cls((t.price - P.entry) * P.dir)}">${pct(t.price)}</td><td>${t.r.toFixed(1)}R</td><td class="l mu">${t.label}</td></tr>`).join('')}
+    <tr class="en"><td class="l">Entry</td><td>${fp(P.entry, dec)}</td><td class="mu">—</td><td class="mu">—</td><td class="l mu">${D.entry == null ? 'last close' : 'custom'}</td></tr>
+    <tr class="sl"><td class="l">Stop</td><td>${fp(P.sl, dec)}</td><td class="dn">${pct(P.sl)}</td><td>−1R</td><td class="l mu">${P.slNote}</td></tr>
+  </tbody></table>`;
+  const z = sizing(parseFloat($('pAcct').value), parseFloat($('pRisk').value), parseFloat($('pLev').value), P.entry, P.sl);
+  D.size = z;
+  $('dSize').innerHTML = z ? `<div><div class="k">Risk</div><div class="v">${usd(z.riskUsd)}</div></div>
+    <div><div class="k">Quantity</div><div class="v">${z.qty >= 100 ? z.qty.toFixed(0) : z.qty.toPrecision(4)}</div></div>
+    <div><div class="k">Notional</div><div class="v">${usd(z.notional)}</div></div>
+    <div><div class="k">Margin @${$('pLev').value}×</div><div class="v ${z.marginWarn ? 'dn' : ''}">${usd(z.margin)}</div></div>` : '<p class="mu">Enter account, risk and leverage.</p>';
+  renderWarnings(P, z); drawLines();
+}
+function renderWarnings(P, z){
+  const r = D.row, w = [], long = P.dir > 0;
+  const aligned = long ? r.bull >= 4 : r.bear >= 4;
+  if (r.d) w.push(aligned ? ['ok', `${long ? 'Bull' : 'Bear'}-aligned ${long ? r.bull : r.bear}/5 on ${S.tf.toUpperCase()}.`] : ['', `Not ${long ? 'bull' : 'bear'}-aligned (${long ? r.bull : r.bear}/5). This is a counter-signal trade.`]);
+  if (r.mtf){ const hi = r.mtf['1d']; if (hi != null && hi === -P.dir) w.push(['', `The 1D trend points the other way (${hi > 0 ? 'bull' : 'bear'}). Counter-trend trades need tighter management.`]); else if (r.mtfAll === P.dir) w.push(['ok', 'All three timeframes (1D, 4H, 1H) agree with this direction.']); }
+  const tSame = r.trig.filter(t => t.dir === P.dir);
+  if (tSame.length) w.push(['ok', `Fresh trigger${tSame.length > 1 ? 's' : ''}: ${tSame.map(t => t.name).join(', ')}.`]);
+  else if (r.d) w.push(['', `No fresh trigger in the last ${cfg().trigN} candles. Waiting for one usually improves timing.`]);
+  if (S.regimeDir && S.regimeDir !== P.dir) w.push(['', `Against the market regime (${S.regimeDir > 0 ? 'risk-on' : 'risk-off'}). Consider smaller size.`]);
+  if (r.ext != null && r.ext * P.dir >= 3) w.push(['', `Stretched ${Math.abs(r.ext).toFixed(1)} ATR from EMA20. A pullback entry near ${fp(P.ema20, decFor(P.entry))} offers better R:R.`]);
+  if (r.fFlag === P.dir) w.push(['', `Funding is ${long ? 'hot: longs' : 'deeply negative: shorts'} are crowded on your side.`]);
+  if (long && r.pos === 'cover') w.push(['', 'The move is driven by short covering (OI falling). Those rallies often fade.']);
+  if (!long && r.pos === 'liq') w.push(['', 'The drop is longs exiting (OI falling), not new shorts. Late shorts risk a bounce.']);
+  if (long && r.pos === 'longs' || !long && r.pos === 'shorts') w.push(['ok', `New ${long ? 'longs' : 'shorts'} are opening behind the move (OI rising with price).`]);
+  if (P.R > 3 * P.atr) w.push(['', `Stop is ${(P.R / P.atr).toFixed(1)} ATR away (wide). Consider the ATR stop or a smaller size.`]);
+  if (P.tps[0] && P.tps[0].r < 1) w.push(['', `First target is only ${P.tps[0].r.toFixed(1)}R away.`]);
+  if (z && z.liqWarn) w.push(['bad', `Stop is ${z.slPct.toFixed(1)}% away, too close to liquidation at ${$('pLev').value}×. Lower the leverage.`]);
+  if (z && z.marginWarn) w.push(['bad', 'Required margin exceeds the account size.']);
+  $('dWarn').innerHTML = w.map(([k, t]) => `<li class="${k}">${t}</li>`).join('');
+}
+async function drawChart(){
+  const el = $('dChart'), sym = D.sym;
+  if (D.ro) D.ro.disconnect(); if (D.chart){ D.chart.remove(); D.chart = null; }
+  if (!D.candles || !D.candles.length){ el.innerHTML = '<div class="dload">No candle data.</div>'; return; }
+  try { await loadLWC(); } catch { el.innerHTML = '<div class="dload">The chart library could not load. The plan below still works.</div>'; return; }
+  if (D.sym !== sym) return;
+  el.innerHTML = '';
+  const dec = decFor(D.candles.at(-1)[4]), T = k => Math.floor(k[0] / 1000);
+  const ch = LightweightCharts.createChart(el, {width: el.clientWidth, height: el.clientHeight,
+    layout: {background: {type: 'solid', color: cssv('--panel')}, textColor: cssv('--muted'), fontSize: 11},
+    grid: {vertLines: {color: 'rgba(255,255,255,.04)'}, horzLines: {color: 'rgba(255,255,255,.04)'}},
+    rightPriceScale: {borderColor: cssv('--line')}, timeScale: {borderColor: cssv('--line'), timeVisible: S.tf !== '1d'}, crosshair: {mode: 0}});
+  const cs = ch.addCandlestickSeries({upColor: cssv('--bull'), downColor: cssv('--bear'), borderVisible: false, wickUpColor: cssv('--bull'), wickDownColor: cssv('--bear'),
+    priceFormat: {type: 'price', precision: dec, minMove: Math.pow(10, -dec)}});
+  cs.setData(D.candles.map(k => ({time: T(k), open: k[1], high: k[2], low: k[3], close: k[4]})));
+  const vol = ch.addHistogramSeries({priceFormat: {type: 'volume'}, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false});
+  ch.priceScale('vol').applyOptions({scaleMargins: {top: 0.82, bottom: 0}});
+  vol.setData(D.candles.map(k => ({time: T(k), value: k[5], color: k[4] >= k[1] ? 'rgba(158,255,0,.22)' : 'rgba(233,76,42,.22)'})));
+  const cl = D.candles.map(k => k[4]);
+  const line = (arr, color) => { const ls = ch.addLineSeries({color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false});
+    ls.setData(D.candles.map((k, i) => ({time: T(k), value: arr[i]})).filter(x => Number.isFinite(x.value))); };
+  line(ema(cl, 20), cssv('--accent-lt')); line(ema(cl, 50), cssv('--info'));
+  ch.timeScale().setVisibleLogicalRange({from: D.candles.length - 120, to: D.candles.length + 6});
+  D.chart = ch; D.series = cs; D.lines = [];
+  D.ro = new ResizeObserver(() => ch.applyOptions({width: el.clientWidth, height: el.clientHeight})); D.ro.observe(el);
+  drawLines();
+}
+function drawLines(){
+  if (!D.series || !D.plan) return;
+  D.lines.forEach(x => D.series.removePriceLine(x)); D.lines = [];
+  const add = (price, color, title, style) => D.lines.push(D.series.createPriceLine({price, color, lineWidth: 1, lineStyle: style, axisLabelVisible: true, title}));
+  add(D.plan.entry, cssv('--accent-lt'), 'Entry', 0);
+  add(D.plan.sl, cssv('--bear'), 'SL', 2);
+  D.plan.tps.forEach((t, i) => add(t.price, cssv('--bull'), 'TP' + (i + 1), 2));
+}
+function planText(){
+  const P = D.plan, z = D.size; if (!P) return '';
+  const dec = decFor(P.entry), pct = x => fmtPct((x / P.entry - 1) * 100);
+  return [`${P.dir > 0 ? 'LONG' : 'SHORT'} ${D.sym}.P (${S.tf.toUpperCase()})`,
+    `Entry ${fp(P.entry, dec)}`,
+    `SL ${fp(P.sl, dec)} (${pct(P.sl)}, ${P.slNote})`,
+    ...P.tps.map((t, i) => `TP${i + 1} ${fp(t.price, dec)} (${pct(t.price)}, ${t.r.toFixed(1)}R, ${t.label})`),
+    z ? `Size ${z.qty >= 100 ? z.qty.toFixed(0) : z.qty.toPrecision(4)} · notional ${usd(z.notional)} · margin ${usd(z.margin)} @${$('pLev').value}x · risk ${usd(z.riskUsd)} (${$('pRisk').value}%)` : '',
+    `Score bull ${D.row.bull}/5 bear ${D.row.bear}/5${D.row.pos ? ' · ' + POS[D.row.pos][0] : ''}${D.row.fund != null ? ' · funding ' + D.row.fund.toFixed(4) + '%' : ''}`
+  ].filter(Boolean).join('\n');
 }
 
 /* ---------- Wire up ---------- */
@@ -668,14 +1137,27 @@ $('tfSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('showSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   S.show = b.dataset.v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x === b)); render(); };
 document.querySelectorAll('.mf').forEach(s => s.onchange = () => { S.mf[s.dataset.k] = s.value; render(); });
-$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
+$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('trigF').value = ''; $('mtfF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
   S.show = 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === 'all')); render(); };
 for (const id of ['oiThr','oiN','sector','mcap','newOnly']) $(id).onchange = () => { saveSettings(); render(); };
 $('search').oninput = render;
-$('universe').onchange = saveSettings; $('closed').onchange = saveSettings;
+$('universe').onchange = saveSettings; $('closed').onchange = saveSettings; $('mtfOn').onchange = saveSettings;
+for (const id of ['trigF','mtfF']) $(id).onchange = render;
+$('trigN').onchange = () => { saveSettings(); render(); };
 for (const id of ['rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) $(id).onchange = saveSettings;
+for (const id of ['fundHot','fundCold']) $(id).onchange = () => { saveSettings(); render(); };
 $('auto').onchange = () => { saveSettings(); setAuto(); };
 $('scanBtn').onclick = scan;
+loadAcct();
+$('tbody').onclick = e => { if (e.target.closest('a')) return; const tr = e.target.closest('tr[data-sym]'); if (tr) openDrawer(tr.dataset.sym); };
+$('scrim').onclick = closeDrawer; $('dClose').onclick = closeDrawer;
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && D.sym) closeDrawer(); });
+$('dDir').onclick = e => { const b = e.target.closest('button'); if (!b) return; D.dir = +b.dataset.v; updatePlan(); };
+for (const id of ['pSlMode','pAtr','pAcct','pRisk','pLev']) $(id).oninput = () => { saveAcct(); updatePlan(); };
+$('pEntry').oninput = () => { const v = parseFloat($('pEntry').value); D.entry = v > 0 ? v : null; updatePlan(); };
+$('pEntryLast').onclick = () => { D.entry = null; $('pEntry').value = ''; updatePlan(); };
+$('pEntryEma').onclick = () => { if (!D.plan) return; D.entry = D.plan.ema20; $('pEntry').value = fp(D.plan.ema20, decFor(D.plan.ema20)); updatePlan(); };
+$('dCopy').onclick = async () => { try { await navigator.clipboard.writeText(planText()); $('dCopied').textContent = 'Copied'; } catch { $('dCopied').textContent = 'Copy failed: select and copy manually'; } setTimeout(() => $('dCopied').textContent = '', 2500); };
 $('csvBtn').onclick = exportCSV;
 $('pageSize').onchange = () => { saveSettings(); render(); };
 $('pager').onclick = e => { const b = e.target.closest('button[data-p]'); if (!b || b.disabled) return;
@@ -686,6 +1168,7 @@ $('stats').onclick = e => { const c = e.target.closest('.stat'); if (!c) return;
   if (f === 'new') $('newOnly').checked = !$('newOnly').checked;
   if (f === 'oi'){ const sel = document.querySelector('.mf[data-k="oi"]'); sel.value = S.mf.oi === '1' ? '' : '1'; S.mf.oi = sel.value; }
   if (f === 'inc') S.incOnly = !S.incOnly;
+  if (f === 'setup') S.setupOnly = !S.setupOnly;
   render(); };
 $('resetCache').onclick = async () => { await Cache.clear(); infoCache = null; setStatus('', 'Cache cleared'); };
 $('thead').onclick = e => { const th = e.target.closest('th'); if (!th) return; const k = th.dataset.k;
