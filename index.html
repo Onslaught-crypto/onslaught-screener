@@ -188,6 +188,89 @@ td.trigs{white-space:nowrap}
 .rsw{display:inline-flex;gap:3px;cursor:help}
 .rsc{font:600 10.5px var(--mono);padding:1px 4px;border-radius:3px;background:var(--panel2)}
 .rsc.up{color:var(--bull);background:var(--bull-bg)} .rsc.dn{color:var(--bear);background:var(--bear-bg)}
+.mapwrap{position:relative;padding:8px}
+.mapsvg .q.lead{fill:rgba(158,255,0,.06)} .mapsvg .q.imp{fill:rgba(89,160,216,.07)} .mapsvg .q.lag{fill:rgba(233,76,42,.06)} .mapsvg .q.weak{fill:rgba(255,122,10,.06)}
+.mapsvg .grid{stroke:rgba(255,255,255,.05)} .mapsvg .axis0{stroke:#585a60;stroke-width:1.2}
+.mapsvg .tick{fill:#8b8b90;font:10.5px var(--mono)} .mapsvg .axt{fill:#8b8b90;font:11.5px system-ui}
+.mapsvg .qlab{font:800 13px system-ui;letter-spacing:1px;text-transform:uppercase;opacity:.75}
+.qlab.lead{fill:var(--bull)} .qlab.imp{fill:var(--info)} .qlab.lag{fill:var(--bear)} .qlab.weak{fill:var(--warn)}
+.mapsvg .dot{cursor:pointer} .mapsvg .dot:hover circle{stroke:#fff;stroke-width:1.6}
+.mapsvg .mlab{fill:#e6e3ee;font:600 10.5px system-ui;pointer-events:none;paint-order:stroke;stroke:#000;stroke-width:3px}
+.maptip{position:absolute;pointer-events:none;background:#0b0b10;border:1px solid var(--accent);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;min-width:220px;z-index:5;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.maplegend{font-size:11.5px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:auto}
+.lg{display:inline-block;width:10px;height:10px;border-radius:50%} .lg.A{background:var(--bull)} .lg.B{background:var(--accent)} .lg.C{background:#6b6d75} .lg.N{background:#3d3f47}
+.lg.ring{background:none;border:2px solid} .lg.ring.b{border-color:var(--bull)} .lg.ring.s{border-color:var(--bear)}
+.quads{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.quad{background:var(--panel);border:1px solid var(--line);border-top:2px solid;border-radius:10px;padding:10px;display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start}
+.quad.lead{border-top-color:var(--bull)} .quad.imp{border-top-color:var(--info)} .quad.lag{border-top-color:var(--bear)} .quad.weak{border-top-color:var(--warn)}
+.quad .qh{width:100%;font-size:12.5px;margin-bottom:4px}
+.qchip{font:600 11.5px var(--mono);padding:3px 7px;display:inline-flex;gap:4px;align-items:center}
+.qchip .gr{min-width:0;font-size:10px;padding:0 4px}
+.qchip .setup{font-size:9px;padding:1px 4px;margin:0}
+@media (max-width:900px){.quads{grid-template-columns:1fr 1fr}}
+.heatsvg .tile{cursor:pointer} .heatsvg .tile:hover rect{stroke:#bcacd4;stroke-width:2}
+.heatsvg .tname{font:700 13px system-ui} .heatsvg .tval{font:600 12px var(--mono)} .heatsvg .tsub{font:11px system-ui;opacity:.85}
+/* motion & look */
+.spk{display:block;margin:0 auto}
+td.sp{padding-top:2px;padding-bottom:2px}
+#tbody tr.tA td:nth-child(2){box-shadow:inset 3px 0 0 var(--bull)}
+#tbody tr.tB td:nth-child(2){box-shadow:inset 3px 0 0 var(--accent)}
+#tbody tr.tA{background:rgba(158,255,0,.035)}
+#tbody tr.tA:hover{background:rgba(158,255,0,.07)}
+td.px.fu{animation:fu .9s ease-out} td.px.fd{animation:fd .9s ease-out}
+@keyframes fu{0%{background:rgba(158,255,0,.45);color:#000}100%{background:transparent}}
+@keyframes fd{0%{background:rgba(233,76,42,.55);color:#fff}100%{background:transparent}}
+#tbody tr.fadein{animation:fadein .35s ease-out}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+#tbody tr.entered{animation:glow 2.4s ease-out 2}
+@keyframes glow{0%{box-shadow:inset 0 0 0 1px rgba(188,172,212,.0)}30%{box-shadow:inset 0 0 0 1px rgba(188,172,212,.9),0 0 18px rgba(138,82,156,.55)}100%{box-shadow:inset 0 0 0 1px rgba(188,172,212,0)}}
+.stat.pulse{animation:pulse 1.6s ease-out 2}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(158,255,0,.6)}70%{box-shadow:0 0 0 12px rgba(158,255,0,0)}100%{box-shadow:0 0 0 0 rgba(158,255,0,0)}}
+tr.skel td{padding:9px 7px}
+.sk{display:block;height:10px;border-radius:4px;background:linear-gradient(90deg,var(--panel2) 0%,#3a3b42 50%,var(--panel2) 100%);background-size:200% 100%;animation:shim 1.2s linear infinite}
+@keyframes shim{from{background-position:200% 0}to{background-position:-200% 0}}
+.drawer{transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+.livechip{font:600 11.5px system-ui;padding:4px 9px;border-radius:999px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.livechip.on{color:var(--bull);border-color:rgba(158,255,0,.45)} .livechip.on::first-letter{animation:blink 2s infinite}
+.livechip.err{color:var(--warn)}
+@keyframes blink{50%{opacity:.25}}
+body.compact th,body.compact td{padding:3px 6px;font-size:12px} body.compact .spk{height:16px}
+body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
+.popwrap{position:relative}
+.pop{position:absolute;right:0;top:calc(100% + 6px);width:300px;max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:12px;z-index:30;box-shadow:0 12px 36px rgba(0,0,0,.6)}
+.pophead{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+.collist{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.collist label{color:var(--text);font-size:12.5px}
+.presetlist{display:flex;flex-wrap:wrap;gap:5px}
+.preset{font-size:12px;padding:4px 9px;border-radius:999px}
+.preset.mine{display:inline-flex;padding:0;border:1px solid var(--accent-dk);border-radius:999px;overflow:hidden}
+.preset.mine button{border:0;border-radius:0;font-size:12px;padding:4px 8px}
+.preset.mine .pdel{color:var(--muted);padding:4px 7px}
+.palette{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:12vh}
+.palette[hidden]{display:none}
+.palbox{width:min(560px,92vw);background:var(--panel);border:1px solid var(--bull);border-radius:12px;box-shadow:0 0 24px rgba(158,255,0,.25),0 20px 50px rgba(0,0,0,.7);overflow:hidden}
+#palIn{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;background:#0b1206;color:var(--bull);font:16px var(--mono);padding:14px 16px}
+#palIn:focus{outline:none}
+#palList{list-style:none;margin:0;padding:6px}
+#palList li{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:6px;cursor:pointer}
+#palList li.on,#palList li:hover{background:rgba(138,82,156,.22)}
+#palList li b{min-width:90px}
+.palhint{font-size:11.5px;padding:8px 14px;border-top:1px solid var(--line)}
+@media (max-width:760px){
+  .tablewrap{border:0;background:none;overflow:visible}
+  #viewTrend table{min-width:0} #thead{display:none}
+  #tbody tr{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+  #tbody tr.tA{background:var(--panel);border-color:rgba(158,255,0,.5)}
+  #tbody td{display:block;border:0;padding:2px 0;text-align:left;position:static!important;background:none!important;box-shadow:none!important;max-width:none!important;width:auto!important}
+  #tbody td::before{content:attr(data-label);display:block;font:10px system-ui;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  #tbody td:nth-child(1){grid-column:3;grid-row:1;text-align:right} #tbody td:nth-child(1)::before,#tbody td:nth-child(2)::before{display:none}
+  #tbody td:nth-child(2){grid-column:1 / 3;grid-row:1;font-size:16px}
+  #tbody td.empty{grid-column:1 / -1}
+  #tbody td:nth-child(3),#tbody td:nth-child(7),#tbody td:nth-child(8),#tbody td:nth-child(9),#tbody td:nth-child(10),#tbody td:nth-child(11),#tbody td:nth-child(12),#tbody td:nth-child(13),#tbody td:nth-child(14),#tbody td:nth-child(19),#tbody td:nth-child(20),#tbody td:nth-child(22){display:none}
+  #tbody td:last-child{grid-column:1 / -1}
+  tr.skel{display:block!important}
+}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 .pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .pager .pinfo{color:var(--muted);font-size:12px;margin-right:auto}
 .pager button{font-family:var(--mono);font-size:12px;padding:5px 10px}
@@ -240,6 +323,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="status">
       <span><span id="dot" class="dot"></span> <span id="statusText">Idle</span></span>
       <span>Last scan: <span id="lastScan">—</span></span>
+      <button id="liveBtn" class="livechip" title="Live prices from Binance between scans. Click to turn off/on.">● Live</button>
       <label>Auto
         <select id="auto"><option value="0">Manual</option><option value="60">60s</option><option value="120">2m</option><option value="300">5m</option></select>
       </label>
@@ -250,6 +334,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <nav class="tabs" id="tabs" role="tablist">
     <button role="tab" data-view="trend" class="on">Trend Confirmation</button>
+    <button role="tab" data-view="map">Market Map</button>
     <button role="tab" data-view="sectors">Sector Flow</button>
     <button role="tab" data-view="journal">Journal</button>
   </nav>
@@ -277,6 +362,14 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="toolbar">
         <div class="searchbox"><span class="sicon" aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search pair…" aria-label="Search pair"></div>
         <label>Rows <select id="pageSize"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="0">All</option></select></label>
+        <div class="popwrap"><button id="viewBtn" aria-haspopup="true" aria-expanded="false" title="Columns, row density and presets">View ▾</button>
+          <div class="pop" id="viewPop" hidden>
+            <div class="pophead">Presets</div><div id="presetList" class="presetlist"></div>
+            <div class="row" style="margin:6px 0 10px"><input id="presetName" type="text" placeholder="Name this view…" style="flex:1;min-width:0"><button id="presetSave">Save</button></div>
+            <div class="pophead">Rows</div>
+            <div class="seg" id="densSeg"><button data-v="comfortable">Comfortable</button><button data-v="compact">Compact</button></div>
+            <div class="pophead" style="margin-top:10px">Columns</div><div id="colList" class="collist"></div>
+          </div></div>
         <button id="clearBtn">Clear filters</button>
         <button id="csvBtn">Export CSV</button>
       </div>
@@ -322,7 +415,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div class="tablewrap">
     <table>
       <thead><tr id="thead"></tr></thead>
-      <tbody id="tbody"><tr><td class="empty" colspan="23">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
+      <tbody id="tbody"><tr><td class="empty" colspan="24">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
     </table>
   </div>
   <div class="pager" id="pager"></div>
@@ -383,6 +476,27 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   </div><!-- /viewTrend -->
 
+  <div id="viewMap" hidden>
+    <div class="panel">
+      <div class="row">
+        <span class="mu">Compare with</span>
+        <div class="seg" id="mapVs"><button data-v="b" class="on">₿ BTC</button><button data-v="e">Ξ ETH</button></div>
+        <label>Show <select id="mapShow"><option value="all">All scanned pairs</option><option value="al">Aligned only</option><option value="set">Setups only</option></select></label>
+        <label><input id="mapLabels" type="checkbox" checked> Labels</label>
+        <span class="maplegend"><i class="lg A"></i>A <i class="lg B"></i>B <i class="lg C"></i>C <i class="lg N"></i>no grade · <i class="lg ring b"></i>long setup <i class="lg ring s"></i>short setup · size = 24h volume</span>
+      </div>
+    </div>
+    <div class="panel mapwrap"><div id="mapBox"></div><div class="maptip" id="mapTip" hidden></div></div>
+    <div class="quads" id="mapQuads"></div>
+    <div class="panel" style="margin-top:12px"><details><summary>How to read the Market Map</summary><ul>
+      <li><b>Across</b>: relative strength over 7 days. Right of centre = the coin beat BTC (or ETH) this week.</li>
+      <li><b>Up and down</b>: relative strength over the last 24 hours, the recent momentum of that strength.</li>
+      <li><b>Leading</b> (top right): strong and still gaining. <b>Weakening</b> (bottom right): strong but fading, often taking profit. <b>Lagging</b> (bottom left): weak and still losing. <b>Improving</b> (top left): weak but turning up, where early rotations show first.</li>
+      <li>Coins tend to rotate clockwise: Improving → Leading → Weakening → Lagging. Improving coins with an A or B long setup are early candidates; Weakening coins with a short setup are early fade candidates.</li>
+      <li>Click any dot or name to open its trade plan. Extreme values are pinned to the edge (dashed outline).</li>
+    </ul></details></div>
+  </div><!-- /viewMap -->
+
   <div id="viewSectors" hidden>
     <div class="panel">
       <div class="row">
@@ -401,7 +515,13 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="rot-head"><b>Rotation</b> <span class="mu">Change in share of altcoin volume today vs the 7-day average, in percentage points. Money has to come from somewhere: gainers are pulling it from losers.</span></div>
       <div id="secBars"></div>
     </div>
-    <div class="tablewrap">
+    <div class="row" style="margin:0 0 10px">
+      <div class="seg" id="secMode"><button data-v="table" class="on">Table</button><button data-v="heat">Heatmap</button></div>
+      <label id="secColorL" hidden>Colour by <select id="secColor"><option value="flow">Flow (share Δ)</option><option value="rs">RS vs BTC 7d</option><option value="px">Price 24h (VW)</option></select></label>
+      <span class="mu" id="secHeatNote" hidden style="font-size:12px">Tile size = 24h volume. Click a sector to see its coins.</span>
+    </div>
+    <div class="panel" id="secHeat" hidden><div id="secHeatBox"></div></div>
+    <div class="tablewrap" id="secTableWrap">
       <table class="sectbl">
         <thead><tr id="secHead"></tr></thead>
         <tbody id="secBody"><tr><td class="empty" colspan="11">Press <b>Load sector flow</b> to pull 24h volume and 30 days of daily candles, then compare each sector with its own normal.</td></tr></tbody>
@@ -458,6 +578,9 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <footer>Data: <code>fapi.binance.com</code> klines (cached in your browser, topped up incrementally) · OI from <code>openInterestHist</code> · market cap from CoinGecko. Requests come from your own browser, no keys or backend. Not financial advice. Confirm on the chart.</footer>
 </div>
 
+<div class="palette" id="palette" hidden role="dialog" aria-label="Quick search">
+  <div class="palbox"><input id="palIn" type="text" placeholder="Search a pair and press Enter…" autocomplete="off" aria-label="Pair"><ul id="palList"></ul>
+  <div class="palhint mu">↑ ↓ to move · Enter to open the trade plan · Esc to close · <b>Ctrl+K</b> anywhere</div></div></div>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-label="Trade plan" aria-hidden="true">
   <div class="dhead">
@@ -629,7 +752,7 @@ function evaluate(candles, cfg){
   const e20 = ema(c, 20), at = atr(h, l, c, 14);
   const ext = Number.isFinite(e20[L]) && at[L] > 0 ? (c[L] - e20[L]) / at[L] : null;
   const trig = cfg.noTrig ? [] : triggers(candles, ind, cfg);
-  return {incomplete: false, ...now, ext, trig, atr: at[L], prevBull: prev ? prev.bull : 0, prevBear: prev ? prev.bear : 0, lastClose: c[L], lastTime: candles[L][0], firstTime: candles[0][0], bars: c.length, tail: c.slice(-12)};
+  return {incomplete: false, ...now, ext, trig, atr: at[L], prevBull: prev ? prev.bull : 0, prevBear: prev ? prev.bear : 0, lastClose: c[L], lastTime: candles[L][0], firstTime: candles[0][0], bars: c.length, tail: c.slice(-30)};
 }
 /* OI/price quadrant. dz = dead zone in % (moves smaller than this count as flat). */
 function positioning(pD, oD, dz = 0.5){
@@ -986,10 +1109,10 @@ async function getKlines(sym, tf, closedOnly){
 
 /* Daily candles for volume baselines: 32 bars, weight 1, refreshed once per UTC day. Stores [openTime, quoteVol≈vol×close]. */
 async function getDaily(sym){
-  const day = 864e5, cur = Math.floor(Date.now() / day) * day, key = `d:${sym}`, c = await Cache.get(key);
+  const day = 864e5, cur = Math.floor(Date.now() / day) * day, key = `d2:${sym}`, c = await Cache.get(key);
   if (c && c.b === cur) return c.v;
   const d = await getJSON(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=1d&limit=32`, WEIGHT, 1);
-  const v = d.filter(k => k[0] < cur).map(k => [k[0], +k[7] || (+k[5] * +k[4])]);   // k[7] = quote asset volume
+  const v = d.filter(k => k[0] < cur).map(k => [k[0], +k[7] || (+k[5] * +k[4]), +k[4]]);   // [time, quote volume, close]
   await Cache.set(key, {b: cur, v});
   return v;
 }
@@ -1010,7 +1133,7 @@ async function getOI(sym, tf){
 
 /* ---------- UI state ---------- */
 const $ = id => document.getElementById(id);
-const S = {tf: '4h', show: 'all', sort: {k: 'score', dir: -1}, rows: [], total: 0, scanning: false, timer: null, mf: {}, page: 0, sig: '', incOnly: false, setupOnly: false};
+const S = {view: 'trend', tf: '4h', show: 'all', sort: {k: 'score', dir: -1}, rows: [], total: 0, scanning: false, timer: null, mf: {}, page: 0, sig: '', incOnly: false, setupOnly: false};
 const store = {
   get(){ try { return JSON.parse(localStorage.getItem('onslaught-tc') || '{}'); } catch { return {}; } },
   set(o){ try { localStorage.setItem('onslaught-tc', JSON.stringify(o)); } catch {} }
@@ -1059,6 +1182,14 @@ function derive(r, c){
 }
 
 const gradeTip = G => [`Grade ${G.grade} (${G.pts > 0 ? '+' : ''}${G.pts} points)`, ...G.reasons.map(x => `${x.v > 0 ? '+' : ''}${x.v}  ${x.t}`), ...G.flags.map(f => `capped at C: ${f}`)].join('&#10;');
+/* Sparkline of the last 30 closes on the scanned timeframe; colour = direction over that span. */
+function sparkline(r){
+  const t = r.d && r.d.tail; if (!t || t.length < 5) return '<span class="mu">—</span>';
+  const W = 64, H = 20, lo = Math.min(...t), hi = Math.max(...t), rg = hi - lo || 1, up = t.at(-1) >= t[0];
+  const pts = t.map((v, i) => `${(i / (t.length - 1) * W).toFixed(1)},${(H - 2 - (v - lo) / rg * (H - 4)).toFixed(1)}`).join(' ');
+  const col = up ? 'var(--bull)' : 'var(--bear)', chg = (t.at(-1) / t[0] - 1) * 100;
+  return `<svg class="spk" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-label="${t.length} candles ${chg > 0 ? '+' : ''}${chg.toFixed(1)}%"><title>Last ${t.length} candles: ${chg > 0 ? '+' : ''}${chg.toFixed(2)}%</title><polyline points="0,${H} ${pts} ${W},${H}" fill="${col}" fill-opacity=".10" stroke="none"/><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.3" stroke-linejoin="round"/><circle cx="${W}" cy="${(H - 2 - (t.at(-1) - lo) / rg * (H - 4)).toFixed(1)}" r="1.8" fill="${col}"/></svg>`;
+}
 const ppf = v => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1);
 function rsCell(r){
   const x = r.rs; if (!x || (x.b7 == null && x.e7 == null)) return '<span class="mu" title="Needs 8+ days of daily candles">—</span>';
@@ -1078,9 +1209,9 @@ function trigCell(r){
   const shown = r.trig.slice(0, 3).map(t => `<span class="tg ${t.dir > 0 ? 'b' : t.dir < 0 ? 's' : 'n'}" title="${t.name}${t.t === 'coil' ? '' : ', ' + (t.ago === 0 ? 'last candle' : t.ago + ' candle' + (t.ago > 1 ? 's' : '') + ' ago')}">${TRIG_SHORT[t.t]}${t.ago && t.t !== 'coil' ? '<sub>' + t.ago + '</sub>' : ''}</span>`).join('');
   return shown + (r.trig.length > 3 ? `<span class="tg n" title="${r.trig.slice(3).map(t => t.name).join(', ')}">+${r.trig.length - 3}</span>` : '');
 }
-const COL_HELP = {"star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
+const COL_HELP = {"star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "spark": "Price over the last 30 candles of the selected timeframe (green = up over that span, red = down). Sort to rank by that move.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
 const COLS = [
-  {k:'star', t:'★', c:'c'}, {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
+  {k:'star', t:'★', c:'c'}, {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'spark', t:'Trend', c:'c'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA', c:'c'},
   {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'rs', t:'RS 7D', c:'c'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'grade', t:'Grade', c:'c'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
 ];
@@ -1090,6 +1221,7 @@ function sortVal(r, k){
   if (k === 'sym') return r.sym;
   if (k === 'star') return WATCH.has(r.sym) ? 1 : 0;
   if (k === 'score') return r.score * 1e13 + r.qv;
+  if (k === 'spark') return r.d && r.d.tail ? r.d.tail.at(-1) / r.d.tail[0] - 1 : -1e9;
   if (k === 'rs') return r.rs?.b7 ?? -1e9;
   if (k === 'grade') return r.G ? GRADE_RANK[r.G.grade] * 100 + r.G.pts : -1;
   if (k === 'trig') return r.setup ? 100 + r.trig.length : r.trig.length;
@@ -1203,15 +1335,16 @@ function syncCards(){
 }
 function setShow(v){ S.show = v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === v)); }
 function render(){
+  if (S.view === 'map') queueMicrotask(renderMap);
   const c = cfg(), all = S.rows.map(r => derive(r, c));
-  $('sScanned').textContent = S.rows.length; $('sOf').textContent = `of ${S.total} perpetuals`;
-  $('sBull').textContent = all.filter(r => r.bull >= 4).length;
-  $('sBear').textContent = all.filter(r => r.bear >= 4).length;
-  $('sNew').textContent = all.filter(r => r.isNew).length;
-  $('sOi').textContent = all.filter(r => r.oiUp).length; $('sOiS').textContent = `≥ ${c.oiThr}% over ${c.oiN} candles`;
-  $('sInc').textContent = all.filter(r => r.inc).length;
-  { const ws = all.filter(r => WATCH.has(r.sym)); $('sStar').textContent = ws.length; $('sStarS').textContent = `${ws.filter(r => r.bull >= 4 || r.bear >= 4).length} aligned · ${ws.filter(r => r.setup).length} triggered`; }
-  $('sSetup').textContent = all.filter(r => r.setup).length; $('sSetupS').textContent = `aligned + trigger in last ${c.trigN} · ${all.filter(r => r.setup && r.G && r.G.grade === 'A').length} A-grade`;
+  setNum('sScanned', S.rows.length); $('sOf').textContent = `of ${S.total} perpetuals`;
+  setNum('sBull', all.filter(r => r.bull >= 4).length);
+  setNum('sBear', all.filter(r => r.bear >= 4).length);
+  setNum('sNew', all.filter(r => r.isNew).length);
+  setNum('sOi', all.filter(r => r.oiUp).length); $('sOiS').textContent = `≥ ${c.oiThr}% over ${c.oiN} candles`;
+  setNum('sInc', all.filter(r => r.inc).length);
+  { const ws = all.filter(r => WATCH.has(r.sym)); setNum('sStar', ws.length); $('sStarS').textContent = `${ws.filter(r => r.bull >= 4 || r.bear >= 4).length} aligned · ${ws.filter(r => r.setup).length} triggered`; }
+  setNum('sSetup', all.filter(r => r.setup).length); $('sSetupS').textContent = `aligned + trigger in last ${c.trigN} · ${all.filter(r => r.setup && r.G && r.G.grade === 'A').length} A-grade`;
   renderRegime(all, c);
 
   $('thead').innerHTML = COLS.map(col => `<th class="${col.c || ''} ${S.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}" title="${(COL_HELP[col.k] || '').replace(/"/g, '&quot;')} (click to sort)">${col.t}${S.sort.k === col.k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
@@ -1226,20 +1359,22 @@ function render(){
   renderPager(rows.length, size, pages, start, pageRows.length);
   syncCards();
   if (!rows.length){
+    if (S.scanning && !S.rows.length){ $('tbody').innerHTML = skeletonRows(10); return; }
     $('tbody').innerHTML = `<tr><td class="empty" colspan="${COLS.length}">${S.rows.length ? 'No pairs match the current filters.' : 'Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.'}</td></tr>`;
-    return;
+    UI.prev = new Set(); return;
   }
   $('tbody').innerHTML = pageRows.map(r => {
     const d = r.d, v = d ? d.vals : null, f = x => Number.isFinite(x) ? x.toFixed(1) : '—';
     const tv = `https://www.tradingview.com/chart/?symbol=BINANCE:${r.sym}.P`;
     const sb = r.bull >= 5 ? 'b5' : r.bull >= 4 ? 'b4' : '', sr = r.bear >= 5 ? 'r5' : r.bear >= 4 ? 'r4' : '';
     const ent = S.changes && S.changes.inMap[r.sym];
-    return `<tr data-sym="${r.sym}" class="${r.inc && !d ? 'inc' : ''} ${D.sym === r.sym ? 'sel' : ''} ${ent ? 'entered' : ''}" title="Click for trade plan">
+    return `<tr data-sym="${r.sym}" class="${r.inc && !d ? 'inc' : ''} ${D.sym === r.sym ? 'sel' : ''} ${ent ? 'entered' : ''} ${r.G ? 't' + r.G.grade : ''} ${UI.prev && !UI.prev.has(r.sym) ? 'fadein' : ''}" title="Click for trade plan">
       <td class="c"><button class="starb ${WATCH.has(r.sym) ? 'on' : ''}" data-star="${r.sym}" aria-label="${WATCH.has(r.sym) ? 'Remove from' : 'Add to'} watchlist" title="${WATCH.has(r.sym) ? 'Remove from' : 'Add to'} watchlist">${WATCH.has(r.sym) ? '★' : '☆'}</button></td>
       <td class="l pair">${r.sym.replace('USDT','')}${r.isNew ? '<span class="new">NEW</span>' : ''}${ent ? `<span class="inpill ${ent.dir > 0 ? 'b' : 's'}" title="Entered since the last scan: ${ent.kind === 'setup' ? 'triggered setup' : 'aligned'}">IN</span>` : ''}<a class="tvl" href="${tv}" target="_blank" rel="noopener" title="Open on TradingView">↗</a></td>
       <td class="l">${(tg => `<span class="tag">${tg[0]}</span>${tg.length > 1 ? `<span class="tag" title="${tg.slice(1).join(', ')}">+${tg.length - 1}</span>` : ''}`)(tagsOf(r.base))}</td>
-      <td>${fmtPrice(r.price)}</td>
-      <td class="${cls(r.chg)}">${fmtPct(r.chg)}</td>
+      <td class="px">${fmtPrice(r.price)}</td>
+      <td class="pc ${cls(r.chg)}">${fmtPct(r.chg)}</td>
+      <td class="c sp">${sparkline(r)}</td>
       <td>${fmtBig(r.qv)}</td>
       <td>${fmtBig(r.mcap)}</td>
       ${d ? chk(d.s.dmi, `+DI ${f(v.pdi)} · −DI ${f(v.mdi)} · ADX ${f(v.adx)}`) : '<td class="c mu">—</td>'}
@@ -1259,6 +1394,7 @@ function render(){
       <td class="l trigs">${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}" title="Aligned and triggered on ${S.tf.toUpperCase()}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}${trigCell(r)}</td>
     </tr>`;
   }).join('');
+  afterRender(pageRows);
 }
 let renderPending = false;
 function scheduleRender(){ if (renderPending) return; renderPending = true; setTimeout(() => { renderPending = false; render(); }, 250); }
@@ -1341,12 +1477,13 @@ function exportCSV(){
 /* ---------- Views ---------- */
 function setView(v){
   S.view = v;
-  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal';
+  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = {trend: 'Trend Confirmation', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
+  $('viewName').textContent = {map: 'Market Map', trend: 'Trend Confirmation', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   if (v === 'journal') renderJournal();
+  if (v === 'map') renderMap();
 }
 
 /* ---------- Sector Flow ---------- */
@@ -1370,7 +1507,7 @@ async function loadSectors(){
           const d = await getDaily(u.sym), q = d.map(x => x[1]);
           if (q.length >= 7){
             const avg = n => { const a = q.slice(-n); return a.reduce((x, y) => x + y, 0) / a.length; };
-            out.push({sym: u.sym, base: u.base, qv: u.qv, chg: u.chg, price: u.price, avg7: avg(7), avg30: q.length >= 14 ? avg(30) : null, days: q.length});
+            out.push({sym: u.sym, base: u.base, qv: u.qv, chg: u.chg, price: u.price, avg7: avg(7), avg30: q.length >= 14 ? avg(30) : null, days: q.length, ret7: d.length >= 8 && d.at(-8)[2] > 0 ? (u.price / d.at(-8)[2] - 1) * 100 : null});
           }
         } catch(e){ if (/418|banned/.test(e.message)) throw e; }
         done++; $('secProg').style.width = (3 + 97 * done / list.length) + '%'; st(`Loading daily volume ${done}/${list.length}…`);
@@ -1392,6 +1529,8 @@ function sectorRows(){
   const c = cfg(), trend = new Map(S.rows.map(r => [r.sym, derive(r, c)]));
   for (const r of rows){
     const scanned = r.coins.map(x => trend.get(x.sym)).filter(Boolean);
+    { const btc7 = SEC.coins.find(x => x.base === 'BTC')?.ret7 ?? S.ref?.btc?.r7, w = r.coins.filter(x => x.ret7 != null), wv = w.reduce((a, x) => a + x.qv, 0);
+      r.rs7 = btc7 != null && wv > 0 ? w.reduce((a, x) => a + x.qv * x.ret7, 0) / wv - btc7 : null; }
     r.tScan = scanned.length; r.tBull = scanned.filter(x => x.bull >= 4).length; r.tBear = scanned.filter(x => x.bear >= 4).length;
     r.tNet = r.tScan ? (r.tBull - r.tBear) / r.tScan : null;
     for (const x of r.coins){ const t = trend.get(x.sym); x.tr = t ? (t.setup ? t.setup * 2 : t.bull >= 4 ? 1 : t.bear >= 4 ? -1 : 0) : null; }
@@ -1403,6 +1542,7 @@ const SEC_COLS = [{k: 'sector', t: 'Sector', c: 'l'}, {k: 'n', t: 'Coins'}, {k: 
 const ratio = v => v == null ? '—' : v.toFixed(2) + '×';
 const ratioCls = v => v == null ? 'mu' : v >= 2 ? 'hot2' : v >= 1.5 ? 'hot' : v < 0.8 ? 'cold' : '';
 function renderSectors(){
+  queueMicrotask(renderSecHeat);
   const rows = sectorRows(); SEC.rows = rows;
   const {k, dir} = SEC.sort;
   rows.sort((a, b) => { const x = k === 'sector' ? a.sector : k === 'verdict' ? a.verdict : a[k] ?? -1e9, y = k === 'sector' ? b.sector : k === 'verdict' ? b.verdict : b[k] ?? -1e9; return (x > y ? 1 : x < y ? -1 : 0) * dir; });
@@ -1852,6 +1992,214 @@ function planText(){
   ].filter(Boolean).join('\n');
 }
 
+/* ---------- Market Map (relative rotation) ---------- */
+const MAP = {vs: 'b'};
+function renderMap(){
+  const box = $('mapBox'); if (!box || $('viewMap').hidden) return;
+  const c = cfg(), show = $('mapShow').value, vs = MAP.vs;
+  let rows = S.rows.map(r => derive(r, c)).filter(r => r.rs && r.rs[vs + '7'] != null && r.rs[vs + '1'] != null && r.sym !== (vs === 'b' ? 'BTCUSDT' : 'ETHUSDT'));
+  if (show === 'al') rows = rows.filter(r => r.bull >= 4 || r.bear >= 4);
+  if (show === 'set') rows = rows.filter(r => r.setup);
+  if (!rows.length){ box.innerHTML = `<div class="dload" style="height:300px">${S.rows.length ? 'No pairs with relative strength data match.' : 'Run a Trend Confirmation scan to fill the map.'}</div>`; $('mapQuads').innerHTML = ''; return; }
+  const W = Math.max(320, box.clientWidth), H = Math.min(620, Math.max(360, Math.round(W * 0.48))), m = {l: 54, r: 18, t: 18, b: 40};
+  const xs = rows.map(r => r.rs[vs + '7']), ys = rows.map(r => r.rs[vs + '1']);
+  const q = (a, p) => { const v = a.map(Math.abs).sort((x, y) => x - y); return v[Math.min(v.length - 1, Math.floor(p * (v.length - 1)))] || 0; };
+  const xM = Math.max(5, q(xs, .95) * 1.15), yM = Math.max(2, q(ys, .95) * 1.15);
+  const X = v => m.l + (Math.max(-xM, Math.min(xM, v)) + xM) / (2 * xM) * (W - m.l - m.r), Y = v => m.t + (yM - Math.max(-yM, Math.min(yM, v))) / (2 * yM) * (H - m.t - m.b);
+  const maxV = Math.max(...rows.map(r => r.qv || 0)) || 1, rad = r => 3.5 + 11 * Math.sqrt((r.qv || 0) / maxV);
+  const ticks = (M, n) => { const st = [1, 2, 2.5, 5, 10, 20, 25, 50, 100].find(s => M / s <= n) || 100; const out = []; for (let v = -Math.floor(M / st) * st; v <= M + 1e-9; v += st) out.push(+v.toFixed(2)); return out; };
+  const x0 = X(0), y0 = Y(0), fill = {A: 'var(--bull)', B: 'var(--accent)', C: '#6b6d75'};
+  const labelSet = new Set(rows.slice().sort((a, b) => b.qv - a.qv).slice(0, 14).map(r => r.sym).concat(rows.filter(r => r.setup && r.G && r.G.grade === 'A').map(r => r.sym)));
+  const dots = rows.slice().sort((a, b) => b.qv - a.qv).map(r => {
+    const x = r.rs[vs + '7'], y = r.rs[vs + '1'], cx = X(x), cy = Y(y), clip = Math.abs(x) > xM || Math.abs(y) > yM, R = rad(r);
+    const ring = r.setup ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(R + 2.5).toFixed(1)}" fill="none" stroke="${r.setup > 0 ? 'var(--bull)' : 'var(--bear)'}" stroke-width="1.6"/>` : '';
+    return `<g class="dot" data-sym="${r.sym}">${ring}<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${R.toFixed(1)}" fill="${r.G ? fill[r.G.grade] : '#3d3f47'}" fill-opacity="${r.G ? .85 : .55}" stroke="${clip ? '#bcacd4' : '#000'}" stroke-width="${clip ? 1.2 : .6}" ${clip ? 'stroke-dasharray="2 2"' : ''}/>${$('mapLabels').checked && labelSet.has(r.sym) ? `<text x="${(cx + R + 3).toFixed(1)}" y="${(cy + 3.5).toFixed(1)}" class="mlab">${r.sym.replace('USDT', '')}</text>` : ''}</g>`;
+  }).join('');
+  const qd = [['Improving', m.l + 8, m.t + 16, 'imp'], ['Leading', W - m.r - 8, m.t + 16, 'lead', 'end'], ['Lagging', m.l + 8, H - m.b - 8, 'lag'], ['Weakening', W - m.r - 8, H - m.b - 8, 'weak', 'end']];
+  box.innerHTML = `<svg class="mapsvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Market map: relative strength vs ${vs === 'b' ? 'BTC' : 'ETH'}">
+    <rect x="${x0}" y="${m.t}" width="${W - m.r - x0}" height="${y0 - m.t}" class="q lead"/><rect x="${m.l}" y="${m.t}" width="${x0 - m.l}" height="${y0 - m.t}" class="q imp"/>
+    <rect x="${m.l}" y="${y0}" width="${x0 - m.l}" height="${H - m.b - y0}" class="q lag"/><rect x="${x0}" y="${y0}" width="${W - m.r - x0}" height="${H - m.b - y0}" class="q weak"/>
+    ${ticks(xM, 6).map(v => `<line x1="${X(v)}" x2="${X(v)}" y1="${m.t}" y2="${H - m.b}" class="grid"/><text x="${X(v)}" y="${H - m.b + 15}" class="tick" text-anchor="middle">${v > 0 ? '+' : ''}${v}</text>`).join('')}
+    ${ticks(yM, 5).map(v => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" class="grid"/><text x="${m.l - 6}" y="${Y(v) + 3.5}" class="tick" text-anchor="end">${v > 0 ? '+' : ''}${v}</text>`).join('')}
+    <line x1="${x0}" x2="${x0}" y1="${m.t}" y2="${H - m.b}" class="axis0"/><line x1="${m.l}" x2="${W - m.r}" y1="${y0}" y2="${y0}" class="axis0"/>
+    ${qd.map(([t, x, y, k, a]) => `<text x="${x}" y="${y}" class="qlab ${k}" text-anchor="${a || 'start'}">${t}</text>`).join('')}
+    <text x="${(m.l + W - m.r) / 2}" y="${H - 6}" class="axt" text-anchor="middle">Relative strength vs ${vs === 'b' ? 'BTC' : 'ETH'}, 7 days (pp) →</text>
+    <text transform="translate(14 ${(m.t + H - m.b) / 2}) rotate(-90)" class="axt" text-anchor="middle">24h momentum (pp) →</text>
+    ${dots}</svg>`;
+  const quad = r => { const x = r.rs[vs + '7'], y = r.rs[vs + '1']; return x >= 0 ? (y >= 0 ? 'lead' : 'weak') : (y >= 0 ? 'imp' : 'lag'); };
+  const groups = {lead: [], imp: [], weak: [], lag: []}; for (const r of rows) groups[quad(r)].push(r);
+  const names = {lead: ['Leading', 'strong and still gaining'], imp: ['Improving', 'weak but turning up'], weak: ['Weakening', 'strong but fading'], lag: ['Lagging', 'weak and still losing']};
+  $('mapQuads').innerHTML = ['imp', 'lead', 'lag', 'weak'].map(k => `<div class="quad ${k}"><div class="qh"><b>${names[k][0]}</b> <span class="mu">${groups[k].length} · ${names[k][1]}</span></div>
+    ${groups[k].sort((a, b) => (!!b.setup - !!a.setup) || (b.qv - a.qv)).slice(0, 10).map(r => `<button class="qchip" data-open="${r.sym}">${r.sym.replace('USDT', '')}${r.G ? ` <span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'L' : 'S'}</span>` : ''}</button>`).join('') || '<span class="mu">none</span>'}</div>`).join('');
+  MAP.rows = new Map(rows.map(r => [r.sym, r]));
+}
+function mapTip(e){
+  const g = e.target.closest('.dot'), tip = $('mapTip');
+  if (!g){ tip.hidden = true; return; }
+  const r = MAP.rows.get(g.dataset.sym); if (!r) return;
+  const vs = MAP.vs;
+  tip.innerHTML = `<b>${r.sym.replace('USDT', '')}</b> ${fmtPrice(r.price)} <span class="${cls(r.chg)}">${fmtPct(r.chg)}</span><br>
+    RS 7d ${vs === 'b' ? '₿' : 'Ξ'} <b class="${cls(r.rs[vs + '7'])}">${ppf(r.rs[vs + '7'])} pp</b> · 24h <b class="${cls(r.rs[vs + '1'])}">${ppf(r.rs[vs + '1'])} pp</b><br>
+    ${r.G ? `Grade <b>${r.G.grade}</b> · ` : ''}Bull ${r.bull}/5 · Bear ${r.bear}/5${r.setup ? ` · <b class="${r.setup > 0 ? 'up' : 'dn'}">${r.setup > 0 ? 'LONG' : 'SHORT'} setup</b>` : ''}<br><span class="mu">Vol ${fmtBig(r.qv)} · click for trade plan</span>`;
+  const wrap = $('mapBox').getBoundingClientRect(); tip.hidden = false;
+  let x = e.clientX - wrap.left + 14, y = e.clientY - wrap.top + 14; if (x + 240 > wrap.width) x -= 260;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+
+/* ---------- Sector heatmap (squarified treemap) ---------- */
+function squarify(items, x, y, w, h){
+  const out = [], total = items.reduce((a, i) => a + i.v, 0); if (!total) return out;
+  const scale = w * h / total, list = items.map(i => ({...i, a: i.v * scale}));
+  const worst = (row, len) => { const s = row.reduce((a, r) => a + r.a, 0), mx = Math.max(...row.map(r => r.a)), mn = Math.min(...row.map(r => r.a)); return Math.max(len * len * mx / (s * s), s * s / (len * len * mn)); };
+  let row = [], rest = list.slice();
+  while (rest.length){
+    const len = Math.min(w, h), next = rest[0];
+    if (!row.length || worst(row.concat(next), len) <= worst(row, len)){ row.push(next); rest.shift(); continue; }
+    const s = row.reduce((a, r) => a + r.a, 0);
+    if (w >= h){ const cw = s / h; let cy = y; for (const r of row){ const ch = r.a / cw; out.push({...r, x, y: cy, w: cw, h: ch}); cy += ch; } x += cw; w -= cw; }
+    else { const ch = s / w; let cx = x; for (const r of row){ const cw2 = r.a / ch; out.push({...r, x: cx, y, w: cw2, h: ch}); cx += cw2; } y += ch; h -= ch; }
+    row = [];
+  }
+  if (row.length){ const s = row.reduce((a, r) => a + r.a, 0);
+    if (w >= h){ const cw = s / h; let cy = y; for (const r of row){ const ch = r.a / cw; out.push({...r, x, y: cy, w: cw, h: ch}); cy += ch; } }
+    else { const ch = s / w; let cx = x; for (const r of row){ const cw2 = r.a / ch; out.push({...r, x: cx, y, w: cw2, h: ch}); cx += cw2; } } }
+  return out;
+}
+function renderSecHeat(){
+  const box = $('secHeatBox'); if ($('secHeat').hidden || !box) return;
+  const rows = SEC.rows || [];
+  if (!rows.length){ box.innerHTML = '<div class="dload" style="height:240px">Load sector flow to see the heatmap.</div>'; return; }
+  const mode = $('secColor').value, val = r => mode === 'flow' ? r.shareD : mode === 'rs' ? r.rs7 : r.priceVW;
+  const vals = rows.map(val).filter(v => v != null), M = Math.max(...vals.map(Math.abs), mode === 'flow' ? 1 : 2);
+  const col = v => { if (v == null) return '#2a2b30'; const k = Math.min(1, Math.abs(v) / M), a = .18 + .62 * k; return v >= 0 ? `rgba(158,255,0,${a.toFixed(2)})` : `rgba(233,76,42,${a.toFixed(2)})`; };
+  const W = Math.max(320, box.clientWidth), H = Math.round(Math.min(560, Math.max(320, W * 0.42)));
+  const tiles = squarify(rows.slice().sort((a, b) => b.vol - a.vol).map(r => ({r, v: r.vol})), 0, 0, W, H);
+  const unit = mode === 'flow' ? ' pp' : mode === 'rs' ? ' pp' : '%';
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="heatsvg" role="img" aria-label="Sector heatmap">${tiles.map(t => { const v = val(t.r), big = t.w > 90 && t.h > 46, mid = t.w > 54 && t.h > 30;
+    const ink = v != null && Math.abs(v) / M > .55 && v > 0 ? '#061003' : '#f2f0f6';
+    return `<g class="tile" data-sec="${t.r.sector}"><rect x="${t.x + 1}" y="${t.y + 1}" width="${Math.max(0, t.w - 2)}" height="${Math.max(0, t.h - 2)}" rx="6" fill="${col(v)}" stroke="#000" stroke-width="1"/>
+      <title>${t.r.sector}: ${t.r.n} coins · vol ${fmtBig(t.r.vol)} · flow ${ppf(t.r.shareD)} pp · RS vs BTC 7d ${ppf(t.r.rs7)} pp · price ${fmtPct(t.r.priceVW)} · ${VERDICT[t.r.verdict][0]}</title>
+      ${mid ? `<text x="${t.x + 9}" y="${t.y + 19}" fill="${ink}" class="tname">${t.r.sector}</text><text x="${t.x + 9}" y="${t.y + 35}" fill="${ink}" class="tval">${ppf(v)}${unit}</text>` : ''}
+      ${big ? `<text x="${t.x + 9}" y="${t.y + t.h - 10}" fill="${ink}" class="tsub">${fmtBig(t.r.vol)} · ${VERDICT[t.r.verdict][0]}</text>` : ''}</g>`; }).join('')}</svg>`;
+}
+
+/* ---------- Look & feel, motion, live prices ---------- */
+const UI = {prev: null, cells: new Map(), lastA: null, hidden: new Set(), dens: 'comfortable'};
+const RM = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function skeletonRows(n){ return Array.from({length: n}, () => `<tr class="skel">${COLS.map(() => '<td><span class="sk"></span></td>').join('')}</tr>`).join(''); }
+function setNum(id, n){
+  const el = $(id); if (!el) return;
+  const from = parseFloat(el.textContent) || 0;
+  if (RM() || from === n || !Number.isFinite(n)){ el.textContent = n; return; }
+  const t0 = performance.now(), dur = 450; cancelAnimationFrame(el._raf);
+  const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(from + (n - from) * e); if (k < 1) el._raf = requestAnimationFrame(step); };
+  el._raf = requestAnimationFrame(step);
+}
+function afterRender(pageRows){
+  UI.prev = new Set(pageRows.map(r => r.sym));
+  UI.rowIdx = new Map(S.rows.map(r => [r.sym, r]));
+  UI.cells = new Map();
+  for (const tr of $('tbody').children){
+    const sym = tr.dataset.sym; if (!sym) continue;
+    UI.cells.set(sym, {px: tr.querySelector('td.px'), pc: tr.querySelector('td.pc')});
+    [...tr.children].forEach((td, i) => { if (COLS[i]) td.dataset.label = COLS[i].t; });
+  }
+  const a = S.rows.length ? $('sSetup') && +($('sSetupS').textContent.match(/(\d+) A-grade/) || [0, 0])[1] : null;
+  if (a != null && UI.lastA != null && a > UI.lastA && !RM()){ const card = document.querySelector('.stat.trigcard'); card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse'); }
+  UI.lastA = a;
+}
+/* Columns, density, presets */
+const COLS_KEY = 'onslaught-cols', PRESET_KEY = 'onslaught-presets';
+function applyCols(){
+  let css = '';
+  COLS.forEach((c, i) => { if (UI.hidden.has(c.k)) css += `#thead th:nth-child(${i + 1}),#tbody td:nth-child(${i + 1}){display:none}`; });
+  let st = $('colStyle'); if (!st){ st = document.createElement('style'); st.id = 'colStyle'; document.head.appendChild(st); }
+  st.textContent = css;
+  document.body.classList.toggle('compact', UI.dens === 'compact');
+  [...$('densSeg').children].forEach(b => b.classList.toggle('on', b.dataset.v === UI.dens));
+}
+function loadView(){
+  try { const o = JSON.parse(localStorage.getItem(COLS_KEY) || '{}'); UI.hidden = new Set(o.hidden || []); UI.dens = o.dens || 'comfortable'; } catch {}
+  $('colList').innerHTML = COLS.filter(c => c.k !== 'star' && c.k !== 'sym').map(c => `<label><input type="checkbox" data-col="${c.k}" ${UI.hidden.has(c.k) ? '' : 'checked'}> ${c.t}</label>`).join('');
+  applyCols(); renderPresets();
+}
+function saveView(){ try { localStorage.setItem(COLS_KEY, JSON.stringify({hidden: [...UI.hidden], dens: UI.dens})); } catch {} }
+const PRESET_FIELDS = ['newOnly','starOnly','gradeF','rsF','trigF','mtfF','sector'];
+const BUILTIN = [
+  {name: 'A-grade setups', v: {setupOnly: true, gradeF: 'A'}},
+  {name: 'Leaders · long side', v: {show: 'bull', rsF: 'lbe', gradeF: 'AB'}},
+  {name: 'Laggards · short side', v: {show: 'bear', rsF: 'gb', gradeF: 'AB'}},
+  {name: 'All timeframes bullish', v: {show: 'bull', mtfF: 'b'}},
+  {name: 'All timeframes bearish', v: {show: 'bear', mtfF: 's'}},
+  {name: 'Fresh alignments', v: {newOnly: true}},
+  {name: 'My watchlist', v: {starOnly: true}}
+];
+function curPreset(){ const v = {show: S.show, setupOnly: S.setupOnly, mf: {...S.mf}}; for (const f of PRESET_FIELDS){ const el = $(f); v[f] = el.type === 'checkbox' ? el.checked : el.value; } return v; }
+function applyPreset(v){
+  S.show = v.show || 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === S.show));
+  S.setupOnly = !!v.setupOnly; S.incOnly = false;
+  S.mf = {...(v.mf || {})}; document.querySelectorAll('.mf').forEach(sel => sel.value = S.mf[sel.dataset.k] || '');
+  for (const f of PRESET_FIELDS){ const el = $(f); if (el.type === 'checkbox') el.checked = !!v[f]; else el.value = v[f] || ''; }
+  saveSettings(); render();
+}
+function customPresets(){ try { return JSON.parse(localStorage.getItem(PRESET_KEY) || '[]'); } catch { return []; } }
+function renderPresets(){
+  const cp = customPresets();
+  $('presetList').innerHTML = BUILTIN.map((p, i) => `<button class="preset" data-pb="${i}">${p.name}</button>`).join('') +
+    cp.map((p, i) => `<span class="preset mine"><button data-pc="${i}">${esc(p.name)}</button><button class="pdel" data-pd="${i}" aria-label="Delete preset ${esc(p.name)}">✕</button></span>`).join('');
+}
+/* Quick search (Ctrl+K) */
+function openPalette(){
+  if (!S.rows.length){ toast('Scan first, then search for a pair.'); return; }
+  $('palette').hidden = false; $('palIn').value = ''; renderPalette(); $('palIn').focus();
+}
+function closePalette(){ $('palette').hidden = true; }
+function renderPalette(){
+  const q = $('palIn').value.trim().toUpperCase(), c = cfg();
+  const list = S.rows.filter(r => !q || r.sym.includes(q)).map(r => derive(r, c))
+    .sort((a, b) => (b.sym.startsWith(q) - a.sym.startsWith(q)) || (b.score - a.score)).slice(0, 8);
+  UI.pal = list.map(r => r.sym); UI.palI = 0;
+  $('palList').innerHTML = list.length ? list.map((r, i) => `<li data-ps="${r.sym}" class="${i === 0 ? 'on' : ''}"><b>${r.sym.replace('USDT', '')}</b>
+    <span class="mu">${fmtPrice(r.price)} <span class="${cls(r.chg)}">${fmtPct(r.chg)}</span></span>
+    ${r.G ? `<span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}</li>`).join('')
+    : '<li class="mu">No scanned pair matches.</li>';
+}
+/* Live prices: Binance futures mini-ticker stream for all symbols, about once a second */
+const LIVE = {ws: null, on: true, retry: 0, q: new Map(), raf: 0, t: 0};
+function liveSet(state){ const b = $('liveBtn'); b.classList.toggle('on', state === 'on'); b.classList.toggle('err', state === 'err'); b.textContent = state === 'off' ? '○ Live off' : state === 'err' ? '● Live (reconnecting)' : '● Live'; }
+function liveConnect(){
+  if (!LIVE.on || LIVE.ws || location.protocol === 'about:') return;
+  let ws; try { ws = new WebSocket('wss://fstream.binance.com/ws/!miniTicker@arr'); } catch { liveSet('err'); return; }
+  LIVE.ws = ws;
+  ws.onopen = () => { LIVE.retry = 0; liveSet('on'); };
+  ws.onmessage = ev => {
+    let arr; try { arr = JSON.parse(ev.data); } catch { return; }
+    for (const t of arr){ const c = +t.c, o = +t.o; if (c > 0) LIVE.q.set(t.s, [c, o > 0 ? (c / o - 1) * 100 : null]); }
+    if (!LIVE.raf) LIVE.raf = requestAnimationFrame(liveFlush);
+  };
+  ws.onclose = () => { LIVE.ws = null; if (!LIVE.on) return; liveSet('err'); const d = Math.min(60, 5 * 2 ** LIVE.retry++); setTimeout(liveConnect, d * 1000); };
+  ws.onerror = () => { try { ws.close(); } catch {} };
+}
+function liveFlush(){
+  LIVE.raf = 0;
+  if (!LIVE.q.size) return;
+  const idx = UI.rowIdx || (UI.rowIdx = new Map(S.rows.map(r => [r.sym, r])));
+  const show = !document.hidden && S.view === 'trend';
+  for (const [sym, [c, chg]] of LIVE.q){
+    const r = idx.get(sym); if (!r) continue;
+    const old = r.price; r.price = c; if (chg != null) r.chg = chg;
+    if (!show) continue;
+    const cell = UI.cells.get(sym); if (!cell || !cell.px || c === old) continue;
+    cell.px.textContent = fmtPrice(c);
+    if (chg != null && cell.pc){ cell.pc.textContent = fmtPct(chg); cell.pc.className = 'pc ' + cls(chg); }
+    if (!RM()){ cell.px.classList.remove('fu', 'fd'); void cell.px.offsetWidth; cell.px.classList.add(c > old ? 'fu' : 'fd'); }
+  }
+  LIVE.q.clear();
+  if (D.sym && idx.get(D.sym)){ const r = idx.get(D.sym); $('dSub').innerHTML = `${fmtPrice(r.price)} · <span class="${cls(r.chg)}">${fmtPct(r.chg)}</span> 24h · ${tagsOf(r.base).join(', ')}`; }
+}
+function liveToggle(){ LIVE.on = !LIVE.on; try { localStorage.setItem('onslaught-live', LIVE.on ? '1' : '0'); } catch {}
+  if (LIVE.on) liveConnect(); else { if (LIVE.ws) LIVE.ws.close(); LIVE.ws = null; liveSet('off'); } }
+
 /* ---------- Wire up ---------- */
 const SANDBOX_MSG = 'This page is running inside a sandboxed preview that blocks network requests. Download the file and open it in a normal browser tab (or host it on GitHub Pages) to scan.';
 document.addEventListener('securitypolicyviolation', e => {
@@ -1901,7 +2249,7 @@ $('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.
   if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Trend Confirmation scan that includes this coin to open its trade plan.'); return; }
   const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
 $('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
-try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal') setView(v); } catch {}
+try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map') setView(v); } catch {}
 $('alertBtn').onclick = toggleAlerts; paintAlertBtn();
 for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
 for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
@@ -1911,6 +2259,42 @@ loadAcct();
 $('tbody').onclick = e => { const sb = e.target.closest('[data-star]'); if (sb){ toggleStar(sb.dataset.star); return; } if (e.target.closest('a')) return; const tr = e.target.closest('tr[data-sym]'); if (tr) openDrawer(tr.dataset.sym); };
 $('scrim').onclick = closeDrawer; $('dClose').onclick = closeDrawer;
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && D.sym) closeDrawer(); });
+$('mapVs').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAP.vs = b.dataset.v; [...$('mapVs').children].forEach(x => x.classList.toggle('on', x === b)); renderMap(); };
+$('mapShow').onchange = renderMap; $('mapLabels').onchange = renderMap;
+$('mapBox').addEventListener('mousemove', mapTip); $('mapBox').addEventListener('mouseleave', () => $('mapTip').hidden = true);
+$('mapBox').addEventListener('click', e => { const g = e.target.closest('.dot'); if (g) openDrawer(g.dataset.sym); });
+let rsT = 0; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(() => { if (S.view === 'map') renderMap(); if (S.view === 'sectors') renderSecHeat(); }, 150); });
+$('secMode').onclick = e => { const b = e.target.closest('button'); if (!b) return; const heat = b.dataset.v === 'heat';
+  [...$('secMode').children].forEach(x => x.classList.toggle('on', x === b)); $('secHeat').hidden = !heat; $('secTableWrap').hidden = heat; $('secColorL').hidden = !heat; $('secHeatNote').hidden = !heat; renderSecHeat(); };
+$('secColor').onchange = renderSecHeat;
+$('secHeatBox').addEventListener('click', e => { const t = e.target.closest('.tile'); if (!t) return; SEC.open.add(t.dataset.sec); $('secMode').querySelector('[data-v=table]').click(); renderSectors();
+  document.querySelector(`#secBody tr[data-sec="${t.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); });
+loadView();
+$('viewBtn').onclick = e => { e.stopPropagation(); const p = $('viewPop'); p.hidden = !p.hidden; $('viewBtn').setAttribute('aria-expanded', !p.hidden); };
+document.addEventListener('click', e => { if (!$('viewPop').hidden && !e.target.closest('.popwrap')) $('viewPop').hidden = true; });
+$('colList').onchange = e => { const k = e.target.dataset.col; if (!k) return; e.target.checked ? UI.hidden.delete(k) : UI.hidden.add(k); saveView(); applyCols(); };
+$('densSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; UI.dens = b.dataset.v; saveView(); applyCols(); };
+$('presetList').onclick = e => {
+  const b = e.target.closest('[data-pb]'), c = e.target.closest('[data-pc]'), d = e.target.closest('[data-pd]');
+  if (b) applyPreset(BUILTIN[+b.dataset.pb].v);
+  if (c) applyPreset(customPresets()[+c.dataset.pc].v);
+  if (d){ const cp = customPresets(); cp.splice(+d.dataset.pd, 1); try { localStorage.setItem(PRESET_KEY, JSON.stringify(cp)); } catch {} renderPresets(); }
+};
+$('presetSave').onclick = () => { const n = $('presetName').value.trim(); if (!n){ $('presetName').focus(); return; }
+  const cp = customPresets().filter(p => p.name !== n); cp.push({name: n, v: curPreset()}); try { localStorage.setItem(PRESET_KEY, JSON.stringify(cp)); } catch {} $('presetName').value = ''; renderPresets(); };
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); $('palette').hidden ? openPalette() : closePalette(); return; }
+  if ($('palette').hidden) return;
+  if (e.key === 'Escape'){ closePalette(); return; }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); const n = UI.pal.length; if (!n) return; UI.palI = (UI.palI + (e.key === 'ArrowDown' ? 1 : n - 1)) % n;
+    [...$('palList').children].forEach((li, i) => li.classList.toggle('on', i === UI.palI)); }
+  if (e.key === 'Enter' && UI.pal[UI.palI]){ const s2 = UI.pal[UI.palI]; closePalette(); if (S.view !== 'trend') setView('trend'); openDrawer(s2); }
+});
+$('palIn').oninput = renderPalette;
+$('palList').onclick = e => { const li = e.target.closest('[data-ps]'); if (li){ closePalette(); if (S.view !== 'trend') setView('trend'); openDrawer(li.dataset.ps); } };
+$('palette').onclick = e => { if (e.target === $('palette')) closePalette(); };
+try { LIVE.on = localStorage.getItem('onslaught-live') !== '0'; } catch {}
+$('liveBtn').onclick = liveToggle; liveSet(LIVE.on ? 'err' : 'off'); if (LIVE.on) liveConnect();
 $('dDir').onclick = e => { const b = e.target.closest('button'); if (!b) return; D.dir = +b.dataset.v; updatePlan(); };
 for (const id of ['pSlMode','pAtr','pAcct','pRisk','pLev']) $(id).oninput = () => { saveAcct(); updatePlan(); };
 $('pEntry').oninput = () => { const v = parseFloat($('pEntry').value); D.entry = v > 0 ? v : null; updatePlan(); };
