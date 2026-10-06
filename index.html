@@ -185,6 +185,9 @@ td.trigs{white-space:nowrap}
 .gr{display:inline-block;min-width:22px;padding:1px 6px;border-radius:4px;font:800 12px var(--mono);text-align:center;cursor:help}
 .gr.gA{background:var(--bull);color:#000;box-shadow:0 0 6px rgba(158,255,0,.5)} .gr.gB{background:var(--accent-dk);color:#fff} .gr.gC{background:var(--panel2);color:var(--muted)}
 .gflag{display:inline-block;margin-left:3px;font:800 11px system-ui;color:var(--warn);cursor:help}
+.rsw{display:inline-flex;gap:3px;cursor:help}
+.rsc{font:600 10.5px var(--mono);padding:1px 4px;border-radius:3px;background:var(--panel2)}
+.rsc.up{color:var(--bull);background:var(--bull-bg)} .rsc.dn{color:var(--bear);background:var(--bear-bg)}
 .pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .pager .pinfo{color:var(--muted);font-size:12px;margin-right:auto}
 .pager button{font-family:var(--mono);font-size:12px;padding:5px 10px}
@@ -293,6 +296,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <label title="Keep starred pairs at the top of the table, whatever the sort"><input id="pinStar" type="checkbox" checked> Pin ★</label>
       <label title="Filter by trigger direction: Bull = at least one bullish trigger, Bear = at least one bearish, None = no fresh trigger">Trigger <select id="trigF"><option value="">Any</option><option value="b">Bull</option><option value="s">Bear</option><option value="none">None</option></select></label>
       <label title="How recent a trigger must be to count, in candles of the selected timeframe. Also sets what counts as a LONG/SHORT setup and the Triggered setups card.">within <select id="trigN"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles</label>
+      <label title="Relative strength filter over 7 days">RS <select id="rsF"><option value="">Any</option><option value="lb">Leaders vs BTC</option><option value="lbe">Leaders vs BTC + ETH</option><option value="gb">Laggards vs BTC</option></select></label>
       <label title="Setup grade filter. A = high quality (timeframes, regime and positioning agree, not stretched); C = weak or risky">Grade <select id="gradeF"><option value="">Any</option><option value="A">A only</option><option value="AB">A–B</option></select></label>
       <label title="Multi-timeframe filter: All bull / All bear = 1D, 4H and 1H all agree">MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
     </div>
@@ -318,7 +322,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div class="tablewrap">
     <table>
       <thead><tr id="thead"></tr></thead>
-      <tbody id="tbody"><tr><td class="empty" colspan="22">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
+      <tbody id="tbody"><tr><td class="empty" colspan="23">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
     </table>
   </div>
   <div class="pager" id="pager"></div>
@@ -337,6 +341,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <li><b>Since last scan</b>: pairs that became aligned or triggered (⚡) since your previous scan on the same timeframe, and pairs that lost alignment. New entries get an IN pill and a purple edge in the table. Click a chip to open its trade plan.</li>
         <li><b>Telegram</b>: create a bot with @BotFather, paste its token and your chat ID in Settings, press Send test, then tick Send alerts to Telegram. Each alert lists the pairs with triggers, context and (optionally) entry, stop and targets. The token stays in this browser only. The drawer also has a Send to Telegram button for any plan.</li>
         <li><b>Alerts</b>: turn on with 🔔 (your browser asks permission). After each scan, new triggered setups (or new alignments too, in Settings) raise a desktop notification, an on-page toast and a sound; the tab title shows a count while you're away. Auto-refresh must be on and the tab must stay open; with alerts on, scans keep running in a background tab.</li>
+        <li><b>RS 7D</b>: relative strength over the last 7 days in percentage points: ₿ = vs BTC, Ξ = vs ETH (hover for 24h). Green = leading by 2+ points, red = lagging by 2+. Leaders make the best longs in a risk-on market, laggards the best shorts. The regime bar also shows ETH vs BTC: ETH leading often comes before altcoins run. RS is shown, filtered and journaled but not yet part of the grade, so the Journal can show first whether it adds an edge.</li>
         <li><b>Grade A / B / C</b> rates the aligned side: +1 score 5/5 · +2 all timeframes agree (+1 if only 1D, −2 if 1D is against) · +1 with the regime (−2 against) · +1 within 1.5 ATR of its average (−2 if stretched 3+) · +1 new positions on its side (−1 for short-covering rallies or long-liquidation drops) · +1 when the other side is crowded (−1 when its own side is) · +1 for 2+ triggers. A = 5+, B = 2–4, C = below. New listings, extreme funding and thin liquidity cap it at C (shown as !). Hover any grade for its breakdown.</li>
         <li><b>LONG / SHORT badge</b> = a triggered setup: 4–5/5 aligned plus a trigger in the same direction. These rank first and have their own stat card.</li>
         <li><b>Positioning</b> compares price and OI change over the same N candles: <b>New longs</b> (price ↑ OI ↑), <b>New shorts</b> (price ↓ OI ↑), <b>Short covering</b> (price ↑ OI ↓, a squeeze that often fades once covering ends), <b>Long liquidation</b> (price ↓ OI ↓). Moves under 0.5% count as flat.</li>
@@ -814,6 +819,14 @@ function gradeSetup(x, o = {}){
   return {grade, pts, reasons: R, flags};
 }
 const GRADE_RANK = {A: 3, B: 2, C: 1};
+/* 7-day return in %: live price vs the daily close 7 full days before the last closed day. daily = closed 1D candles. */
+function ret7d(price, daily){ if (!(price > 0) || !daily || daily.length < 8) return null; const b = daily.at(-8)[4]; return b > 0 ? (price / b - 1) * 100 : null; }
+/* Relative strength vs BTC and ETH in percentage points. ref = {btc: {r1, r7}, eth: {r1, r7}} */
+function relStrength(r1, r7, ref){
+  if (!ref) return null;
+  const d = (a, b) => a != null && b != null ? a - b : null;
+  return {b1: d(r1, ref.btc?.r1), b7: d(r7, ref.btc?.r7), e1: d(r1, ref.eth?.r1), e7: d(r7, ref.eth?.r7)};
+}
 /* Market regime: 2×BTC 1D + BTC 4H + breadth (±1 when bull/bear-aligned shares differ by 15+ points). */
 function regimeScore(d1, h4, bullPct, bearPct){
   const br = bullPct - bearPct >= 15 ? 1 : bullPct - bearPct <= -15 ? -1 : 0;
@@ -1009,13 +1022,13 @@ function cfg(){
 }
 function saveSettings(){
   const o = {tf: S.tf, auto: $('auto').value, universe: $('universe').value, mcap: $('mcap').value, oiThr: $('oiThr').value, oiN: $('oiN').value,
-    closed: $('closed').checked, mtfOn: $('mtfOn').checked, jOn: $('jOn').checked, jWhat: $('jWhat').value, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value, minLiq: $('minLiq').value, extremeFund: $('extremeFund').value, gradeF: $('gradeF').value, alertGrade: $('alertGrade').value};
+    closed: $('closed').checked, mtfOn: $('mtfOn').checked, jOn: $('jOn').checked, jWhat: $('jWhat').value, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value, minLiq: $('minLiq').value, extremeFund: $('extremeFund').value, gradeF: $('gradeF').value, rsF: $('rsF').value, alertGrade: $('alertGrade').value};
   store.set(o);
 }
 function loadSettings(){
   const o = store.get();
   if (o.tf && TFS.includes(o.tf)) S.tf = o.tf;
-  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold','minLiq','extremeFund','gradeF','alertGrade']) if (o[k] != null) $(k).value = o[k];
+  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold','minLiq','extremeFund','gradeF','alertGrade','rsF']) if (o[k] != null) $(k).value = o[k];
   if (o.closed != null) $('closed').checked = o.closed;
   if (o.mtfOn != null) $('mtfOn').checked = o.mtfOn;
   for (const k of ['pinStar','alertStar','alertSound']) if (o[k] != null) $(k).checked = o[k];
@@ -1040,12 +1053,20 @@ function derive(r, c){
   const against = S.regimeDir && ((S.regimeDir < 0 && bull >= 4) || (S.regimeDir > 0 && bear >= 4));
   const gdir = setup || (bull >= 4 ? 1 : bear >= 4 ? -1 : 0);
   const G = d && gdir ? gradeSetup({dir: gdir, s: core, d, mtf: r.mtf, regime: S.regimeDir || 0, fund: r.fund, qv: r.qv}, {minLiq: c.minLiq, extremeFund: c.extremeFund}) : null;
-  return {...r, d, ext: d ? d.ext : null, pD, pos, fFlag, against, oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, G, inc: !d || r.oi == null,
+  const rs = relStrength(r.chg, r.ret7, S.ref);
+  return {...r, d, rs, ext: d ? d.ext : null, pD, pos, fFlag, against, oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, G, inc: !d || r.oi == null,
     score: Math.max(bull, bear) + (bull >= 4 || bear >= 4 ? 10 : 0) + (setup ? 5 : 0) + (G ? {A: 4, B: 2, C: 0}[G.grade] : 0)};
 }
 
 const gradeTip = G => [`Grade ${G.grade} (${G.pts > 0 ? '+' : ''}${G.pts} points)`, ...G.reasons.map(x => `${x.v > 0 ? '+' : ''}${x.v}  ${x.t}`), ...G.flags.map(f => `capped at C: ${f}`)].join('&#10;');
-function gradeCell(r){ return r.G ? `<span class="gr g${r.G.grade}" title="${gradeTip(r.G)}">${r.G.grade}</span>${r.G.flags.length ? '<span class="gflag" title="' + r.G.flags.join(', ') + '">!</span>' : ''}` : '<span class="mu">—</span>'; }
+const ppf = v => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1);
+function rsCell(r){
+  const x = r.rs; if (!x || (x.b7 == null && x.e7 == null)) return '<span class="mu" title="Needs 8+ days of daily candles">—</span>';
+  const tip = `Relative strength (percentage points the coin out- or under-performed):&#10;vs BTC: 7d ${ppf(x.b7)} pp · 24h ${ppf(x.b1)} pp&#10;vs ETH: 7d ${ppf(x.e7)} pp · 24h ${ppf(x.e1)} pp&#10;Coin 7d ${ppf(r.ret7)}% · BTC ${ppf(S.ref?.btc?.r7)}% · ETH ${ppf(S.ref?.eth?.r7)}%`;
+  const chip = (l, v) => `<span class="rsc ${v == null ? '' : v >= 2 ? 'up' : v <= -2 ? 'dn' : 'mu'}">${l}${ppf(v)}</span>`;
+  return `<span class="rsw" title="${tip}">${chip('₿', x.b7)}${chip('Ξ', x.e7)}</span>`;
+}
+function gradeCell(r){ return r.G ? `<span class="gr g${r.G.grade}" title="${gradeTip(r.G)}">${r.G.grade}</span>${r.G.flags.length ? '<span class="gflag" title="' + r.G.flags.join(', ') + '">!</span>' : ''}` : `<span class="mu" title="${r.d ? 'No grade: only aligned pairs (4–5 of 5 checks on one side) are graded' : 'No grade: not enough data'}">—</span>`; }
 const MTF_LBL = {'1d': '1D', '4h': '4H', '1h': '1H'};
 function mtfCell(r){
   if (!r.mtf) return '<span class="mu">—</span>';
@@ -1057,11 +1078,11 @@ function trigCell(r){
   const shown = r.trig.slice(0, 3).map(t => `<span class="tg ${t.dir > 0 ? 'b' : t.dir < 0 ? 's' : 'n'}" title="${t.name}${t.t === 'coil' ? '' : ', ' + (t.ago === 0 ? 'last candle' : t.ago + ' candle' + (t.ago > 1 ? 's' : '') + ' ago')}">${TRIG_SHORT[t.t]}${t.ago && t.t !== 'coil' ? '<sub>' + t.ago + '</sub>' : ''}</span>`).join('');
   return shown + (r.trig.length > 3 ? `<span class="tg n" title="${r.trig.slice(3).map(t => t.name).join(', ')}">+${r.trig.length - 3}</span>` : '');
 }
-const COL_HELP = {"star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "grade": "Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
+const COL_HELP = {"star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
 const COLS = [
   {k:'star', t:'★', c:'c'}, {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA', c:'c'},
-  {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'grade', t:'Grade', c:'c'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
+  {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'rs', t:'RS 7D', c:'c'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'grade', t:'Grade', c:'c'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
 ];
 function sortVal(r, k){
   if (['dmi','rsiEma','rsi50','obv'].includes(k)) return r.d ? r.d.s[k] : -9;
@@ -1069,6 +1090,7 @@ function sortVal(r, k){
   if (k === 'sym') return r.sym;
   if (k === 'star') return WATCH.has(r.sym) ? 1 : 0;
   if (k === 'score') return r.score * 1e13 + r.qv;
+  if (k === 'rs') return r.rs?.b7 ?? -1e9;
   if (k === 'grade') return r.G ? GRADE_RANK[r.G.grade] * 100 + r.G.pts : -1;
   if (k === 'trig') return r.setup ? 100 + r.trig.length : r.trig.length;
   if (k === 'pos') return {longs: 4, cover: 3, flat: 2, liq: 1, shorts: 0}[r.pos] ?? -1;
@@ -1094,6 +1116,10 @@ function filtered(){
     const gf = $('gradeF').value;
     if (gf === 'A' && !(r.G && r.G.grade === 'A')) return false;
     if (gf === 'AB' && !(r.G && r.G.grade !== 'C')) return false;
+    const rf = $('rsF').value, x = r.rs;
+    if (rf === 'lb' && !(x && x.b7 > 0)) return false;
+    if (rf === 'lbe' && !(x && x.b7 > 0 && x.e7 > 0)) return false;
+    if (rf === 'gb' && !(x && x.b7 < 0)) return false;
     const mf2 = $('mtfF').value;
     if (mf2 === 'b' && r.mtfAll !== 1) return false;
     if (mf2 === 's' && r.mtfAll !== -1) return false;
@@ -1149,6 +1175,7 @@ function renderRegime(all, c){
       return `<span class="btf ${!x ? 'na' : x.dir > 0 ? 'b' : x.dir < 0 ? 's' : 'n'}${tf === '1d' || tf === '4h' ? ' key' : ''}">${l} ${!x ? '—' : x.dir > 0 ? '▲' : x.dir < 0 ? '▼' : '◆'}</span>`; }).join('')}</span>
     <span class="chip" title="Of the pairs scanned, the share that are bull-aligned (4–5/5) and bear-aligned. A wide gap shows a one-sided market; it counts toward the verdict when the gap is 15 points or more.">Breadth <b class="up">${bullPct.toFixed(0)}%</b> bull · <b class="dn">${bearPct.toFixed(0)}%</b> bear</span>
     <span class="chip" title="Median last funding rate across all USDT perpetuals. Around +0.01% is normal. Clearly higher = longs are paying to stay in (crowded long market); negative = shorts are crowded.">Funding median <b>${fMed == null ? '—' : (fMed > 0 ? '+' : '') + fMed.toFixed(4) + '%'}</b></span>
+    ${S.ref && S.ref.eth?.r7 != null && S.ref.btc?.r7 != null ? `<span class="chip" title="ETH minus BTC over 7 days. ETH outperforming BTC often comes before altcoins outperform; ETH lagging means money is staying in BTC.">ETH vs BTC 7d <b class="${cls(S.ref.eth.r7 - S.ref.btc.r7)}">${ppf(S.ref.eth.r7 - S.ref.btc.r7)} pp</b></span>` : ''}
     <span class="chip" title="Median change in open interest over the last N candles across scanned pairs. Rising = new positions entering the market; falling = positions closing (deleveraging).">OI median <b class="${cls(oMed)}">${fmtPct(oMed)}</b> over ${c.oiN} candles</span>
     <span class="note">${notes.join(' ')}</span>`;
 }
@@ -1168,7 +1195,7 @@ function renderPager(total, size, pages, start, n){
   el.innerHTML = h;
 }
 function anyFilter(){
-  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked || $('gradeF').value || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
+  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked || $('gradeF').value || $('rsF').value || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
 }
 function syncCards(){
   const st = {all: !anyFilter(), bull: S.show === 'bull', bear: S.show === 'bear', new: $('newOnly').checked, oi: S.mf.oi === '1', inc: S.incOnly, setup: S.setupOnly, star: $('starOnly').checked};
@@ -1191,7 +1218,7 @@ function render(){
   const rows = filtered(), {k, dir} = S.sort;
   rows.sort((a, b) => { const x = sortVal(a, k), y = sortVal(b, k); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
   if ($('pinStar').checked) rows.sort((a, b) => WATCH.has(b.sym) - WATCH.has(a.sym));   // stable: keeps the sort within each group
-  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value, $('starOnly').checked, $('pinStar').checked, $('gradeF').value, $('minLiq').value, $('extremeFund').value]);
+  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value, $('starOnly').checked, $('pinStar').checked, $('gradeF').value, $('minLiq').value, $('extremeFund').value, $('rsF').value]);
   if (sig !== S.sig){ S.sig = sig; S.page = 0; }            // any filter/sort change → back to page 1
   const size = +$('pageSize').value || rows.length || 1, pages = Math.max(1, Math.ceil(rows.length / size));
   S.page = Math.min(S.page, pages - 1);
@@ -1224,6 +1251,7 @@ function render(){
       <td class="l">${posCell(r)}</td>
       <td class="${r.fFlag ? 'fhot' : r.fund > 0 ? 'mu' : r.fund < 0 ? 'fneg' : 'mu'}" title="Last funding rate${r.fFlag === 1 ? ': longs crowded' : r.fFlag === -1 ? ': shorts crowded' : ''}">${r.fund == null ? '—' : (r.fund > 0 ? '+' : '') + r.fund.toFixed(4) + '%'}${r.fFlag ? ' 🔥' : ''}</td>
       <td class="${r.ext != null && Math.abs(r.ext) >= 3 ? 'ext' : 'mu'}" title="Close vs EMA20 in ATR units. 3 or more = stretched, high chase risk">${r.ext == null ? '—' : (r.ext > 0 ? '+' : '') + r.ext.toFixed(1)}${r.ext != null && Math.abs(r.ext) >= 3 ? ' ⚠' : ''}</td>
+      <td class="c">${rsCell(r)}</td>
       <td><span class="score ${sb} ${r.against && r.bull >= 4 ? 'against' : ''}" ${r.against && r.bull >= 4 ? 'title="Bullish setup against a risk-off regime"' : ''}>${d ? r.bull : '—'}</span></td>
       <td><span class="score ${sr} ${r.against && r.bear >= 4 ? 'against' : ''}" ${r.against && r.bear >= 4 ? 'title="Bearish setup against a risk-on regime"' : ''}>${d ? r.bear : '—'}</span></td>
       <td class="c">${gradeCell(r)}</td>
@@ -1253,18 +1281,24 @@ async function scan(){
       S.regime = {h4: st(b4), d1: st(b1), funds: uni.map(u => u.fund), btc: await btcTrends(c, {'4h': st(b4), '1d': st(b1)})};
     } catch { S.regime = null; }
     if (mcapMin) list = list.filter(u => u.mcap >= mcapMin);   // don't spend requests on pairs that will be filtered out
+    { const day = 864e5, today = Math.floor(Date.now() / day) * day, closedD = k => k ? k.filter(x => x[0] < today) : null;
+      const [bD, eD] = await Promise.all([getKlines('BTCUSDT', '1d', true).catch(() => null), getKlines('ETHUSDT', '1d', true).catch(() => null)]);
+      const bU = uni.find(u => u.sym === 'BTCUSDT'), eU = uni.find(u => u.sym === 'ETHUSDT');
+      S.ref = {btc: {r1: bU?.chg ?? null, r7: ret7d(bU?.price, closedD(bD))}, eth: {r1: eU?.chg ?? null, r7: ret7d(eU?.price, closedD(eD))}}; }
     const out = new Array(list.length); let done = 0, i = 0;
     S.rows = [];
     async function worker(){
       while (i < list.length){
         const idx = i++, u = list[idx];
         const others = $('mtfOn').checked ? MTF_TFS.filter(t => t !== tf) : [];
-        const [k, oi, ...ok] = await Promise.all([getKlines(u.sym, tf, c.closed), getOI(u.sym, tf), ...others.map(t => getKlines(u.sym, t, c.closed).catch(() => null))]);
+        const needD = tf !== '1d' && !others.includes('1d');
+        const [k, oi, dExtra, ...ok] = await Promise.all([getKlines(u.sym, tf, c.closed), getOI(u.sym, tf), needD ? getKlines(u.sym, '1d', true).catch(() => null) : null, ...others.map(t => getKlines(u.sym, t, c.closed).catch(() => null))]);
         if (tf !== S.tf) return;                                  // timeframe changed mid-scan
         const ev = evaluate(k, c);
         let mtf = null;
         if (others.length){ mtf = {}; for (const t of MTF_TFS) mtf[t] = t === tf ? (ev.incomplete ? null : ev.bull >= 3 ? 1 : ev.bear >= 3 ? -1 : 0) : (ok[others.indexOf(t)] ? tfDir(ok[others.indexOf(t)], c) : null); }
-        out[idx] = {...u, ev, oi, mtf};
+        const today = Math.floor(Date.now() / 864e5) * 864e5, dRaw = tf === '1d' ? k : needD ? dExtra : ok[others.indexOf('1d')];
+        out[idx] = {...u, ev, oi, mtf, ret7: ret7d(u.price, dRaw ? dRaw.filter(x => x[0] < today) : null)};
         S.rows = out.filter(Boolean);
         done++; $('prog').style.width = (2 + 98 * done / list.length) + '%';
         setStatus('run', `Scanning ${done}/${list.length}…`);
@@ -1292,11 +1326,11 @@ function setAuto(){
 }
 
 function exportCSV(){
-  const rows = filtered(), head = ['pair','sectors','price','chg24h','vol24h','mcap','dmi','rsi_gt_ema','rsi_gt_50','obv_gt_ema50','oi_rising','oi_delta_pct','price_delta_pct','positioning','funding_pct','ext_atr','bull','bear','new','setup','grade','grade_pts','grade_flags','mtf_1d','mtf_4h','mtf_1h','triggers','rsi','adx','pdi','mdi'];
+  const rows = filtered(), head = ['pair','sectors','price','chg24h','vol24h','mcap','dmi','rsi_gt_ema','rsi_gt_50','obv_gt_ema50','oi_rising','oi_delta_pct','price_delta_pct','positioning','funding_pct','ext_atr','bull','bear','new','setup','grade','grade_pts','grade_flags','ret7d_pct','rs7_btc_pp','rs7_eth_pp','rs24_btc_pp','rs24_eth_pp','mtf_1d','mtf_4h','mtf_1h','triggers','rsi','adx','pdi','mdi'];
   const lines = [head.join(',')].concat(rows.map(r => {
     const d = r.d, v = d ? d.vals : {};
     return [r.sym, tagsOf(r.base).join('|'), r.price, r.chg, r.qv, r.mcap ?? '', d?.s.dmi ?? '', d?.s.rsiEma ?? '', d?.s.rsi50 ?? '', d?.s.obv ?? '',
-      r.oiUp, r.oiD?.toFixed(2) ?? '', r.pD?.toFixed(2) ?? '', r.pos ?? '', r.fund ?? '', r.ext?.toFixed(2) ?? '', r.bull, r.bear, r.isNew ? 1 : 0, r.setup, r.G?.grade ?? '', r.G?.pts ?? '', (r.G?.flags || []).join('|'), r.mtf?.['1d'] ?? '', r.mtf?.['4h'] ?? '', r.mtf?.['1h'] ?? '', r.trig.map(t => t.name + (t.ago ? '@' + t.ago : '')).join('|'), v.rsi?.toFixed(2) ?? '', v.adx?.toFixed(2) ?? '', v.pdi?.toFixed(2) ?? '', v.mdi?.toFixed(2) ?? ''].join(',');
+      r.oiUp, r.oiD?.toFixed(2) ?? '', r.pD?.toFixed(2) ?? '', r.pos ?? '', r.fund ?? '', r.ext?.toFixed(2) ?? '', r.bull, r.bear, r.isNew ? 1 : 0, r.setup, r.G?.grade ?? '', r.G?.pts ?? '', (r.G?.flags || []).join('|'), r.ret7?.toFixed(2) ?? '', r.rs?.b7?.toFixed(2) ?? '', r.rs?.e7?.toFixed(2) ?? '', r.rs?.b1?.toFixed(2) ?? '', r.rs?.e1?.toFixed(2) ?? '', r.mtf?.['1d'] ?? '', r.mtf?.['4h'] ?? '', r.mtf?.['1h'] ?? '', r.trig.map(t => t.name + (t.ago ? '@' + t.ago : '')).join('|'), v.rsi?.toFixed(2) ?? '', v.adx?.toFixed(2) ?? '', v.pdi?.toFixed(2) ?? '', v.mdi?.toFixed(2) ?? ''].join(',');
   }));
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type: 'text/csv'}));
@@ -1437,7 +1471,7 @@ async function journalLog(tf){
       if (seen.has(id)) continue;
       if (kind === 'setup' && lastBy.has(key) && x.d.lastTime - lastBy.get(key) < 6 * ms) continue;
       J.entries.push({id, key, sym: r.sym, tf, kind, dir, ct: x.d.lastTime, price: x.d.lastClose, atr: x.d.atr,
-        score: dir > 0 ? x.bull : x.bear, grade: x.G && (x.setup === dir || (!x.setup && (dir > 0 ? x.bull : x.bear) >= 4)) ? x.G.grade : null, trig: x.trig.filter(t => t.dir === dir).map(t => t.t),
+        score: dir > 0 ? x.bull : x.bear, rs7: x.rs?.b7 ?? null, grade: x.G && (x.setup === dir || (!x.setup && (dir > 0 ? x.bull : x.bear) >= 4)) ? x.G.grade : null, trig: x.trig.filter(t => t.dir === dir).map(t => t.t),
         regime: S.regimeDir || 0, mtf: r.mtf ? (x.mtfAll === dir ? 'all' : x.mtfAll === -dir ? 'against' : 'mixed') : null,
         ext: x.ext, pos: x.pos, fFlag: x.fFlag, out: null});
       seen.add(id); lastBy.set(key, x.d.lastTime); added++;
@@ -1473,6 +1507,7 @@ function edgeGroups(es){
   add('Kind', 'Triggered setup', es.filter(e => e.kind === 'setup')); add('Kind', 'New alignment', es.filter(e => e.kind === 'aligned'));
   add('Side', 'Long', es.filter(e => e.dir > 0)); add('Side', 'Short', es.filter(e => e.dir < 0));
   for (const g of ['A', 'B', 'C']) { const l = es.filter(e => e.grade === g); if (l.length) add('Grade', g, l); }
+  { const l = es.filter(e => e.rs7 != null); if (l.length){ add('RS vs BTC', 'Leader on its side (2+ pp)', l.filter(e => e.rs7 * e.dir >= 2)); add('RS vs BTC', 'In line', l.filter(e => Math.abs(e.rs7) < 2)); add('RS vs BTC', 'Against its side (2+ pp)', l.filter(e => e.rs7 * e.dir <= -2)); } }
   add('Score', '5/5', es.filter(e => e.score >= 5)); add('Score', '4/5', es.filter(e => e.score === 4));
   for (const tf of TFS) { const l = es.filter(e => e.tf === tf); if (l.length) add('Timeframe', tf.toUpperCase(), l); }
   add('Regime', 'With regime', es.filter(e => e.regime === e.dir)); add('Regime', 'Mixed', es.filter(e => !e.regime)); add('Regime', 'Against regime', es.filter(e => e.regime === -e.dir));
@@ -1623,6 +1658,7 @@ async function tgAlertText(items){
   for (const e of items.slice(0, 6)){
     const base = S.rows.find(r => r.sym === e.sym), x = base ? derive(base, c) : null;
     lines.push('', `<b>${esc(e.sym.replace('USDT', ''))} ${e.dir > 0 ? 'LONG 🟢' : 'SHORT 🔴'}</b> · ${x ? (e.dir > 0 ? x.bull : x.bear) + '/5' : ''}${x && x.G ? ' · <b>Grade ' + x.G.grade + '</b>' : ''} · ${e.kind === 'setup' ? 'triggered' : 'aligned'}`);
+    if (x && x.rs && x.rs.b7 != null) lines.push(`RS 7d: vs BTC ${ppf(x.rs.b7)} pp · vs ETH ${ppf(x.rs.e7)} pp`);
     if (x && x.G && x.G.flags.length) lines.push('⚠️ ' + esc(x.G.flags.join(', ')));
     if (x){
       const tr = x.trig.filter(t => t.dir === e.dir).map(t => t.name);
@@ -1718,6 +1754,7 @@ function renderChips(){
     r.ext != null ? `Ext <b>${(r.ext > 0 ? '+' : '') + r.ext.toFixed(1)} ATR</b>` : null,
     `OI Δ <b class="${cls(r.oiD)}">${fmtPct(r.oiD)}</b>`,
     S.regime ? `Regime <b>${S.regimeDir > 0 ? 'Risk-on' : S.regimeDir < 0 ? 'Risk-off' : 'Mixed'}</b>` : null,
+    r.rs && r.rs.b7 != null ? `RS 7d <b class="${cls(r.rs.b7)}">₿ ${ppf(r.rs.b7)}</b> <b class="${cls(r.rs.e7)}">Ξ ${ppf(r.rs.e7)}</b> pp` : null,
     r.G ? `<span title="${gradeTip(r.G)}">Grade <b class="${r.G.grade === 'A' ? 'up' : r.G.grade === 'C' ? 'dn' : ''}">${r.G.grade}</b> (${r.G.pts > 0 ? '+' : ''}${r.G.pts})</span>` : null,
     r.mtf ? `MTF ${MTF_TFS.map(t => `<b class="${r.mtf[t] > 0 ? 'up' : r.mtf[t] < 0 ? 'dn' : 'mu'}">${MTF_LBL[t]}${r.mtf[t] > 0 ? '▲' : r.mtf[t] < 0 ? '▼' : '◆'}</b>`).join(' ')}` : null,
     ...r.trig.map(t => `<b class="${t.dir > 0 ? 'up' : t.dir < 0 ? 'dn' : 'mu'}">${t.name}</b>${t.t === 'coil' ? '' : ' · ' + (t.ago ? t.ago + ' ago' : 'last candle')}`)
@@ -1752,6 +1789,9 @@ function renderWarnings(P, z){
   const tSame = r.trig.filter(t => t.dir === P.dir);
   if (tSame.length) w.push(['ok', `Fresh trigger${tSame.length > 1 ? 's' : ''}: ${tSame.map(t => t.name).join(', ')}.`]);
   else if (r.d) w.push(['', `No fresh trigger in the last ${cfg().trigN} candles. Waiting for one usually improves timing.`]);
+  if (r.rs && r.rs.b7 != null){ const v = r.rs.b7 * P.dir;
+    if (v <= -5) w.push(['', `${long ? 'Lagging' : 'Outperforming'} BTC by ${Math.abs(r.rs.b7).toFixed(1)} pp over 7 days. ${long ? 'Leaders' : 'Laggards'} usually make better ${long ? 'longs' : 'shorts'}.`]);
+    else if (v >= 5) w.push(['ok', `${long ? 'Leading' : 'Lagging'} BTC by ${Math.abs(r.rs.b7).toFixed(1)} pp over 7 days: relative strength is on your side.`]); }
   if (r.G && r.G.flags.length) w.push(['bad', `Risk: ${r.G.flags.join(', ')}. Grade capped at C.`]);
   if (S.regimeDir && S.regimeDir !== P.dir) w.push(['', `Against the market regime (${S.regimeDir > 0 ? 'risk-on' : 'risk-off'}). Consider smaller size.`]);
   if (r.ext != null && r.ext * P.dir >= 3) w.push(['', `Stretched ${Math.abs(r.ext).toFixed(1)} ATR from EMA20. A pullback entry near ${fp(P.ema20, decFor(P.entry))} offers better R:R.`]);
@@ -1827,7 +1867,7 @@ $('tfSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('showSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   S.show = b.dataset.v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x === b)); render(); };
 document.querySelectorAll('.mf').forEach(s => s.onchange = () => { S.mf[s.dataset.k] = s.value; render(); });
-$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('starOnly').checked = false; $('gradeF').value = ''; $('trigF').value = ''; $('mtfF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
+$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('starOnly').checked = false; $('gradeF').value = ''; $('rsF').value = ''; $('trigF').value = ''; $('mtfF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
   S.show = 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === 'all')); render(); };
 for (const id of ['oiThr','oiN','sector','mcap','newOnly']) $(id).onchange = () => { saveSettings(); render(); };
 $('search').oninput = render;
@@ -1835,7 +1875,7 @@ $('universe').onchange = saveSettings; $('closed').onchange = saveSettings; $('m
 for (const id of ['trigF','mtfF']) $(id).onchange = render;
 $('trigN').onchange = () => { saveSettings(); render(); };
 for (const id of ['rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) $(id).onchange = saveSettings;
-for (const id of ['fundHot','fundCold','minLiq','extremeFund','gradeF']) $(id).onchange = () => { saveSettings(); render(); };
+for (const id of ['fundHot','fundCold','minLiq','extremeFund','gradeF','rsF']) $(id).onchange = () => { saveSettings(); render(); };
 $('alertGrade').onchange = saveSettings;
 $('auto').onchange = () => { saveSettings(); setAuto(); };
 $('scanBtn').onclick = scan;
