@@ -1752,7 +1752,7 @@ function renderSectors(){
   const rows = sectorRows(); SEC.rows = rows;
   const {k, dir} = SEC.sort;
   rows.sort((a, b) => { const x = k === 'sector' ? a.sector : k === 'verdict' ? a.verdict : a[k] ?? -1e9, y = k === 'sector' ? b.sector : k === 'verdict' ? b.verdict : b[k] ?? -1e9; return (x > y ? 1 : x < y ? -1 : 0) * dir; });
-  $('secHead').innerHTML = SEC_COLS.map(col => `<th class="${col.c || ''} ${SEC.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}">${col.t}${SEC.sort.k === col.k ? (SEC.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
+  $('secHead').innerHTML = SEC_COLS.map(col => `<th class="${col.c || ''} ${SEC.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}" title="Click to sort sectors and the coins inside each open sector">${col.t}${SEC.sort.k === col.k ? (SEC.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
   if (!SEC.coins){ $('secRotation').hidden = true; return; }
   if (!rows.length){ $('secBody').innerHTML = `<tr><td class="empty" colspan="${SEC_COLS.length}">No sector has enough coins at these filters.</td></tr>`; $('secRotation').hidden = true; return; }
   // rotation bars
@@ -1778,11 +1778,16 @@ function renderSectors(){
       <td class="c">${trend}</td>
       <td class="l"><span class="vd ${r.verdict}" title="${vtip}">${vt}</span>${tm ? ` <span class="tm ${r.timing}" title="${tm[1]}">${tm[0]}</span>` : ''}</td></tr>`;
     if (!open) return main;
-    const coins = r.coins.slice(0, 25).map(x => `<tr class="coinrow" data-coin="${x.sym}">
+    // coins inside the sector follow the same column sort; share Δ = the coin's share of sector volume today vs its 7-day average share
+    const a7 = r.coins.reduce((a, x) => a + (x.avg7 || 0), 0);
+    for (const x of r.coins){ x.secShare = 100 * x.qv / r.vol; x.secShareD = a7 > 0 && x.avg7 != null ? x.secShare - 100 * x.avg7 / a7 : null; }
+    const ck = {sector: 'base', n: 'days', vol: 'qv', vsWeek: 'vsWeek', vsMonth: 'vsMonth', share: 'secShare', shareD: 'secShareD', part: 'vsWeek', priceVW: 'chg', tNet: 'tr', verdict: 'vsWeek'}[k] || 'qv';
+    const sorted = r.coins.slice().sort((a, b) => { const x = a[ck] ?? (ck === 'base' ? '' : -1e9), y = b[ck] ?? (ck === 'base' ? '' : -1e9); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
+    const coins = sorted.slice(0, 25).map(x => `<tr class="coinrow" data-coin="${x.sym}">
       <td class="l">${WATCH.has(x.sym) ? '<span style="color:#f5c518">★</span> ' : ''}${x.base}${x.tr === 2 ? ' <span class="setup b">LONG</span>' : x.tr === -2 ? ' <span class="setup s">SHORT</span>' : ''}</td>
       <td class="mu">${x.days}d</td><td>${fmtBig(x.qv)}</td>
       <td class="${ratioCls(x.vsWeek)}">${ratio(x.vsWeek)}</td><td class="${ratioCls(x.vsMonth)}">${ratio(x.vsMonth)}</td>
-      <td class="mu">${(100 * x.qv / r.vol).toFixed(1)}% of sector</td><td></td><td>${x.vsWeek >= 1.5 ? '<span class="up">busy</span>' : '<span class="mu">—</span>'}</td>
+      <td class="mu">${x.secShare.toFixed(1)}% of sector</td><td class="${cls(x.secShareD)}" title="Share of this sector's volume today vs its 7-day average share: who inside the sector is pulling the money">${x.secShareD == null ? '—' : (x.secShareD > 0 ? '+' : '') + x.secShareD.toFixed(2) + ' pp'}</td><td>${x.vsWeek >= 1.5 ? '<span class="up">busy</span>' : '<span class="mu">—</span>'}</td>
       <td class="${cls(x.chg)}">${fmtPct(x.chg)}</td>
       <td class="c">${x.tr == null ? '<span class="mu">—</span>' : x.tr > 0 ? '<span class="up">▲</span>' : x.tr < 0 ? '<span class="dn">▼</span>' : '<span class="mu">·</span>'}</td>
       <td class="l"><a class="tvl" href="https://www.tradingview.com/chart/?symbol=BINANCE:${x.sym}.P" target="_blank" rel="noopener">chart ↗</a></td></tr>`).join('');
