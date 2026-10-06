@@ -331,6 +331,8 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
 @media (max-width:1100px){.maccards{grid-template-columns:1fr 1fr} .macbottom{grid-template-columns:1fr}}
 @media (max-width:600px){.maccards{grid-template-columns:1fr} .macv{grid-template-columns:1fr} .mtab .cond,.mtab td:first-child{white-space:normal} .macv .mbias{white-space:normal}}
 .macbottom>*{min-width:0} #macMatrix{overflow-x:auto}
+.coin{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;margin-right:6px;font:800 11px system-ui;color:#fff;vertical-align:-3px;font-style:normal}
+.coin.btc{background:#f7931a} .coin.eth{background:#627eea}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 .pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .pager .pinfo{color:var(--muted);font-size:12px;margin-right:auto}
@@ -379,7 +381,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <header>
     <div class="brand"><svg aria-hidden="true" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ohd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a62ad"/><stop offset=".55" stop-color="#642372"/><stop offset="1" stop-color="#26102f"/></linearGradient><linearGradient id="ohl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#bcacd4" stop-opacity=".0"/><stop offset=".5" stop-color="#bcacd4" stop-opacity=".55"/><stop offset="1" stop-color="#bcacd4" stop-opacity="0"/></linearGradient><radialGradient id="ocn" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#ffe9a3"/><stop offset=".55" stop-color="#f0b90b"/><stop offset="1" stop-color="#9a6400"/></radialGradient><radialGradient id="obg" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#1c1430"/><stop offset="1" stop-color="#050508"/></radialGradient><filter id="oglow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="1.4"/></filter></defs><rect x="1.5" y="1.5" width="61" height="61" rx="14" fill="url(#obg)" stroke="#8a529c" stroke-width="1.5"/><path d="M32 6.5C18.5 8.5 11.5 21 11.5 35.5c0 9.5 3 17 7 22.5h27c4-5.5 7-13 7-22.5C52.5 21 45.5 8.5 32 6.5z" fill="url(#ohd)"/><path d="M32 6.5C25 8 21 12 18.6 17.5" fill="none" stroke="url(#ohl)" stroke-width="1.3" stroke-linecap="round"/><path d="M32 17.5c-8 1-12.5 8.6-12.5 17 0 7.4 4.3 13.3 12.5 15.5 8.2-2.2 12.5-8.1 12.5-15.5 0-8.4-4.5-16-12.5-17z" fill="#040406"/><g fill="#ff2626" filter="url(#oglow)" opacity=".95"><path d="M22.8 32.6l7.4 1.9-1.1 2.6-5.3-1.5z"/><path d="M41.2 32.6l-7.4 1.9 1.1 2.6 5.3-1.5z"/></g><g fill="#ff5a4d"><path d="M23.6 33l6 1.6-.8 1.8-4.3-1.2z"/><path d="M40.4 33l-6 1.6.8 1.8 4.3-1.2z"/></g><circle cx="47.5" cy="47.5" r="11.2" fill="url(#ocn)" stroke="#5e3d00" stroke-width="1.2"/><circle cx="47.5" cy="47.5" r="7.8" fill="none" stroke="#a87000" stroke-width="1"/><g fill="#4a3000"><rect x="42.6" y="48.2" width="2.4" height="3.8" rx=".5"/><rect x="46.3" y="45.6" width="2.4" height="6.4" rx=".5"/><rect x="50" y="42.6" width="2.4" height="9.4" rx=".5"/></g></svg>
       <div><div class="name">Onslaught <span>Screener</span></div>
-      <div class="sub"><b id="viewName">Trend Confirmation</b> · Binance USDT-M Perpetuals</div></div>
+      <div class="sub"><b id="viewName">Crypto Scanner</b> · Binance USDT-M Perpetuals</div></div>
     </div>
     <div class="status">
       <span><span id="dot" class="dot"></span> <span id="statusText">Idle</span></span>
@@ -394,7 +396,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   </header>
 
   <nav class="tabs" id="tabs" role="tablist">
-    <button role="tab" data-view="trend" class="on">Trend Confirmation</button>
+    <button role="tab" data-view="trend" class="on">Crypto Scanner</button>
     <button role="tab" data-view="map">Market Map</button>
     <button role="tab" data-view="sectors">Sector Flow</button>
     <button role="tab" data-view="macro">Macro</button>
@@ -439,7 +441,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
     <div class="row">
       <div class="seg" id="showSeg">
-        <button data-v="all" class="on">All</button><button data-v="bull">Bullish aligned</button><button data-v="bear">Bearish aligned</button>
+        <button data-v="all" class="on">All</button><button data-v="bull">Bullish momentum</button><button data-v="bear">Bearish momentum</button>
       </div>
       <span class="sep"></span>
       <label>DMI <select class="mf" data-k="dmi"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
@@ -466,8 +468,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <div class="stats" id="stats">
     <div class="stat" data-f="all" title="Show all (clear filters)"><div class="k">Pairs scanned</div><div class="v" id="sScanned">0</div><div class="s" id="sOf">of 0 perpetuals</div></div>
-    <div class="stat bull" data-f="bull" title="Filter: bullish aligned"><div class="k">Bullish aligned</div><div class="v" id="sBull">0</div><div class="s">4–5 of 5 bull checks</div></div>
-    <div class="stat bear" data-f="bear" title="Filter: bearish aligned"><div class="k">Bearish aligned</div><div class="v" id="sBear">0</div><div class="s">4–5 of 5 bear checks</div></div>
+    <div class="stat bull" data-f="bull" title="Filter: bullish momentum"><div class="k">Bullish momentum</div><div class="v" id="sBull">0</div><div class="s">4–5 of 5 bull checks</div></div>
+    <div class="stat bear" data-f="bear" title="Filter: bearish momentum"><div class="k">Bearish momentum</div><div class="v" id="sBear">0</div><div class="s">4–5 of 5 bear checks</div></div>
     <div class="stat" data-f="new" title="Filter: new alignments"><div class="k">New alignments</div><div class="v" id="sNew">0</div><div class="s">aligned on the latest candle</div></div>
     <div class="stat" data-f="oi" title="Filter: OI rising"><div class="k">OI rising</div><div class="v" id="sOi">0</div><div class="s" id="sOiS">threshold met</div></div>
     <div class="stat starcard" data-f="star" title="Filter: watchlist"><div class="k">★ Watchlist</div><div class="v" id="sStar">0</div><div class="s" id="sStarS">starred pairs in this scan</div></div>
@@ -543,7 +545,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="panel">
       <div class="row">
         <span class="mu">Compare with</span>
-        <div class="seg" id="mapVs"><button data-v="b" class="on">₿ BTC</button><button data-v="e">Ξ ETH</button></div>
+        <div class="seg" id="mapVs"><button data-v="b" class="on"><i class="coin btc">₿</i>BTC</button><button data-v="e"><i class="coin eth"><svg viewBox="0 0 10 16" width="7" height="11"><path d="M5 0 0 8.2 5 11 10 8.2Z" fill="#fff"/><path d="M5 12 0 9.2 5 16 10 9.2Z" fill="#fff" opacity=".75"/></svg></i>ETH</button></div>
         <label title="Trend aligned = 4–5 of 5 bull or bear checks, no trigger needed (your watchlist). Triggered setups = aligned AND a trigger fired in the last few candles (actionable now).">Show <select id="mapShow"><option value="all">All scanned pairs</option><option value="al">Trend aligned (4–5/5)</option><option value="set">Triggered setups</option></select></label>
         <span class="mu">Scale</span><div class="seg" id="mapScale"><button data-v="spread" class="on" title="Square-root scale: spreads out the crowded centre and keeps outliers on the chart">Spread</button><button data-v="linear" title="Plain linear scale; extremes are pinned to the edge">Linear</button></div>
         <label><input id="mapLabels" type="checkbox" checked> Labels</label>
@@ -565,10 +567,10 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div id="viewSectors" hidden>
     <div class="panel">
       <div class="row">
-        <button id="secLoad" class="primary">Load sector flow</button>
+        <button id="secLoad" class="primary">Track money flow</button>
         <span class="mu" id="secStatus" style="font-size:12px">Not loaded yet</span>
         <span class="sep"></span>
-        <label>Ignore coins under <select id="secMin"><option value="250000">$250K/day</option><option value="1000000" selected>$1M/day</option><option value="5000000">$5M/day</option><option value="20000000">$20M/day</option></select></label>
+        <label>Skip coins below <select id="secMin"><option value="250000">$250K/day</option><option value="1000000" selected>$1M/day</option><option value="5000000">$5M/day</option><option value="20000000">$20M/day</option></select></label>
         <label>Min coins <select id="secMinCoins"><option>1</option><option selected>3</option><option>5</option><option>8</option></select></label>
         <label><input id="secMajors" type="checkbox"> Include BTC &amp; ETH</label>
         <label><input id="secOther" type="checkbox"> Include "Other"</label>
@@ -589,7 +591,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="tablewrap" id="secTableWrap">
       <table class="sectbl">
         <thead><tr id="secHead"></tr></thead>
-        <tbody id="secBody"><tr><td class="empty" colspan="11">Press <b>Load sector flow</b> to pull 24h volume and 30 days of daily candles, then compare each sector with its own normal.</td></tr></tbody>
+        <tbody id="secBody"><tr><td class="empty" colspan="11">Press <b>Track money flow</b> to pull 24h volume and 30 days of daily candles, then compare each sector with its own normal.</td></tr></tbody>
       </table>
     </div>
     <div class="panel" style="margin-top:12px">
@@ -600,7 +602,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
           <li><b>Share Δ</b>: the sector's slice of all volume shown today minus its average slice over the last 7 days, in percentage points. This is the rotation signal.</li>
           <li><b>Participation</b>: share of the sector's coins whose own volume is at least 1.5× their weekly normal. High volume with low participation means one coin is pumping, not the sector. This column kills most false alarms.</li>
           <li><b>Price (VW)</b>: the volume-weighted 24h price change. Volume alone never says who is buying; paired with price, heavy volume and price up = money in, heavy volume and price down = money out.</li>
-          <li><b>Trend</b>: how many of the sector's coins are bull- or bear-aligned in your last Trend Confirmation scan (scan first to fill it).</li>
+          <li><b>Trend</b>: how many of the sector's coins are bull- or bear-aligned in your last Crypto Scanner scan (scan first to fill it).</li>
           <li>Coins carry several tags, so a coin's volume counts toward each of its sectors; shares are normalised across the sectors shown. Volume shows where attention is, not where price goes next. Confirm on the chart.</li>
         </ul>
       </details>
@@ -611,9 +613,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="panel">
       <div class="row">
         <span class="mu">Chart window</span><div class="seg" id="macWin"><button data-v="30">30d</button><button data-v="60">60d</button><button data-v="90" class="on">90d</button></div>
-        <label title="Add the macro regime to every setup's grade: from −2 points (alt longs in risk-off) to +1 (alt longs in alt season)."><input id="macGrade" type="checkbox" checked> Use macro in grades</label>
         <button id="macLoad">Refresh</button>
-        <label title="Optional. CoinGecko's keyless API allows only a few requests a minute. A free Demo key (coingecko.com → Developer Dashboard) makes the macro data load reliably. It stays in this browser only.">CoinGecko key <input id="cgKey" type="password" placeholder="optional, free demo key" style="width:170px"></label>
         <span class="mu" id="macStatus"></span>
       </div>
     </div>
@@ -629,7 +629,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li><b>TOTAL3ES</b>: value of all alts excluding BTC, ETH and stablecoins. Rising = real money flowing into alts.</li>
       <li><b>OTHERS.D</b>: share of everything outside the top 10. Rising = small-cap speculation; a 15%+ jump in 30 days is flagged as froth.</li>
       <li>Each index gets a direction from its 7-day change plus its 20/50-day average structure. The four directions map to one regime (table above).</li>
-      <li>With <b>Use macro in grades</b> on, the regime adds or removes grade points: for example −2 for alt longs in Risk-off, +1 in Alt season. The points appear in each grade's tooltip and in the trade plan.</li>
+      <li>The regime adds or removes grade points: for example −2 for alt longs in Risk-off, +1 in Alt season. The points appear in each grade's tooltip and in the trade plan.</li>
       <li>Numbers are rebuilt from CoinGecko (today's market caps and the BTC, ETH, USDT and USDC history) and Binance daily prices (everything else, assuming supply stays constant over the window). They run a few tenths off TradingView's indices because the coin universe differs; the direction is what counts. The TradingView chart shows the official ones.</li>
     </ul></details></div>
   </div><!-- /viewMacro -->
@@ -668,7 +668,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div id="viewJournal" hidden>
     <div class="panel">
       <div class="row">
-        <label title="Log triggered setups and new alignments after each Trend Confirmation scan (closed candles only)"><input id="jOn" type="checkbox" checked> Log signals</label>
+        <label title="Log triggered setups and new alignments after each Crypto Scanner scan (closed candles only)"><input id="jOn" type="checkbox" checked> Log signals</label>
         <label><select id="jWhat"><option value="both">Setups + new alignments</option><option value="setup">Triggered setups only</option></select></label>
         <span class="sep"></span>
         <button id="jUpdate" class="primary">Update outcomes</button>
@@ -691,7 +691,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
     <div class="pager" id="jPager"></div>
     <div class="panel" style="margin-top:12px"><details><summary>How the journal works</summary><ul>
-      <li>After each Trend Confirmation scan with closed candles, it logs every <b>triggered setup</b> (cooldown 6 candles per pair, side and timeframe) and every <b>new alignment</b> (aligned on the latest candle only). It records the context at that moment: score, triggers, regime, MTF, extension, positioning and funding.</li>
+      <li>After each Crypto Scanner scan with closed candles, it logs every <b>triggered setup</b> (cooldown 6 candles per pair, side and timeframe) and every <b>new alignment</b> (aligned on the latest candle only). It records the context at that moment: score, triggers, regime, MTF, extension, positioning and funding.</li>
       <li><b>Outcomes</b> update after each scan, or with Update outcomes: returns after 4, 12 and 24 candles (in your favour = positive), maximum favourable and adverse excursion, and a simulated trade result: <b>Win</b> = +1.5R target hit first, <b>Loss</b> = −1R stop hit first (both in the same candle counts as a loss), <b>Time</b> = neither within 24 candles, closed at market.</li>
       <li><b>Avg R</b> is the expectancy per trade in risk units: above 0 means the signal paid over this sample, before fees and slippage.</li>
       <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
@@ -1683,7 +1683,7 @@ function setView(v){
   S.view = v;
   $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = {macro: 'Macro', liq: 'Liquidation Map', map: 'Market Map', trend: 'Trend Confirmation', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
+  $('viewName').textContent = {macro: 'Macro', liq: 'Liquidation Map', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   if (v === 'journal') renderJournal();
@@ -1767,7 +1767,7 @@ function renderSectors(){
   }).join('');
   $('secBody').innerHTML = rows.map(r => {
     const open = SEC.open.has(r.sector), [vt, vtip] = VERDICT[r.verdict], tm = r.timing ? TIMING[r.timing] : null;
-    const trend = r.tScan ? `<span class="up">${r.tBull}▲</span> <span class="dn">${r.tBear}▼</span> <span class="mu">/ ${r.tScan}</span>` : '<span class="mu" title="Run a Trend Confirmation scan to fill this">—</span>';
+    const trend = r.tScan ? `<span class="up">${r.tBull}▲</span> <span class="dn">${r.tBear}▼</span> <span class="mu">/ ${r.tScan}</span>` : '<span class="mu" title="Run a Crypto Scanner scan to fill this">—</span>';
     const main = `<tr class="secrow ${open ? 'open' : ''}" data-sec="${r.sector}">
       <td class="l"><span class="caret">${open ? '▾' : '▸'}</span> <b>${r.sector}</b></td>
       <td>${r.n}</td><td>${fmtBig(r.vol)}</td>
@@ -1883,7 +1883,7 @@ function renderJournal(){
       <td>${g.win == null ? '—' : g.win.toFixed(0) + '%'}</td><td class="${cls(g.avgR)}">${fR(g.avgR)}</td>
       <td class="l"><span class="rtrack ebar"><span class="rfill ${g.avgR >= 0 ? 'pos' : 'neg'}" style="${g.avgR >= 0 ? `left:50%;width:${w}%` : `right:50%;width:${w}%`}"></span><span class="rzero"></span></span></td>
       <td class="${cls(g.r12)}">${g.r12 == null ? '—' : fmtPct(g.r12)}</td><td class="up">${g.mfe == null ? '—' : g.mfe.toFixed(2) + '%'}</td><td class="dn">${g.mae == null ? '—' : g.mae.toFixed(2) + '%'}</td></tr>`; }).join('')
-    : '<tr><td class="empty" colspan="9">No signals logged yet. Run Trend Confirmation scans (closed candles) and setups will be recorded here.</td></tr>';
+    : '<tr><td class="empty" colspan="9">No signals logged yet. Run Crypto Scanner scans (closed candles) and setups will be recorded here.</td></tr>';
   const list = es.slice().reverse(), size = 50, pages = Math.max(1, Math.ceil(list.length / size)); J.page = Math.min(J.page, pages - 1);
   const rows = list.slice(J.page * size, J.page * size + size);
   $('jBody').innerHTML = rows.length ? rows.map(e => { const o = e.out || {}, dec = decFor(e.price), rs = o.res ? RES[o.res] : null;
@@ -2212,7 +2212,7 @@ function renderMap(){
   if (show === 'al') rows = rows.filter(r => r.bull >= 4 || r.bear >= 4);
   if (show === 'set') rows = rows.filter(r => r.setup);
   $('mapReset').hidden = !MAP.zoom; $('mapTip').hidden = true;
-  if (!rows.length){ box.innerHTML = `<div class="dload" style="height:300px">${S.rows.length ? 'No pairs with relative strength data match.' : 'Run a Trend Confirmation scan to fill the map.'}</div>`; $('mapQuads').innerHTML = ''; return; }
+  if (!rows.length){ box.innerHTML = `<div class="dload" style="height:300px">${S.rows.length ? 'No pairs with relative strength data match.' : 'Run a Crypto Scanner scan to fill the map.'}</div>`; $('mapQuads').innerHTML = ''; return; }
   const W = Math.max(320, box.clientWidth), H = Math.min(700, Math.max(420, Math.round(W * 0.5))), m = {l: 50, r: 16, t: 14, b: 42};
   const pw = W - m.l - m.r, ph = H - m.t - m.b;
   const xs = rows.map(r => r.rs[vs + '7']), ys = rows.map(r => r.rs[vs + '1']);
@@ -2348,7 +2348,7 @@ const MAC_METRICS = [
   {k: 'othD', name: 'OTHERS.D', sub: 'share outside the top 10', fmt: v => v.toFixed(2) + '%', tone: d => d > 0 ? 'g' : d < 0 ? 'r' : 'n', words: ['rising: small caps bid', 'falling: flight to large caps']}];
 function macStatus(t){ const e = $('macStatus'); if (e) e.textContent = t || ''; }
 let cgChain = Promise.resolve(), cgLast = 0;
-function cgKey(){ try { return (localStorage.getItem('onslaught-cg-key') || '').trim(); } catch { return ''; } }
+const cgKey = () => '';   // keyless CoinGecko API; requests are spaced so they stay within its free limit
 function cgJSON(path, tries = 4){
   const run = async () => {
     const gap = cgKey() ? 2200 : 6500;                            // keyless ≈ 10 calls/min; free demo key ≈ 30/min
@@ -2357,9 +2357,9 @@ function cgJSON(path, tries = 4){
       cgLast = Date.now();
       const k = cgKey(), url = 'https://api.coingecko.com/api/v3' + path + (k ? (path.includes('?') ? '&' : '?') + 'x_cg_demo_api_key=' + encodeURIComponent(k) : '');
       let r; try { r = await fetch(url); } catch { if (a < tries - 1){ macStatus(`CoinGecko is busy, retrying (${a + 1}/${tries - 1})…`); continue; }
-        throw new Error('CoinGecko is not answering (usually its free rate limit). Retrying automatically in 10 minutes; a free CoinGecko demo key makes this reliable.'); }
+        throw new Error('CoinGecko is not answering (usually its free rate limit). Retrying automatically in 10 minutes.'); }
       if (r.status === 429 || r.status >= 500){ if (a < tries - 1){ macStatus(`CoinGecko rate limit, retrying (${a + 1}/${tries - 1})…`); continue; } throw new Error('CoinGecko rate limit. Retrying automatically in 10 minutes.'); }
-      if (r.status === 401 || r.status === 403) throw new Error('CoinGecko rejected the API key. Check it, or clear it to use the keyless API.');
+      if (r.status === 401 || r.status === 403) throw new Error(`CoinGecko HTTP ${r.status}`);
       if (!r.ok) throw new Error(`CoinGecko HTTP ${r.status}`);
       return r.json();
     }
@@ -2433,7 +2433,7 @@ function renderMacro(){
   if (!M || !R){ $('macVerdict').innerHTML = `<div class="panel dload" style="height:160px">${MAC.loading ? 'Loading the macro indices…' : 'Press Refresh to load the macro indices.'}</div>`; $('macCards').innerHTML = ''; macMatrix(null); macTv(); return; }
   const tone = MAC_TONE[R.key], arrow = d => d > 0 ? '▲' : d < 0 ? '▼' : '◆';
   $('macVerdict').innerHTML = `<div class="macv ${tone}"><span class="mname">${R.name}</span><span class="mtext">${R.text}${R.froth ? ' <span class="froth">🔥 Froth</span> Small caps jumped over 15% in share this month: late-stage speculation, tighten stops on small-cap longs.' : ''}</span>
-    <span class="mbias"><span>Alt longs ${biasTxt(R.bias.alt[0])} · shorts ${biasTxt(R.bias.alt[1])}</span><span>BTC longs ${biasTxt(R.bias.btc[0])} · shorts ${biasTxt(R.bias.btc[1])}</span><span class="mu">grade points${S.macroOn === false ? ' (off)' : ''}</span></span>
+    <span class="mbias"><span>Alt longs ${biasTxt(R.bias.alt[0])} · shorts ${biasTxt(R.bias.alt[1])}</span><span>BTC longs ${biasTxt(R.bias.btc[0])} · shorts ${biasTxt(R.bias.btc[1])}</span><span class="mu">grade points</span></span>
     <div class="mdirs">${MAC_METRICS.map(m => { const t = R.tr[m.k]; return `<span class="mdir ${m.tone(t.dir)}">${m.name} ${arrow(t.dir)} ${t.dir ? m.words[t.dir > 0 ? 0 : 1] : 'flat'}</span>`; }).join('')}<span class="mu" style="margin-left:auto;font-size:11.5px">as of ${new Date(M.t).toLocaleString([], {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})}</span></div></div>`;
   const ser = M.series.slice(-MAC.win);
   $('macCards').innerHTML = MAC_METRICS.map(m => { const t = R.tr[m.k], vals = ser.map(x => x[m.k]), e20 = emaSeries(M.series.map(x => x[m.k]), 20).slice(-MAC.win), tn = m.tone(t.dir);
@@ -2683,7 +2683,7 @@ function squarify(items, x, y, w, h){
 function renderSecHeat(){
   const box = $('secHeatBox'); if ($('secHeat').hidden || !box) return;
   const rows = SEC.rows || [];
-  if (!rows.length){ box.innerHTML = '<div class="dload" style="height:240px">Load sector flow to see the heatmap.</div>'; return; }
+  if (!rows.length){ box.innerHTML = '<div class="dload" style="height:240px">Track money flow to see the heatmap.</div>'; return; }
   const mode = $('secColor').value, val = r => mode === 'flow' ? r.shareD : mode === 'rs' ? r.rs7 : r.priceVW;
   const vals = rows.map(val).filter(v => v != null), M = Math.max(...vals.map(Math.abs), mode === 'flow' ? 1 : 2);
   const col = v => { if (v == null) return '#2a2b30'; const k = Math.min(1, Math.abs(v) / M), a = .18 + .62 * k; return v >= 0 ? `rgba(158,255,0,${a.toFixed(2)})` : `rgba(233,76,42,${a.toFixed(2)})`; };
@@ -2861,7 +2861,7 @@ for (const id of ['jOn','jWhat']) $(id).onchange = saveSettings; $('secCsv').onc
 for (const id of ['secMin','secMinCoins','secMajors','secOther']) $(id).onchange = () => { if (id === 'secMin' && SEC.coins && +$('secMin').value < SEC.minLoaded) loadSectors(); else renderSectors(); };
 $('secHead').onclick = e => { const th = e.target.closest('th'); if (!th) return; const k = th.dataset.k; SEC.sort = SEC.sort.k === k ? {k, dir: -SEC.sort.dir} : {k, dir: ['sector','verdict'].includes(k) ? 1 : -1}; renderSectors(); };
 $('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.target.closest('[data-coin]');
-  if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Trend Confirmation scan that includes this coin to open its trade plan.'); return; }
+  if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Crypto Scanner scan that includes this coin to open its trade plan.'); return; }
   const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
 $('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
 try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'macro') setView(v); } catch {}
@@ -2886,12 +2886,8 @@ $('lqLev').onchange = () => { buildLiq(); renderLiq(); };
 $('lqReal').onchange = () => { liqWs(); renderLiq(); };
 $('lqLoad').onclick = loadLiq;
 $('lqAll').onchange = renderLiqFeed;
-try { S.macroOn = localStorage.getItem('onslaught-macro-grade') !== '0'; } catch {}
-$('macGrade').checked = S.macroOn !== false;
-$('macGrade').onchange = e => { S.macroOn = e.target.checked; try { localStorage.setItem('onslaught-macro-grade', e.target.checked ? '1' : '0'); } catch {} render(); renderMacro(); };
 $('macLoad').onclick = () => loadMacro(true);
-$('cgKey').value = cgKey();
-$('cgKey').onchange = e => { try { localStorage.setItem('onslaught-cg-key', e.target.value.trim()); } catch {} };
+
 $('macWin').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.win = +b.dataset.v; [...$('macWin').children].forEach(x => x.classList.toggle('on', x === b)); renderMacro(); };
 $('macTv').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.tv = b.dataset.v; renderMacro(); };
 $('macCards').onclick = e => { const c = e.target.closest('[data-tv]'); if (!c) return; MAC.tv = c.dataset.tv; renderMacro(); $('macTvBox').scrollIntoView({behavior: 'smooth', block: 'center'}); };
