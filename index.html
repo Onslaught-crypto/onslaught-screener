@@ -119,6 +119,50 @@ td.trigs{white-space:nowrap}
 .setup{display:inline-block;font:800 10px system-ui;letter-spacing:.6px;padding:2px 6px;border-radius:3px;margin-right:5px}
 .setup.b{background:var(--bull);color:#000} .setup.s{background:var(--bear);color:#fff}
 .stat.trigcard{border-top-color:var(--accent-lt)}
+.starb{background:none;border:0;padding:0 2px;font-size:15px;color:var(--dim);cursor:pointer;line-height:1}
+.starb:hover{color:var(--accent-lt)} .starb.on{color:#f5c518}
+.stat.starcard{border-top-color:#f5c518}
+.inpill{font:700 9.5px system-ui;border-radius:3px;padding:1px 4px;margin-left:5px;vertical-align:1px}
+.inpill.b{background:var(--bull);color:#000} .inpill.s{background:var(--bear);color:#fff}
+#tbody tr.entered td:first-child{box-shadow:inset 3px 0 0 var(--accent-lt)}
+.changes{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-size:12px;margin:-4px 0 12px;padding:0 4px}
+.changes:empty{display:none}
+.changes .lbl{color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-size:11px}
+.changes .grp{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.chg{font:600 11.5px var(--mono);padding:2px 7px;border-radius:4px;background:var(--panel2);border:1px solid var(--line);color:var(--text);cursor:pointer}
+.chg.b{color:var(--bull);border-color:rgba(158,255,0,.35)} .chg.s{color:var(--bear);border-color:rgba(233,76,42,.4)}
+.chg.out{color:var(--muted);cursor:default}
+#alertBtn.on{border-color:var(--bull);color:var(--bull)}
+.toast{position:fixed;right:16px;bottom:16px;max-width:380px;background:var(--panel);border:1px solid var(--accent);border-left:4px solid var(--bull);border-radius:10px;padding:12px 36px 12px 14px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.6);transform:translateY(140%);transition:transform .25s;z-index:60}
+.toast.show{transform:none}
+.toast .tl{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.toast .tx{position:absolute;top:6px;right:6px;background:none;border:0;color:var(--muted);padding:4px 6px}
+.tabs{display:flex;gap:4px;margin:0 0 12px;border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:8px 14px;color:var(--muted);font-weight:600}
+.tabs button.on{color:var(--text);border-bottom-color:var(--accent-lt)}
+.tabs button:hover{color:var(--text)}
+.rot-head{font-size:12.5px;margin-bottom:10px}
+.rot-head b{font-size:13px;margin-right:6px}
+.rbar{display:grid;grid-template-columns:110px 1fr 80px;align-items:center;gap:10px;padding:3px 0;cursor:pointer;font-size:12.5px}
+.rbar:hover .rname{color:var(--accent-lt)}
+.rtrack{position:relative;height:14px;background:var(--panel2);border-radius:3px}
+.rfill{position:absolute;top:0;bottom:0;border-radius:3px}
+.rfill.pos{background:var(--bull)} .rfill.neg{background:var(--bear)}
+.rzero{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--dim)}
+.rval{font-family:var(--mono);text-align:right}
+.sectbl{min-width:1050px}
+.secrow{cursor:pointer} .secrow.open{background:rgba(138,82,156,.14)}
+.caret{color:var(--muted);display:inline-block;width:10px}
+.coinrow td{font-size:12px;background:rgba(0,0,0,.25);padding-top:5px;padding-bottom:5px}
+.coinrow{cursor:pointer}
+.hot{color:var(--warn);font-weight:600} .hot2{color:var(--bull);font-weight:700} .cold{color:var(--info)}
+.partbar{display:inline-block;width:44px;height:6px;background:var(--panel2);border-radius:3px;vertical-align:1px;overflow:hidden}
+.partbar i{display:block;height:100%;background:var(--accent-lt)}
+.vd{font:600 11px system-ui;padding:2px 7px;border-radius:4px;background:var(--panel2);color:var(--muted)}
+.vd.in{background:var(--bull-bg);color:var(--bull)} .vd.out{background:var(--bear-bg);color:var(--bear)} .vd.narrow{background:rgba(255,122,10,.12);color:var(--warn)} .vd.churn{color:var(--accent-lt)}
+.tm{font:700 10px system-ui;letter-spacing:.4px;text-transform:uppercase;padding:2px 5px;border-radius:3px;border:1px solid var(--line);color:var(--muted)}
+.tm.fuel{color:var(--bull);border-color:rgba(158,255,0,.4)} .tm.early{color:var(--info);border-color:rgba(89,160,216,.5)} .tm.late{color:var(--warn);border-color:rgba(255,122,10,.4)}
+@media (max-width:640px){.rbar{grid-template-columns:80px 1fr 64px}}
 .pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .pager .pinfo{color:var(--muted);font-size:12px;margin-right:auto}
 .pager button{font-family:var(--mono);font-size:12px;padding:5px 10px}
@@ -159,7 +203,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <header>
     <div class="brand"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="og" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a529c"/><stop offset="1" stop-color="#642372"/></linearGradient></defs><path d="M32 3 57 17.5v29L32 61 7 46.5v-29Z" fill="url(#og)" stroke="#bcacd4" stroke-width="2"/><path d="M32 32 52 21" stroke="#bcacd4" stroke-width="1.5" opacity=".55"/><circle cx="32" cy="32" r="17" fill="none" stroke="#bcacd4" stroke-width="1.2" opacity=".35"/><rect x="18" y="33" width="5" height="11" rx="1" fill="#e94c2a"/><path d="M20.5 30v17" stroke="#e94c2a" stroke-width="1.5"/><rect x="29.5" y="27" width="5" height="12" rx="1" fill="#9eff00"/><path d="M32 24v18" stroke="#9eff00" stroke-width="1.5"/><rect x="41" y="18" width="5" height="15" rx="1" fill="#9eff00"/><path d="M43.5 14v22" stroke="#9eff00" stroke-width="1.5"/></svg>
       <div><div class="name">Onslaught <span>Screener</span></div>
-      <div class="sub"><b>Trend Confirmation</b> · Binance USDT-M Perpetuals</div></div>
+      <div class="sub"><b id="viewName">Trend Confirmation</b> · Binance USDT-M Perpetuals</div></div>
     </div>
     <div class="status">
       <span><span id="dot" class="dot"></span> <span id="statusText">Idle</span></span>
@@ -167,11 +211,19 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <label>Auto
         <select id="auto"><option value="0">Manual</option><option value="60">60s</option><option value="120">2m</option><option value="300">5m</option></select>
       </label>
+      <button id="alertBtn" title="Desktop alerts for new setups">🔔 Alerts off</button>
       <button id="scanBtn" class="primary">Scan</button>
     </div>
   </header>
 
+  <nav class="tabs" id="tabs" role="tablist">
+    <button role="tab" data-view="trend" class="on">Trend Confirmation</button>
+    <button role="tab" data-view="sectors">Sector Flow</button>
+  </nav>
+
   <div id="err" class="err"></div>
+
+  <div id="viewTrend">
 
   <div class="panel">
     <div class="row">
@@ -201,6 +253,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <label>OBV&gt;EMA50 <select class="mf" data-k="obv"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
       <label>OI rising <select class="mf" data-k="oi"><option value="">Any</option><option value="1">Yes</option><option value="0">No</option></select></label>
       <label><input id="newOnly" type="checkbox"> New only</label>
+      <label><input id="starOnly" type="checkbox"> ★ only</label>
+      <label title="Keep starred pairs at the top"><input id="pinStar" type="checkbox" checked> Pin ★</label>
       <label>Trigger <select id="trigF"><option value="">Any</option><option value="b">Bull</option><option value="s">Bear</option><option value="none">None</option></select></label>
       <label>within <select id="trigN"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles</label>
       <label>MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
@@ -215,6 +269,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div class="progress"><div id="prog"></div></div>
 
   <div class="regime" id="regime"></div>
+  <div class="changes" id="changes"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <div class="stats" id="stats">
     <div class="stat" data-f="all" title="Show all (clear filters)"><div class="k">Pairs scanned</div><div class="v" id="sScanned">0</div><div class="s" id="sOf">of 0 perpetuals</div></div>
@@ -222,6 +278,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="stat bear" data-f="bear" title="Filter: bearish aligned"><div class="k">Bearish aligned</div><div class="v" id="sBear">0</div><div class="s">4–5 of 5 bear checks</div></div>
     <div class="stat" data-f="new" title="Filter: new alignments"><div class="k">New alignments</div><div class="v" id="sNew">0</div><div class="s">aligned on the latest candle</div></div>
     <div class="stat" data-f="oi" title="Filter: OI rising"><div class="k">OI rising</div><div class="v" id="sOi">0</div><div class="s" id="sOiS">threshold met</div></div>
+    <div class="stat starcard" data-f="star" title="Filter: watchlist"><div class="k">★ Watchlist</div><div class="v" id="sStar">0</div><div class="s" id="sStarS">starred pairs in this scan</div></div>
     <div class="stat trigcard" data-f="setup" title="Filter: aligned and triggered"><div class="k">Triggered setups</div><div class="v" id="sSetup">0</div><div class="s" id="sSetupS">aligned + trigger in last 3</div></div>
     <div class="stat" data-f="inc" title="Filter: incomplete data"><div class="k">Incomplete</div><div class="v" id="sInc">0</div><div class="s">missing data / new listing</div></div>
   </div>
@@ -229,7 +286,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div class="tablewrap">
     <table>
       <thead><tr id="thead"></tr></thead>
-      <tbody id="tbody"><tr><td class="empty" colspan="20">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
+      <tbody id="tbody"><tr><td class="empty" colspan="21">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
     </table>
   </div>
   <div class="pager" id="pager"></div>
@@ -244,6 +301,9 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <li><b>OI rising</b>: open interest grew by at least the threshold over N candles. New positions are fuelling the move, so it counts toward <i>both</i> the bull and the bear score.</li>
         <li><b>MTF</b>: trend direction on 1D, 4H and 1H (3+ of the 4 TA checks). All three agreeing with an aligned setup adds to its rank.</li>
         <li><b>Triggers</b> are events in the last N candles (subscript = candles ago): DMI cross (ADX ≥ threshold − 5), RSI crossing 50, RSI crossing its EMA, OBV crossing its EMA, squeeze fired (Bollinger 20/2 leaving Keltner 20/1.5 ATR), Coil (squeeze still on), RVOL (volume ≥ 2× the 20-bar average), and regular or hidden RSI divergences from 3-bar pivots. Green = bullish, red = bearish.</li>
+        <li><b>★ Watchlist</b>: star a pair to pin it to the top (Pin ★) or filter to it (★ only, or the Watchlist card). Stars are saved in your browser.</li>
+        <li><b>Since last scan</b>: pairs that became aligned or triggered (⚡) since your previous scan on the same timeframe, and pairs that lost alignment. New entries get an IN pill and a purple edge in the table. Click a chip to open its trade plan.</li>
+        <li><b>Alerts</b>: turn on with 🔔 (your browser asks permission). After each scan, new triggered setups (or new alignments too, in Settings) raise a desktop notification, an on-page toast and a sound; the tab title shows a count while you're away. Auto-refresh must be on and the tab must stay open; with alerts on, scans keep running in a background tab.</li>
         <li><b>LONG / SHORT badge</b> = a triggered setup: 4–5/5 aligned plus a trigger in the same direction. These rank first and have their own stat card.</li>
         <li><b>Positioning</b> compares price and OI change over the same N candles: <b>New longs</b> (price ↑ OI ↑), <b>New shorts</b> (price ↓ OI ↑), <b>Short covering</b> (price ↑ OI ↓, a squeeze that often fades once covering ends), <b>Long liquidation</b> (price ↓ OI ↓). Moves under 0.5% count as flat.</li>
         <li><b>Funding</b>: the last funding rate. 🔥 marks extremes: at or above the hot threshold longs are crowded, at or below the cold threshold shorts are crowded. Crowded sides are fuel for squeezes against them.</li>
@@ -260,11 +320,57 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label>OBV EMA <input id="obvLen" type="number" min="2" value="50"></label>
         <label>Funding hot ≥ <input id="fundHot" type="number" step="0.005" value="0.05">%</label>
         <label>Funding cold ≤ <input id="fundCold" type="number" step="0.005" value="-0.03">%</label>
+      </div>
+      <div class="row">
+        <label>Alert on <select id="alertWhat"><option value="setup">Triggered setups</option><option value="aligned">Setups + new alignments</option></select></label>
+        <label><input id="alertStar" type="checkbox"> Starred pairs only</label>
+        <label><input id="alertSound" type="checkbox" checked> Sound</label>
         <button id="resetCache">Clear cache</button>
       </div>
       <p>Indicator lengths and ADX threshold apply on the next scan. Filters, OI threshold and N apply instantly.</p>
     </details>
   </div>
+
+  </div><!-- /viewTrend -->
+
+  <div id="viewSectors" hidden>
+    <div class="panel">
+      <div class="row">
+        <button id="secLoad" class="primary">Load sector flow</button>
+        <span class="mu" id="secStatus" style="font-size:12px">Not loaded yet</span>
+        <span class="sep"></span>
+        <label>Ignore coins under <select id="secMin"><option value="250000">$250K/day</option><option value="1000000" selected>$1M/day</option><option value="5000000">$5M/day</option><option value="20000000">$20M/day</option></select></label>
+        <label>Min coins <select id="secMinCoins"><option>1</option><option selected>3</option><option>5</option><option>8</option></select></label>
+        <label><input id="secMajors" type="checkbox"> Include BTC &amp; ETH</label>
+        <label><input id="secOther" type="checkbox"> Include "Other"</label>
+        <button id="secCsv">Export CSV</button>
+      </div>
+      <div class="progress" style="margin:10px 0 0"><div id="secProg"></div></div>
+    </div>
+    <div class="panel" id="secRotation" hidden>
+      <div class="rot-head"><b>Rotation</b> <span class="mu">Change in share of altcoin volume today vs the 7-day average, in percentage points. Money has to come from somewhere: gainers are pulling it from losers.</span></div>
+      <div id="secBars"></div>
+    </div>
+    <div class="tablewrap">
+      <table class="sectbl">
+        <thead><tr id="secHead"></tr></thead>
+        <tbody id="secBody"><tr><td class="empty" colspan="11">Press <b>Load sector flow</b> to pull 24h volume and 30 days of daily candles, then compare each sector with its own normal.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="panel" style="margin-top:12px">
+      <details>
+        <summary>How to read this</summary>
+        <ul>
+          <li><b>vs Week / vs Month</b>: today's 24h volume divided by the sector's average day over the last 7 / 30 closed days. 1.0 is normal, 2.0 is double. Both high = a real move with fuel. Month high but week flat = it has been hot all week, you may be late. Week high but month flat = something just started.</li>
+          <li><b>Share Δ</b>: the sector's slice of all volume shown today minus its average slice over the last 7 days, in percentage points. This is the rotation signal.</li>
+          <li><b>Participation</b>: share of the sector's coins whose own volume is at least 1.5× their weekly normal. High volume with low participation means one coin is pumping, not the sector. This column kills most false alarms.</li>
+          <li><b>Price (VW)</b>: the volume-weighted 24h price change. Volume alone never says who is buying; paired with price, heavy volume and price up = money in, heavy volume and price down = money out.</li>
+          <li><b>Trend</b>: how many of the sector's coins are bull- or bear-aligned in your last Trend Confirmation scan (scan first to fill it).</li>
+          <li>Coins carry several tags, so a coin's volume counts toward each of its sectors; shares are normalised across the sectors shown. Volume shows where attention is, not where price goes next. Confirm on the chart.</li>
+        </ul>
+      </details>
+    </div>
+  </div><!-- /viewSectors -->
 
   <footer>Data: <code>fapi.binance.com</code> klines (cached in your browser, topped up incrementally) · OI from <code>openInterestHist</code> · market cap from CoinGecko. Requests come from your own browser, no keys or backend. Not financial advice. Confirm on the chart.</footer>
 </div>
@@ -530,6 +636,34 @@ function sizing(acct, riskPct, lev, entry, sl){
 }
 /* Higher-level trend direction on one timeframe: 3+ of the 4 TA checks */
 function tfDir(candles, cfg){ const e = evaluate(candles, {...cfg, noTrig: true}); return e.incomplete ? null : e.bull >= 3 ? 1 : e.bear >= 3 ? -1 : 0; }
+/* ---------- Sector flow ----------
+ coins: [{base, qv (24h quote vol), chg (24h %), avg7, avg30 (avg daily quote vol), tags:[...]}]
+ Returns one row per sector. A coin counts toward every tag it carries. */
+function sectorFlow(coins, o = {}){
+  const minCoins = o.minCoins ?? 3, hot = o.hot ?? 1.5;
+  const by = {};
+  for (const c of coins){
+    if (!(c.avg7 > 0)) continue;
+    for (const t of c.tags){ (by[t] ||= []).push(c); }
+  }
+  let rows = Object.entries(by).filter(([, cs]) => cs.length >= minCoins).map(([sector, cs]) => {
+    const vol = cs.reduce((a, c) => a + c.qv, 0), b7 = cs.reduce((a, c) => a + c.avg7, 0), b30 = cs.reduce((a, c) => a + (c.avg30 || c.avg7), 0);
+    const busy = cs.filter(c => c.qv / c.avg7 >= hot).length;
+    const pw = vol > 0 ? cs.reduce((a, c) => a + c.qv * c.chg, 0) / vol : 0;
+    return {sector, n: cs.length, vol, b7, b30, vsWeek: b7 > 0 ? vol / b7 : null, vsMonth: b30 > 0 ? vol / b30 : null, part: 100 * busy / cs.length, busy, priceVW: pw,
+      coins: cs.map(c => ({...c, vsWeek: c.qv / c.avg7, vsMonth: c.avg30 > 0 ? c.qv / c.avg30 : null})).sort((a, b) => b.vsWeek - a.vsWeek)};
+  });
+  const tv = rows.reduce((a, r) => a + r.vol, 0), t7 = rows.reduce((a, r) => a + r.b7, 0);
+  for (const r of rows){
+    r.share = tv > 0 ? 100 * r.vol / tv : 0;
+    r.share7 = t7 > 0 ? 100 * r.b7 / t7 : 0;
+    r.shareD = r.share - r.share7;                       // percentage points
+    const heavy = r.vsWeek >= hot || r.vsMonth >= hot;
+    r.timing = r.vsWeek >= hot && r.vsMonth >= hot ? 'fuel' : r.vsMonth >= hot && r.vsWeek < 1.2 ? 'late' : r.vsWeek >= hot && r.vsMonth < 1.2 ? 'early' : null;
+    r.verdict = heavy && r.part < 30 ? 'narrow' : heavy && r.priceVW > 0.5 ? 'in' : heavy && r.priceVW < -0.5 ? 'out' : heavy ? 'churn' : r.vsWeek < 0.8 ? 'quiet' : 'normal';
+  }
+  return rows.sort((a, b) => b.shareD - a.shareD);
+}
 // ==ENGINE END==
 
 /* ---------- Config & constants ---------- */
@@ -681,6 +815,15 @@ async function getKlines(sym, tf, closedOnly){
   return closedOnly ? c.filter(k => k[0] < cur) : c;
 }
 
+/* Daily candles for volume baselines: 32 bars, weight 1, refreshed once per UTC day. Stores [openTime, quoteVol≈vol×close]. */
+async function getDaily(sym){
+  const day = 864e5, cur = Math.floor(Date.now() / day) * day, key = `d:${sym}`, c = await Cache.get(key);
+  if (c && c.b === cur) return c.v;
+  const d = await getJSON(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=1d&limit=32`, WEIGHT, 1);
+  const v = d.filter(k => k[0] < cur).map(k => [k[0], +k[7] || (+k[5] * +k[4])]);   // k[7] = quote asset volume
+  await Cache.set(key, {b: cur, v});
+  return v;
+}
 async function getOI(sym, tf){
   const ms = TF_MS[tf], cur = Math.floor(Date.now() / ms) * ms;
   const key = `oi:${sym}:${tf}`, c = await Cache.get(key);
@@ -710,7 +853,7 @@ function cfg(){
 }
 function saveSettings(){
   const o = {tf: S.tf, auto: $('auto').value, universe: $('universe').value, mcap: $('mcap').value, oiThr: $('oiThr').value, oiN: $('oiN').value,
-    closed: $('closed').checked, mtfOn: $('mtfOn').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value};
+    closed: $('closed').checked, mtfOn: $('mtfOn').checked, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value};
   store.set(o);
 }
 function loadSettings(){
@@ -719,6 +862,8 @@ function loadSettings(){
   for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold']) if (o[k] != null) $(k).value = o[k];
   if (o.closed != null) $('closed').checked = o.closed;
   if (o.mtfOn != null) $('mtfOn').checked = o.mtfOn;
+  for (const k of ['pinStar','alertStar','alertSound']) if (o[k] != null) $(k).checked = o[k];
+  if (o.alertWhat) $('alertWhat').value = o.alertWhat;
 }
 function setStatus(kind, text){ $('dot').className = 'dot ' + (kind || ''); $('statusText').textContent = text; }
 function showErr(msg){ const e = $('err'); e.textContent = msg || ''; e.style.display = msg ? 'block' : 'none'; }
@@ -761,7 +906,7 @@ function trigCell(r){
   return shown + (r.trig.length > 3 ? `<span class="tg n" title="${r.trig.slice(3).map(t => t.name).join(', ')}">+${r.trig.length - 3}</span>` : '');
 }
 const COLS = [
-  {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
+  {k:'star', t:'★', c:'c'}, {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA50', c:'c'},
   {k:'oiUp', t:'OI rising', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Positioning', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
 ];
@@ -769,6 +914,7 @@ function sortVal(r, k){
   if (['dmi','rsiEma','rsi50','obv'].includes(k)) return r.d ? r.d.s[k] : -9;
   if (k === 'sector') return tagsOf(r.base)[0];
   if (k === 'sym') return r.sym;
+  if (k === 'star') return WATCH.has(r.sym) ? 1 : 0;
   if (k === 'score') return r.score * 1e13 + r.qv;
   if (k === 'trig') return r.setup ? 100 + r.trig.length : r.trig.length;
   if (k === 'pos') return {longs: 4, cover: 3, flat: 2, liq: 1, shorts: 0}[r.pos] ?? -1;
@@ -786,6 +932,7 @@ function filtered(){
     if (newOnly && !r.isNew) return false;
     if (S.incOnly && !r.inc) return false;
     if (S.setupOnly && !r.setup) return false;
+    if ($('starOnly').checked && !WATCH.has(r.sym)) return false;
     const tf2 = $('trigF').value;
     if (tf2 === 'b' && !r.tB) return false;
     if (tf2 === 's' && !r.tS) return false;
@@ -846,10 +993,10 @@ function renderPager(total, size, pages, start, n){
   el.innerHTML = h;
 }
 function anyFilter(){
-  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
+  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
 }
 function syncCards(){
-  const st = {all: !anyFilter(), bull: S.show === 'bull', bear: S.show === 'bear', new: $('newOnly').checked, oi: S.mf.oi === '1', inc: S.incOnly, setup: S.setupOnly};
+  const st = {all: !anyFilter(), bull: S.show === 'bull', bear: S.show === 'bear', new: $('newOnly').checked, oi: S.mf.oi === '1', inc: S.incOnly, setup: S.setupOnly, star: $('starOnly').checked};
   document.querySelectorAll('#stats .stat').forEach(c => c.classList.toggle('active', !!st[c.dataset.f]));
 }
 function setShow(v){ S.show = v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === v)); }
@@ -861,13 +1008,15 @@ function render(){
   $('sNew').textContent = all.filter(r => r.isNew).length;
   $('sOi').textContent = all.filter(r => r.oiUp).length; $('sOiS').textContent = `≥ ${c.oiThr}% over ${c.oiN} candles`;
   $('sInc').textContent = all.filter(r => r.inc).length;
+  { const ws = all.filter(r => WATCH.has(r.sym)); $('sStar').textContent = ws.length; $('sStarS').textContent = `${ws.filter(r => r.bull >= 4 || r.bear >= 4).length} aligned · ${ws.filter(r => r.setup).length} triggered`; }
   $('sSetup').textContent = all.filter(r => r.setup).length; $('sSetupS').textContent = `aligned + trigger in last ${c.trigN}`;
   renderRegime(all, c);
 
   $('thead').innerHTML = COLS.map(col => `<th class="${col.c || ''} ${S.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}">${col.t}${S.sort.k === col.k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
   const rows = filtered(), {k, dir} = S.sort;
   rows.sort((a, b) => { const x = sortVal(a, k), y = sortVal(b, k); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
-  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value]);
+  if ($('pinStar').checked) rows.sort((a, b) => WATCH.has(b.sym) - WATCH.has(a.sym));   // stable: keeps the sort within each group
+  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value, $('starOnly').checked, $('pinStar').checked]);
   if (sig !== S.sig){ S.sig = sig; S.page = 0; }            // any filter/sort change → back to page 1
   const size = +$('pageSize').value || rows.length || 1, pages = Math.max(1, Math.ceil(rows.length / size));
   S.page = Math.min(S.page, pages - 1);
@@ -882,8 +1031,10 @@ function render(){
     const d = r.d, v = d ? d.vals : null, f = x => Number.isFinite(x) ? x.toFixed(1) : '—';
     const tv = `https://www.tradingview.com/chart/?symbol=BINANCE:${r.sym}.P`;
     const sb = r.bull >= 5 ? 'b5' : r.bull >= 4 ? 'b4' : '', sr = r.bear >= 5 ? 'r5' : r.bear >= 4 ? 'r4' : '';
-    return `<tr data-sym="${r.sym}" class="${r.inc && !d ? 'inc' : ''} ${D.sym === r.sym ? 'sel' : ''}" title="Click for trade plan">
-      <td class="l pair">${r.sym.replace('USDT','')}${r.isNew ? '<span class="new">NEW</span>' : ''}<a class="tvl" href="${tv}" target="_blank" rel="noopener" title="Open on TradingView">↗</a></td>
+    const ent = S.changes && S.changes.inMap[r.sym];
+    return `<tr data-sym="${r.sym}" class="${r.inc && !d ? 'inc' : ''} ${D.sym === r.sym ? 'sel' : ''} ${ent ? 'entered' : ''}" title="Click for trade plan">
+      <td class="c"><button class="starb ${WATCH.has(r.sym) ? 'on' : ''}" data-star="${r.sym}" aria-label="${WATCH.has(r.sym) ? 'Remove from' : 'Add to'} watchlist" title="${WATCH.has(r.sym) ? 'Remove from' : 'Add to'} watchlist">${WATCH.has(r.sym) ? '★' : '☆'}</button></td>
+      <td class="l pair">${r.sym.replace('USDT','')}${r.isNew ? '<span class="new">NEW</span>' : ''}${ent ? `<span class="inpill ${ent.dir > 0 ? 'b' : 's'}" title="Entered since the last scan: ${ent.kind === 'setup' ? 'triggered setup' : 'aligned'}">IN</span>` : ''}<a class="tvl" href="${tv}" target="_blank" rel="noopener" title="Open on TradingView">↗</a></td>
       <td class="l">${tagsOf(r.base).slice(0,2).map(t => `<span class="tag">${t}</span>`).join('')}</td>
       <td>${fmtPrice(r.price)}</td>
       <td class="${cls(r.chg)}">${fmtPct(r.chg)}</td>
@@ -946,6 +1097,7 @@ async function scan(){
     }
     await Promise.all(Array.from({length: Math.min(CONCURRENCY, list.length)}, worker));
     if (tf === S.tf){
+      computeChanges(tf);
       $('lastScan').textContent = new Date().toLocaleTimeString();
       setStatus('ok', `Done · ${list.length} pairs · ${tf}`);
     }
@@ -959,7 +1111,7 @@ async function scan(){
 
 function setAuto(){
   clearInterval(S.timer); const s = +$('auto').value;
-  if (s) S.timer = setInterval(() => { if (!document.hidden) scan(); }, s * 1000);
+  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on) scan(); }, s * 1000);
 }
 
 function exportCSV(){
@@ -974,6 +1126,203 @@ function exportCSV(){
   a.download = `trend-confirmation-${S.tf}-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'')}.csv`;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+/* ---------- Views ---------- */
+function setView(v){
+  S.view = v;
+  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors';
+  [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
+  $('viewName').textContent = v === 'trend' ? 'Trend Confirmation' : 'Sector Flow';
+  try { localStorage.setItem('onslaught-view', v); } catch {}
+  if (v === 'sectors') renderSectors();
+}
+
+/* ---------- Sector Flow ---------- */
+const SEC = {coins: null, rows: [], open: new Set(), sort: {k: 'shareD', dir: -1}, loading: false, t: null};
+const VERDICT = {in: ['Money in', 'Heavy volume with price up'], out: ['Money out', 'Heavy volume with price down'], narrow: ['One-coin move', 'Heavy volume but under 30% of coins are busy'],
+  churn: ['Heavy churn', 'Heavy volume, price flat'], quiet: ['Quiet', 'Volume below 0.8× its weekly normal'], normal: ['Normal', 'Volume near its normal']};
+const TIMING = {fuel: ['Fuel', 'Hot vs both week and month: a real move'], early: ['Early', 'Hot vs the week but not the month: just started'], late: ['Late', 'Hot vs the month but flat vs the week: running all week']};
+async function loadSectors(){
+  if (SEC.loading) return;
+  SEC.loading = true; $('secLoad').disabled = true; showErr('');
+  const st = t => $('secStatus').textContent = t;
+  try {
+    st('Loading universe…'); $('secProg').style.width = '3%';
+    const uni = await getUniverse(), minV = +$('secMin').value;
+    const list = uni.filter(u => u.qv >= minV);
+    const out = []; let i = 0, done = 0;
+    async function worker(){
+      while (i < list.length){
+        const u = list[i++];
+        try {
+          const d = await getDaily(u.sym), q = d.map(x => x[1]);
+          if (q.length >= 7){
+            const avg = n => { const a = q.slice(-n); return a.reduce((x, y) => x + y, 0) / a.length; };
+            out.push({sym: u.sym, base: u.base, qv: u.qv, chg: u.chg, price: u.price, avg7: avg(7), avg30: q.length >= 14 ? avg(30) : null, days: q.length});
+          }
+        } catch(e){ if (/418|banned/.test(e.message)) throw e; }
+        done++; $('secProg').style.width = (3 + 97 * done / list.length) + '%'; st(`Loading daily volume ${done}/${list.length}…`);
+      }
+    }
+    await Promise.all(Array.from({length: Math.min(CONCURRENCY, list.length)}, worker));
+    SEC.coins = out; SEC.t = Date.now(); SEC.minLoaded = minV;
+    st(`${out.length} coins · loaded ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`);
+    renderSectors();
+  } catch(e){ showErr(e.message); st('Error'); }
+  finally { SEC.loading = false; $('secLoad').disabled = false; setTimeout(() => $('secProg').style.width = '0', 800); }
+}
+function sectorRows(){
+  if (!SEC.coins) return [];
+  const majors = $('secMajors').checked, other = $('secOther').checked, minV = +$('secMin').value;
+  const coins = SEC.coins.filter(c => c.qv >= minV && (majors || (c.base !== 'BTC' && c.base !== 'ETH')))
+    .map(c => ({...c, tags: tagsOf(c.base).filter(t => other || t !== 'Other')})).filter(c => c.tags.length);
+  const rows = sectorFlow(coins, {minCoins: +$('secMinCoins').value});
+  const c = cfg(), trend = new Map(S.rows.map(r => [r.sym, derive(r, c)]));
+  for (const r of rows){
+    const scanned = r.coins.map(x => trend.get(x.sym)).filter(Boolean);
+    r.tScan = scanned.length; r.tBull = scanned.filter(x => x.bull >= 4).length; r.tBear = scanned.filter(x => x.bear >= 4).length;
+    r.tNet = r.tScan ? (r.tBull - r.tBear) / r.tScan : null;
+    for (const x of r.coins){ const t = trend.get(x.sym); x.tr = t ? (t.setup ? t.setup * 2 : t.bull >= 4 ? 1 : t.bear >= 4 ? -1 : 0) : null; }
+  }
+  return rows;
+}
+const SEC_COLS = [{k: 'sector', t: 'Sector', c: 'l'}, {k: 'n', t: 'Coins'}, {k: 'vol', t: 'Vol 24h'}, {k: 'vsWeek', t: 'vs Week'}, {k: 'vsMonth', t: 'vs Month'},
+  {k: 'share', t: 'Share'}, {k: 'shareD', t: 'Share Δ'}, {k: 'part', t: 'Participation'}, {k: 'priceVW', t: 'Price (VW)'}, {k: 'tNet', t: 'Trend', c: 'c'}, {k: 'verdict', t: 'Verdict', c: 'l'}];
+const ratio = v => v == null ? '—' : v.toFixed(2) + '×';
+const ratioCls = v => v == null ? 'mu' : v >= 2 ? 'hot2' : v >= 1.5 ? 'hot' : v < 0.8 ? 'cold' : '';
+function renderSectors(){
+  const rows = sectorRows(); SEC.rows = rows;
+  const {k, dir} = SEC.sort;
+  rows.sort((a, b) => { const x = k === 'sector' ? a.sector : k === 'verdict' ? a.verdict : a[k] ?? -1e9, y = k === 'sector' ? b.sector : k === 'verdict' ? b.verdict : b[k] ?? -1e9; return (x > y ? 1 : x < y ? -1 : 0) * dir; });
+  $('secHead').innerHTML = SEC_COLS.map(col => `<th class="${col.c || ''} ${SEC.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}">${col.t}${SEC.sort.k === col.k ? (SEC.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
+  if (!SEC.coins){ $('secRotation').hidden = true; return; }
+  if (!rows.length){ $('secBody').innerHTML = `<tr><td class="empty" colspan="${SEC_COLS.length}">No sector has enough coins at these filters.</td></tr>`; $('secRotation').hidden = true; return; }
+  // rotation bars
+  const max = Math.max(...rows.map(r => Math.abs(r.shareD)), 0.5);
+  $('secRotation').hidden = false;
+  $('secBars').innerHTML = rows.slice().sort((a, b) => b.shareD - a.shareD).map(r => {
+    const w = 50 * Math.abs(r.shareD) / max;
+    return `<div class="rbar" data-sec="${r.sector}" title="${r.sector}: ${r.share.toFixed(1)}% of volume today vs ${r.share7.toFixed(1)}% on a normal day">
+      <span class="rname">${r.sector}</span>
+      <span class="rtrack"><span class="rfill ${r.shareD >= 0 ? 'pos' : 'neg'}" style="${r.shareD >= 0 ? `left:50%;width:${w}%` : `right:50%;width:${w}%`}"></span><span class="rzero"></span></span>
+      <span class="rval ${cls(r.shareD)}">${(r.shareD > 0 ? '+' : '') + r.shareD.toFixed(2)} pp</span></div>`;
+  }).join('');
+  $('secBody').innerHTML = rows.map(r => {
+    const open = SEC.open.has(r.sector), [vt, vtip] = VERDICT[r.verdict], tm = r.timing ? TIMING[r.timing] : null;
+    const trend = r.tScan ? `<span class="up">${r.tBull}▲</span> <span class="dn">${r.tBear}▼</span> <span class="mu">/ ${r.tScan}</span>` : '<span class="mu" title="Run a Trend Confirmation scan to fill this">—</span>';
+    const main = `<tr class="secrow ${open ? 'open' : ''}" data-sec="${r.sector}">
+      <td class="l"><span class="caret">${open ? '▾' : '▸'}</span> <b>${r.sector}</b></td>
+      <td>${r.n}</td><td>${fmtBig(r.vol)}</td>
+      <td class="${ratioCls(r.vsWeek)}">${ratio(r.vsWeek)}</td><td class="${ratioCls(r.vsMonth)}">${ratio(r.vsMonth)}</td>
+      <td>${r.share.toFixed(1)}%</td><td class="${cls(r.shareD)}">${(r.shareD > 0 ? '+' : '') + r.shareD.toFixed(2)} pp</td>
+      <td><span class="partbar"><i style="width:${r.part}%"></i></span> ${r.part.toFixed(0)}% <span class="mu">(${r.busy}/${r.n})</span></td>
+      <td class="${cls(r.priceVW)}">${fmtPct(r.priceVW)}</td>
+      <td class="c">${trend}</td>
+      <td class="l"><span class="vd ${r.verdict}" title="${vtip}">${vt}</span>${tm ? ` <span class="tm ${r.timing}" title="${tm[1]}">${tm[0]}</span>` : ''}</td></tr>`;
+    if (!open) return main;
+    const coins = r.coins.slice(0, 25).map(x => `<tr class="coinrow" data-coin="${x.sym}">
+      <td class="l">${WATCH.has(x.sym) ? '<span style="color:#f5c518">★</span> ' : ''}${x.base}${x.tr === 2 ? ' <span class="setup b">LONG</span>' : x.tr === -2 ? ' <span class="setup s">SHORT</span>' : ''}</td>
+      <td class="mu">${x.days}d</td><td>${fmtBig(x.qv)}</td>
+      <td class="${ratioCls(x.vsWeek)}">${ratio(x.vsWeek)}</td><td class="${ratioCls(x.vsMonth)}">${ratio(x.vsMonth)}</td>
+      <td class="mu">${(100 * x.qv / r.vol).toFixed(1)}% of sector</td><td></td><td>${x.vsWeek >= 1.5 ? '<span class="up">busy</span>' : '<span class="mu">—</span>'}</td>
+      <td class="${cls(x.chg)}">${fmtPct(x.chg)}</td>
+      <td class="c">${x.tr == null ? '<span class="mu">—</span>' : x.tr > 0 ? '<span class="up">▲</span>' : x.tr < 0 ? '<span class="dn">▼</span>' : '<span class="mu">·</span>'}</td>
+      <td class="l"><a class="tvl" href="https://www.tradingview.com/chart/?symbol=BINANCE:${x.sym}.P" target="_blank" rel="noopener">chart ↗</a></td></tr>`).join('');
+    return main + coins + (r.coins.length > 25 ? `<tr class="coinrow"><td class="l mu" colspan="${SEC_COLS.length}">+${r.coins.length - 25} more coins</td></tr>` : '');
+  }).join('');
+}
+function exportSectors(){
+  const head = ['sector','coins','vol24h','vs_week','vs_month','share_pct','share_delta_pp','participation_pct','price_vw_pct','trend_bull','trend_bear','trend_scanned','verdict','timing'];
+  const lines = [head.join(',')].concat(SEC.rows.map(r => [r.sector, r.n, r.vol.toFixed(0), r.vsWeek?.toFixed(3), r.vsMonth?.toFixed(3), r.share.toFixed(2), r.shareD.toFixed(3), r.part.toFixed(1), r.priceVW.toFixed(2), r.tBull, r.tBear, r.tScan, r.verdict, r.timing ?? ''].join(',')));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type: 'text/csv'}));
+  a.download = `sector-flow-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'')}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- Watchlist, changes since last scan, alerts ---------- */
+const WATCH_KEY = 'onslaught-watch', SNAP_KEY = tf => 'onslaught-snap-' + tf, ALERT_KEY = 'onslaught-alerts';
+const WATCH = new Set((() => { try { return JSON.parse(localStorage.getItem(WATCH_KEY) || '[]'); } catch { return []; } })());
+function toggleStar(sym){
+  WATCH.has(sym) ? WATCH.delete(sym) : WATCH.add(sym);
+  try { localStorage.setItem(WATCH_KEY, JSON.stringify([...WATCH])); } catch {}
+  render();
+}
+/* Compare this scan with the previous one on the same timeframe (only pairs present in both). */
+function diffSnap(prev, cur){
+  const entered = [], exited = [];
+  for (const [sym, x] of Object.entries(cur)){
+    const p = prev[sym]; if (!p) continue;
+    if (x.setup && x.setup !== p.setup) entered.push({sym, dir: x.setup, kind: 'setup'});
+    else if (x.al && x.al !== p.al) entered.push({sym, dir: x.al, kind: 'aligned'});
+    else if (!x.al && p.al) exited.push({sym, dir: p.al, kind: 'aligned'});
+  }
+  return {entered, exited};
+}
+function computeChanges(tf){
+  const c = cfg(), cur = {};
+  for (const r of S.rows){ const x = derive(r, c); if (!x.d) continue; cur[r.sym] = {al: x.bull >= 4 ? 1 : x.bear >= 4 ? -1 : 0, setup: x.setup}; }
+  let prev = null; try { prev = JSON.parse(localStorage.getItem(SNAP_KEY(tf)) || 'null'); } catch {}
+  try { localStorage.setItem(SNAP_KEY(tf), JSON.stringify({t: Date.now(), m: cur})); } catch {}
+  if (!prev || !prev.m){ S.changes = {baseline: true, inMap: {}}; renderChanges(); return; }
+  const dfx = diffSnap(prev.m, cur);
+  S.changes = {...dfx, t: prev.t, inMap: Object.fromEntries(dfx.entered.map(e => [e.sym, e]))};
+  renderChanges();
+  fireAlerts(dfx.entered);
+}
+function renderChanges(){
+  const el = $('changes'), ch = S.changes;
+  if (!ch){ el.innerHTML = ''; return; }
+  if (ch.baseline){ el.innerHTML = `<span class="mu">Baseline saved for ${S.tf.toUpperCase()}. Pairs entering or leaving alignment will show here from the next scan.</span>`; return; }
+  const chip = e => `<button class="chg ${e.dir > 0 ? 'b' : 's'}" data-open="${e.sym}" title="${e.kind === 'setup' ? 'Triggered setup' : 'Aligned'} ${e.dir > 0 ? 'long' : 'short'}">${WATCH.has(e.sym) ? '★ ' : ''}${e.sym.replace('USDT', '')} ${e.dir > 0 ? '▲' : '▼'}${e.kind === 'setup' ? ' ⚡' : ''}</button>`;
+  const since = new Date(ch.t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  el.innerHTML = `<span class="lbl">Since ${since}</span>
+    <span class="grp"><b class="up">Entered ${ch.entered.length}</b> ${ch.entered.map(chip).join('') || '<span class="mu">none</span>'}</span>
+    <span class="grp"><b class="mu">Exited ${ch.exited.length}</b> ${ch.exited.slice(0, 12).map(e => `<span class="chg out">${e.sym.replace('USDT', '')}</span>`).join('')}${ch.exited.length > 12 ? `<span class="mu"> +${ch.exited.length - 12}</span>` : ''}</span>`;
+}
+const ALERT = {on: false, ctx: null};
+try { ALERT.on = JSON.parse(localStorage.getItem(ALERT_KEY) || 'false') && 'Notification' in window && Notification.permission === 'granted'; } catch {}
+function paintAlertBtn(){ $('alertBtn').textContent = ALERT.on ? '🔔 Alerts on' : '🔕 Alerts off'; $('alertBtn').classList.toggle('on', ALERT.on); }
+async function toggleAlerts(){
+  if (ALERT.on){ ALERT.on = false; }
+  else {
+    if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
+    ALERT.on = true;
+    try { ALERT.ctx = ALERT.ctx || new (window.AudioContext || window.webkitAudioContext)(); } catch {}
+    const msgs = [];
+    if (!('Notification' in window) || Notification.permission !== 'granted') msgs.push('Desktop notifications are blocked, so alerts will show on this page only.');
+    if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); msgs.push('Auto-refresh set to 2m so alerts can fire.'); }
+    toast(['Alerts on: ' + ($('alertWhat').value === 'setup' ? 'triggered setups' : 'setups and new alignments') + '. Keep this tab open.'].concat(msgs).join(' '));
+  }
+  try { localStorage.setItem(ALERT_KEY, JSON.stringify(ALERT.on)); } catch {}
+  saveSettings(); paintAlertBtn();
+}
+function beep(){
+  const ctx = ALERT.ctx; if (!ctx || !$('alertSound').checked) return;
+  try { [0, 0.18].forEach((dt, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = i ? 1320 : 880; g.gain.setValueAtTime(0.0001, ctx.currentTime + dt);
+    g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + dt + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dt + 0.15);
+    o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + dt); o.stop(ctx.currentTime + dt + 0.16); }); } catch {}
+}
+let toastT = null;
+function toast(msg, items){
+  const el = $('toast');
+  el.innerHTML = `<div>${msg}</div>${items ? `<div class="tl">${items}</div>` : ''}<button class="tx" aria-label="Dismiss">✕</button>`;
+  el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 12000);
+}
+function fireAlerts(entered){
+  if (!ALERT.on || !entered.length) return;
+  let items = entered.filter(e => $('alertWhat').value === 'aligned' || e.kind === 'setup');
+  if ($('alertStar').checked) items = items.filter(e => WATCH.has(e.sym));
+  if (!items.length) return;
+  const line = e => `${e.sym.replace('USDT', '')} ${e.dir > 0 ? 'LONG' : 'SHORT'}${e.kind === 'setup' ? ' (triggered)' : ' (aligned)'}`;
+  const title = `Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} on ${S.tf.toUpperCase()}`;
+  const body = items.slice(0, 6).map(line).join('\n') + (items.length > 6 ? `\n+${items.length - 6} more` : '');
+  if ('Notification' in window && Notification.permission === 'granted'){
+    try { const n = new Notification(title, {body, tag: 'onslaught-' + S.tf, renotify: true}); n.onclick = () => { window.focus(); openDrawer(items[0].sym); n.close(); }; } catch {}
+  }
+  toast(title, items.slice(0, 8).map(e => `<button class="chg ${e.dir > 0 ? 'b' : 's'}" data-open="${e.sym}">${line(e)}</button>`).join(''));
+  beep();
+  if (document.hidden){ S.unseen = (S.unseen || 0) + items.length; document.title = `(${S.unseen}) Onslaught Screener`; }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden){ S.unseen = 0; document.title = 'Onslaught Screener'; } });
 
 /* ---------- Trade drawer ---------- */
 const PLAN_KEY = 'onslaught-plan';
@@ -1133,11 +1482,11 @@ $('tfSeg').innerHTML = TFS.map(t => `<button data-v="${t}" class="${t === S.tf ?
 $('sector').innerHTML += Object.keys(SECTORS).concat('Other').map(s => `<option>${s}</option>`).join('');
 $('tfSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   S.tf = b.dataset.v; [...$('tfSeg').children].forEach(x => x.classList.toggle('on', x === b));
-  S.rows = []; render(); saveSettings(); if (!S.scanning) scan(); };
+  S.rows = []; S.changes = null; renderChanges(); render(); saveSettings(); if (!S.scanning) scan(); };
 $('showSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   S.show = b.dataset.v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x === b)); render(); };
 document.querySelectorAll('.mf').forEach(s => s.onchange = () => { S.mf[s.dataset.k] = s.value; render(); });
-$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('trigF').value = ''; $('mtfF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
+$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('starOnly').checked = false; $('trigF').value = ''; $('mtfF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
   S.show = 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === 'all')); render(); };
 for (const id of ['oiThr','oiN','sector','mcap','newOnly']) $(id).onchange = () => { saveSettings(); render(); };
 $('search').oninput = render;
@@ -1148,8 +1497,22 @@ for (const id of ['rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) $(id).onchan
 for (const id of ['fundHot','fundCold']) $(id).onchange = () => { saveSettings(); render(); };
 $('auto').onchange = () => { saveSettings(); setAuto(); };
 $('scanBtn').onclick = scan;
+$('tabs').onclick = e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); };
+$('secLoad').onclick = loadSectors; $('secCsv').onclick = exportSectors;
+for (const id of ['secMin','secMinCoins','secMajors','secOther']) $(id).onchange = () => { if (id === 'secMin' && SEC.coins && +$('secMin').value < SEC.minLoaded) loadSectors(); else renderSectors(); };
+$('secHead').onclick = e => { const th = e.target.closest('th'); if (!th) return; const k = th.dataset.k; SEC.sort = SEC.sort.k === k ? {k, dir: -SEC.sort.dir} : {k, dir: ['sector','verdict'].includes(k) ? 1 : -1}; renderSectors(); };
+$('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.target.closest('[data-coin]');
+  if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Trend Confirmation scan that includes this coin to open its trade plan.'); return; }
+  const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
+$('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
+try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors') setView('sectors'); } catch {}
+$('alertBtn').onclick = toggleAlerts; paintAlertBtn();
+for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
+for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
+document.addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (b){ openDrawer(b.dataset.open); $('toast').classList.remove('show'); return; }
+  if (e.target.closest('#toast .tx')) $('toast').classList.remove('show'); });
 loadAcct();
-$('tbody').onclick = e => { if (e.target.closest('a')) return; const tr = e.target.closest('tr[data-sym]'); if (tr) openDrawer(tr.dataset.sym); };
+$('tbody').onclick = e => { const sb = e.target.closest('[data-star]'); if (sb){ toggleStar(sb.dataset.star); return; } if (e.target.closest('a')) return; const tr = e.target.closest('tr[data-sym]'); if (tr) openDrawer(tr.dataset.sym); };
 $('scrim').onclick = closeDrawer; $('dClose').onclick = closeDrawer;
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && D.sym) closeDrawer(); });
 $('dDir').onclick = e => { const b = e.target.closest('button'); if (!b) return; D.dir = +b.dataset.v; updatePlan(); };
@@ -1169,6 +1532,7 @@ $('stats').onclick = e => { const c = e.target.closest('.stat'); if (!c) return;
   if (f === 'oi'){ const sel = document.querySelector('.mf[data-k="oi"]'); sel.value = S.mf.oi === '1' ? '' : '1'; S.mf.oi = sel.value; }
   if (f === 'inc') S.incOnly = !S.incOnly;
   if (f === 'setup') S.setupOnly = !S.setupOnly;
+  if (f === 'star') $('starOnly').checked = !$('starOnly').checked;
   render(); };
 $('resetCache').onclick = async () => { await Cache.clear(); infoCache = null; setStatus('', 'Cache cleared'); };
 $('thead').onclick = e => { const th = e.target.closest('th'); if (!th) return; const k = th.dataset.k;
