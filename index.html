@@ -163,6 +163,13 @@ td.trigs{white-space:nowrap}
 .tm{font:700 10px system-ui;letter-spacing:.4px;text-transform:uppercase;padding:2px 5px;border-radius:3px;border:1px solid var(--line);color:var(--muted)}
 .tm.fuel{color:var(--bull);border-color:rgba(158,255,0,.4)} .tm.early{color:var(--info);border-color:rgba(89,160,216,.5)} .tm.late{color:var(--warn);border-color:rgba(255,122,10,.4)}
 @media (max-width:640px){.rbar{grid-template-columns:80px 1fr 64px}}
+.jedge{min-width:820px} .jedge td,.jedge th{padding:6px 10px}
+.jedge tr.low td{opacity:.45} .jedge tr.gstart td{border-top:1px solid var(--dim)}
+.ebar{display:inline-block;width:140px;height:10px;vertical-align:middle}
+.jlog{min-width:1250px}
+.jopen{cursor:pointer;text-decoration:underline dotted var(--dim)} .jopen:hover{color:var(--accent-lt)}
+.jdel{background:none;border:0;color:var(--dim);padding:2px 6px} .jdel:hover{color:var(--bear)}
+.filebtn{border:1px solid var(--line);border-radius:6px;padding:6px 12px;background:var(--panel2);color:var(--text);font-size:13px;cursor:pointer}
 .pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .pager .pinfo{color:var(--muted);font-size:12px;margin-right:auto}
 .pager button{font-family:var(--mono);font-size:12px;padding:5px 10px}
@@ -219,6 +226,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <nav class="tabs" id="tabs" role="tablist">
     <button role="tab" data-view="trend" class="on">Trend Confirmation</button>
     <button role="tab" data-view="sectors">Sector Flow</button>
+    <button role="tab" data-view="journal">Journal</button>
   </nav>
 
   <div id="err" class="err"></div>
@@ -303,6 +311,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <li><b>Triggers</b> are events in the last N candles (subscript = candles ago): DMI cross (ADX ≥ threshold − 5), RSI crossing 50, RSI crossing its EMA, OBV crossing its EMA, squeeze fired (Bollinger 20/2 leaving Keltner 20/1.5 ATR), Coil (squeeze still on), RVOL (volume ≥ 2× the 20-bar average), and regular or hidden RSI divergences from 3-bar pivots. Green = bullish, red = bearish.</li>
         <li><b>★ Watchlist</b>: star a pair to pin it to the top (Pin ★) or filter to it (★ only, or the Watchlist card). Stars are saved in your browser.</li>
         <li><b>Since last scan</b>: pairs that became aligned or triggered (⚡) since your previous scan on the same timeframe, and pairs that lost alignment. New entries get an IN pill and a purple edge in the table. Click a chip to open its trade plan.</li>
+        <li><b>Telegram</b>: create a bot with @BotFather, paste its token and your chat ID in Settings, press Send test, then tick Send alerts to Telegram. Each alert lists the pairs with triggers, context and (optionally) entry, stop and targets. The token stays in this browser only. The drawer also has a Send to Telegram button for any plan.</li>
         <li><b>Alerts</b>: turn on with 🔔 (your browser asks permission). After each scan, new triggered setups (or new alignments too, in Settings) raise a desktop notification, an on-page toast and a sound; the tab title shows a count while you're away. Auto-refresh must be on and the tab must stay open; with alerts on, scans keep running in a background tab.</li>
         <li><b>LONG / SHORT badge</b> = a triggered setup: 4–5/5 aligned plus a trigger in the same direction. These rank first and have their own stat card.</li>
         <li><b>Positioning</b> compares price and OI change over the same N candles: <b>New longs</b> (price ↑ OI ↑), <b>New shorts</b> (price ↓ OI ↑), <b>Short covering</b> (price ↑ OI ↓, a squeeze that often fades once covering ends), <b>Long liquidation</b> (price ↓ OI ↓). Moves under 0.5% count as flat.</li>
@@ -325,6 +334,14 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label>Alert on <select id="alertWhat"><option value="setup">Triggered setups</option><option value="aligned">Setups + new alignments</option></select></label>
         <label><input id="alertStar" type="checkbox"> Starred pairs only</label>
         <label><input id="alertSound" type="checkbox" checked> Sound</label>
+      </div>
+      <div class="row">
+        <label title="From @BotFather. Stored only in this browser.">Telegram bot token <input id="tgToken" type="password" autocomplete="off" placeholder="123456789:ABC…" style="width:230px"></label>
+        <label title="Your chat ID (message @userinfobot), or a group/channel ID">Chat ID <input id="tgChat" type="text" autocomplete="off" style="width:130px"></label>
+        <label><input id="tgOn" type="checkbox"> Send alerts to Telegram</label>
+        <label title="Include entry, stop and targets for each alert"><input id="tgPlan" type="checkbox" checked> with trade plan</label>
+        <button id="tgTest">Send test</button>
+        <span class="mu" id="tgStatus" style="font-size:12px"></span>
         <button id="resetCache">Clear cache</button>
       </div>
       <p>Indicator lengths and ADX threshold apply on the next scan. Filters, OI threshold and N apply instantly.</p>
@@ -372,6 +389,39 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
   </div><!-- /viewSectors -->
 
+  <div id="viewJournal" hidden>
+    <div class="panel">
+      <div class="row">
+        <label title="Log triggered setups and new alignments after each Trend Confirmation scan (closed candles only)"><input id="jOn" type="checkbox" checked> Log signals</label>
+        <label><select id="jWhat"><option value="both">Setups + new alignments</option><option value="setup">Triggered setups only</option></select></label>
+        <span class="sep"></span>
+        <button id="jUpdate" class="primary">Update outcomes</button>
+        <span class="mu" id="jStatus" style="font-size:12px"></span>
+        <span class="sep"></span>
+        <button id="jCsv">Export CSV</button>
+        <button id="jBackup">Backup</button>
+        <label class="filebtn">Restore<input id="jRestore" type="file" accept="application/json" hidden></label>
+        <button id="jClear">Clear journal</button>
+      </div>
+    </div>
+    <div class="stats" id="jCards"></div>
+    <div class="panel">
+      <div class="rot-head"><b>Where is the edge?</b> <span class="mu">Simulated trade per signal: entry at the signal close, stop 1.5 ATR away (1R), target 1.5R, closed after 24 candles. Groups with fewer than 10 completed signals are dimmed: too few to trust.</span></div>
+      <div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Signals</th><th>Win rate</th><th>Avg R</th><th class="l">Expectancy</th><th>Avg +12</th><th>Avg MFE</th><th>Avg MAE</th></tr></thead><tbody id="jEdge"></tbody></table></div>
+    </div>
+    <div class="tablewrap">
+      <table class="jlog"><thead><tr><th class="l">Signal time</th><th class="l">Pair</th><th class="c">TF</th><th class="c">Side</th><th class="l">Kind</th><th>Score</th><th class="l">Triggers</th><th class="l">Context</th><th>Entry</th><th>+4</th><th>+12</th><th>+24</th><th>MFE</th><th>MAE</th><th class="l">Result</th><th></th></tr></thead>
+      <tbody id="jBody"></tbody></table>
+    </div>
+    <div class="pager" id="jPager"></div>
+    <div class="panel" style="margin-top:12px"><details><summary>How the journal works</summary><ul>
+      <li>After each Trend Confirmation scan with closed candles, it logs every <b>triggered setup</b> (cooldown 6 candles per pair, side and timeframe) and every <b>new alignment</b> (aligned on the latest candle only). It records the context at that moment: score, triggers, regime, MTF, extension, positioning and funding.</li>
+      <li><b>Outcomes</b> update after each scan, or with Update outcomes: returns after 4, 12 and 24 candles (in your favour = positive), maximum favourable and adverse excursion, and a simulated trade result: <b>Win</b> = +1.5R target hit first, <b>Loss</b> = −1R stop hit first (both in the same candle counts as a loss), <b>Time</b> = neither within 24 candles, closed at market.</li>
+      <li><b>Avg R</b> is the expectancy per trade in risk units: above 0 means the signal paid over this sample, before fees and slippage.</li>
+      <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
+    </ul></details></div>
+  </div><!-- /viewJournal -->
+
   <footer>Data: <code>fapi.binance.com</code> klines (cached in your browser, topped up incrementally) · OI from <code>openInterestHist</code> · market cap from CoinGecko. Requests come from your own browser, no keys or backend. Not financial advice. Confirm on the chart.</footer>
 </div>
 
@@ -406,7 +456,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="dsize" id="dSize"></div>
   </div>
   <div class="dsec"><ul class="dwarn" id="dWarn"></ul></div>
-  <div class="dsec row"><button id="dCopy" class="primary">Copy plan</button><span class="mu" id="dCopied" style="font-size:12px"></span></div>
+  <div class="dsec row"><button id="dCopy" class="primary">Copy plan</button><button id="dTg" title="Send this plan to your Telegram">Send to Telegram</button><span class="mu" id="dCopied" style="font-size:12px"></span></div>
   <p class="dnote">Levels come from closed candles on the selected timeframe. Swing stop = nearest swing low/high beyond entry ± 0.25 ATR. Targets = nearest swing levels and 1.272 / 1.618 extensions of the last impulse, with R-multiples as fallback. A starting point for your own chart read, not advice.</p>
 </aside>
 
@@ -546,7 +596,7 @@ function evaluate(candles, cfg){
   const e20 = ema(c, 20), at = atr(h, l, c, 14);
   const ext = Number.isFinite(e20[L]) && at[L] > 0 ? (c[L] - e20[L]) / at[L] : null;
   const trig = cfg.noTrig ? [] : triggers(candles, ind, cfg);
-  return {incomplete: false, ...now, ext, trig, prevBull: prev ? prev.bull : 0, prevBear: prev ? prev.bear : 0, lastClose: c[L], lastTime: candles[L][0], tail: c.slice(-12)};
+  return {incomplete: false, ...now, ext, trig, atr: at[L], prevBull: prev ? prev.bull : 0, prevBear: prev ? prev.bear : 0, lastClose: c[L], lastTime: candles[L][0], tail: c.slice(-12)};
 }
 /* OI/price quadrant. dz = dead zone in % (moves smaller than this count as flat). */
 function positioning(pD, oD, dz = 0.5){
@@ -663,6 +713,33 @@ function sectorFlow(coins, o = {}){
     r.verdict = heavy && r.part < 30 ? 'narrow' : heavy && r.priceVW > 0.5 ? 'in' : heavy && r.priceVW < -0.5 ? 'out' : heavy ? 'churn' : r.vsWeek < 0.8 ? 'quiet' : 'normal';
   }
   return rows.sort((a, b) => b.shareD - a.shareD);
+}
+/* ---------- Journal outcomes ----------
+ e: {dir, ct (open time of the signal candle), price, atr}. Simulated trade: stop 1.5 ATR (= 1R), target 1.5R, 24-candle limit.
+ Same-bar stop and target counts as a loss (conservative). */
+const J_HOR = 24, J_STOP_ATR = 1.5, J_TGT_R = 1.5;
+function outcome(e, candles){
+  const i = candles.findIndex(k => k[0] === e.ct);
+  if (i < 0) return null;
+  const n = candles.length - 1 - i, ret = h => n >= h ? e.dir * (candles[i + h][4] / e.price - 1) * 100 : null;
+  const Rv = J_STOP_ATR * e.atr, stop = e.price - e.dir * Rv, tgt = e.price + e.dir * J_TGT_R * Rv;
+  let mfe = 0, mae = 0, res = null, rr = null, hitBar = null;
+  for (let j = 1; j <= Math.min(J_HOR, n); j++){
+    const k = candles[i + j], hi = k[2], lo = k[3];
+    mfe = Math.max(mfe, e.dir > 0 ? (hi / e.price - 1) * 100 : (1 - lo / e.price) * 100);
+    mae = Math.max(mae, e.dir > 0 ? (1 - lo / e.price) * 100 : (hi / e.price - 1) * 100);
+    if (res == null){
+      const hitS = e.dir > 0 ? lo <= stop : hi >= stop, hitT = e.dir > 0 ? hi >= tgt : lo <= tgt;
+      if (hitS){ res = 'loss'; rr = -1; hitBar = j; } else if (hitT){ res = 'win'; rr = J_TGT_R; hitBar = j; }
+    }
+  }
+  if (res == null && n >= J_HOR){ res = 'time'; rr = e.dir * (candles[i + J_HOR][4] - e.price) / Rv; hitBar = J_HOR; }
+  return {r4: ret(4), r12: ret(12), r24: ret(24), mfe, mae, res, rr, hitBar, bars: n, done: n >= J_HOR};
+}
+function jStats(list){
+  const d = list.filter(e => e.out && e.out.res);
+  const avg = f => { const v = d.map(f).filter(Number.isFinite); return v.length ? v.reduce((a, x) => a + x, 0) / v.length : null; };
+  return {n: d.length, win: d.length ? 100 * d.filter(e => e.out.res === 'win').length / d.length : null, avgR: avg(e => e.out.rr), r12: avg(e => e.out.r12), mfe: avg(e => e.out.mfe), mae: avg(e => e.out.mae)};
 }
 // ==ENGINE END==
 
@@ -853,7 +930,7 @@ function cfg(){
 }
 function saveSettings(){
   const o = {tf: S.tf, auto: $('auto').value, universe: $('universe').value, mcap: $('mcap').value, oiThr: $('oiThr').value, oiN: $('oiN').value,
-    closed: $('closed').checked, mtfOn: $('mtfOn').checked, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value};
+    closed: $('closed').checked, mtfOn: $('mtfOn').checked, jOn: $('jOn').checked, jWhat: $('jWhat').value, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value};
   store.set(o);
 }
 function loadSettings(){
@@ -864,6 +941,7 @@ function loadSettings(){
   if (o.mtfOn != null) $('mtfOn').checked = o.mtfOn;
   for (const k of ['pinStar','alertStar','alertSound']) if (o[k] != null) $(k).checked = o[k];
   if (o.alertWhat) $('alertWhat').value = o.alertWhat;
+  if (o.jOn != null) $('jOn').checked = o.jOn; if (o.jWhat) $('jWhat').value = o.jWhat;
 }
 function setStatus(kind, text){ $('dot').className = 'dot ' + (kind || ''); $('statusText').textContent = text; }
 function showErr(msg){ const e = $('err'); e.textContent = msg || ''; e.style.display = msg ? 'block' : 'none'; }
@@ -1098,6 +1176,7 @@ async function scan(){
     await Promise.all(Array.from({length: Math.min(CONCURRENCY, list.length)}, worker));
     if (tf === S.tf){
       computeChanges(tf);
+      journalLog(tf).then(() => updateOutcomes(false));
       $('lastScan').textContent = new Date().toLocaleTimeString();
       setStatus('ok', `Done · ${list.length} pairs · ${tf}`);
     }
@@ -1130,11 +1209,12 @@ function exportCSV(){
 /* ---------- Views ---------- */
 function setView(v){
   S.view = v;
-  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors';
+  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = v === 'trend' ? 'Trend Confirmation' : 'Sector Flow';
+  $('viewName').textContent = {trend: 'Trend Confirmation', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
+  if (v === 'journal') renderJournal();
 }
 
 /* ---------- Sector Flow ---------- */
@@ -1238,6 +1318,110 @@ function exportSectors(){
   a.download = `sector-flow-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'')}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+/* ---------- Signal journal ---------- */
+const J = {entries: [], page: 0, busy: false};
+const J_MAX = 3000;
+async function loadJournal(){ const v = await Cache.get('journal'); J.entries = Array.isArray(v) ? v : []; if (S.view === 'journal') renderJournal(); }
+async function saveJournal(){ if (J.entries.length > J_MAX) J.entries = J.entries.slice(-J_MAX); await Cache.set('journal', J.entries); }
+async function journalLog(tf){
+  const c = cfg();
+  if (!$('jOn').checked || !c.closed) return;
+  const ms = TF_MS[tf], seen = new Set(J.entries.map(e => e.id)), lastBy = new Map();
+  for (const e of J.entries) lastBy.set(e.key, e.ct);
+  let added = 0;
+  for (const r of S.rows){
+    const x = derive(r, c); if (!x.d || !x.d.atr) continue;
+    const cand = [];
+    if (x.setup) cand.push(['setup', x.setup]);
+    if ($('jWhat').value === 'both' && x.isNew) cand.push(['aligned', x.bull >= 4 ? 1 : -1]);
+    for (const [kind, dir] of cand){
+      const key = `${r.sym}|${tf}|${kind}|${dir}`, id = key + '|' + x.d.lastTime;
+      if (seen.has(id)) continue;
+      if (kind === 'setup' && lastBy.has(key) && x.d.lastTime - lastBy.get(key) < 6 * ms) continue;
+      J.entries.push({id, key, sym: r.sym, tf, kind, dir, ct: x.d.lastTime, price: x.d.lastClose, atr: x.d.atr,
+        score: dir > 0 ? x.bull : x.bear, trig: x.trig.filter(t => t.dir === dir).map(t => t.t),
+        regime: S.regimeDir || 0, mtf: r.mtf ? (x.mtfAll === dir ? 'all' : x.mtfAll === -dir ? 'against' : 'mixed') : null,
+        ext: x.ext, pos: x.pos, fFlag: x.fFlag, out: null});
+      seen.add(id); lastBy.set(key, x.d.lastTime); added++;
+    }
+  }
+  if (added){ await saveJournal(); if (S.view === 'journal') renderJournal(); }
+}
+async function updateOutcomes(manual){
+  if (J.busy) return; J.busy = true;
+  const st = t => $('jStatus').textContent = t;
+  try {
+    const now = Date.now(), c = cfg();
+    const pend = J.entries.filter(e => !(e.out && (e.out.done || e.out.expired)) && now >= e.ct + TF_MS[e.tf] * 5);
+    const groups = new Map(); for (const e of pend){ const k = e.sym + '|' + e.tf; (groups.get(k) || groups.set(k, []).get(k)).push(e); }
+    let n = 0; const cap = manual ? 200 : 60;
+    for (const [k, es] of groups){
+      if (n++ >= cap) break;
+      const [sym, tf] = k.split('|');
+      if (manual) st(`Updating ${n}/${Math.min(groups.size, cap)}…`);
+      let cd; try { cd = await getKlines(sym, tf, true); } catch(e){ if (/418|banned/.test(e.message)) throw e; continue; }
+      for (const e of es){ const o = outcome(e, cd); e.out = o || {expired: true}; }
+    }
+    await saveJournal();
+    if (manual) st(`Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}${groups.size > cap ? ` · ${groups.size - cap} pairs left, run again` : ''}`);
+  } catch(e){ st(e.message); }
+  finally { J.busy = false; if (S.view === 'journal') renderJournal(); }
+}
+const fR = v => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + 'R';
+const RES = {win: ['Win', 'up'], loss: ['Loss', 'dn'], time: ['Time', 'mu']};
+function edgeGroups(es){
+  const g = [], add = (group, bucket, list) => { const st = jStats(list); if (st.n || list.length) g.push({group, bucket, ...st, logged: list.length}); };
+  add('All', 'All signals', es);
+  add('Kind', 'Triggered setup', es.filter(e => e.kind === 'setup')); add('Kind', 'New alignment', es.filter(e => e.kind === 'aligned'));
+  add('Side', 'Long', es.filter(e => e.dir > 0)); add('Side', 'Short', es.filter(e => e.dir < 0));
+  add('Score', '5/5', es.filter(e => e.score >= 5)); add('Score', '4/5', es.filter(e => e.score === 4));
+  for (const tf of TFS) { const l = es.filter(e => e.tf === tf); if (l.length) add('Timeframe', tf.toUpperCase(), l); }
+  add('Regime', 'With regime', es.filter(e => e.regime === e.dir)); add('Regime', 'Mixed', es.filter(e => !e.regime)); add('Regime', 'Against regime', es.filter(e => e.regime === -e.dir));
+  add('MTF', 'All 3 agree', es.filter(e => e.mtf === 'all')); add('MTF', 'Mixed', es.filter(e => e.mtf === 'mixed')); add('MTF', 'All 3 against', es.filter(e => e.mtf === 'against'));
+  add('Extension', 'Under 3 ATR', es.filter(e => e.ext != null && e.ext * e.dir < 3)); add('Extension', 'Stretched (3+ ATR)', es.filter(e => e.ext != null && e.ext * e.dir >= 3));
+  for (const [k, [t]] of Object.entries(POS)) { const l = es.filter(e => e.pos === k); if (l.length) add('Positioning', t, l); }
+  add('Funding', 'Crowded on my side', es.filter(e => e.fFlag === e.dir)); add('Funding', 'Not crowded', es.filter(e => e.fFlag !== e.dir));
+  for (const [t, label] of Object.entries(TRIG_SHORT)) { const l = es.filter(e => e.trig.includes(t)); if (l.length) add('Trigger', label, l); }
+  return g;
+}
+function renderJournal(){
+  const es = J.entries, st = jStats(es), pending = es.filter(e => !e.out || !e.out.res).length;
+  const card = (k, v, sub, c2) => `<div class="stat ${c2 || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
+  $('jCards').innerHTML = card('Signals logged', es.length, `${pending} awaiting outcome`) + card('Completed', st.n, 'with a trade result')
+    + card('Win rate', st.win == null ? '—' : st.win.toFixed(0) + '%', 'target before stop', st.win >= 50 ? 'bull' : '')
+    + card('Expectancy', st.avgR == null ? '—' : fR(st.avgR), 'average R per signal', st.avgR > 0 ? 'bull' : st.avgR < 0 ? 'bear' : '')
+    + card('Avg +12 candles', st.r12 == null ? '—' : fmtPct(st.r12), 'return in your favour', st.r12 > 0 ? 'bull' : st.r12 < 0 ? 'bear' : '');
+  const groups = edgeGroups(es), maxR = Math.max(0.5, ...groups.map(g => Math.abs(g.avgR || 0)));
+  let lastG = '';
+  $('jEdge').innerHTML = groups.length ? groups.map(g => { const first = g.group !== lastG; lastG = g.group; const w = 50 * Math.abs(g.avgR || 0) / maxR;
+    return `<tr class="${g.n < 10 ? 'low' : ''} ${first ? 'gstart' : ''}"><td class="l">${first ? `<b>${g.group}</b>` : ''}</td><td class="l">${g.bucket}</td><td>${g.n}<span class="mu"> / ${g.logged}</span></td>
+      <td>${g.win == null ? '—' : g.win.toFixed(0) + '%'}</td><td class="${cls(g.avgR)}">${fR(g.avgR)}</td>
+      <td class="l"><span class="rtrack ebar"><span class="rfill ${g.avgR >= 0 ? 'pos' : 'neg'}" style="${g.avgR >= 0 ? `left:50%;width:${w}%` : `right:50%;width:${w}%`}"></span><span class="rzero"></span></span></td>
+      <td class="${cls(g.r12)}">${g.r12 == null ? '—' : fmtPct(g.r12)}</td><td class="up">${g.mfe == null ? '—' : g.mfe.toFixed(2) + '%'}</td><td class="dn">${g.mae == null ? '—' : g.mae.toFixed(2) + '%'}</td></tr>`; }).join('')
+    : '<tr><td class="empty" colspan="9">No signals logged yet. Run Trend Confirmation scans (closed candles) and setups will be recorded here.</td></tr>';
+  const list = es.slice().reverse(), size = 50, pages = Math.max(1, Math.ceil(list.length / size)); J.page = Math.min(J.page, pages - 1);
+  const rows = list.slice(J.page * size, J.page * size + size);
+  $('jBody').innerHTML = rows.length ? rows.map(e => { const o = e.out || {}, dec = decFor(e.price), rs = o.res ? RES[o.res] : null;
+    const ctx = [e.regime ? (e.regime === e.dir ? 'with regime' : 'vs regime') : null, e.mtf === 'all' ? 'MTF ✓' : e.mtf === 'against' ? 'MTF ✗' : null, e.ext != null && e.ext * e.dir >= 3 ? 'stretched' : null, e.pos ? POS[e.pos][0] : null, e.fFlag === e.dir ? 'crowded' : null].filter(Boolean).join(' · ');
+    const pc = v => v == null ? '<span class="mu">…</span>' : `<span class="${cls(v)}">${fmtPct(v)}</span>`;
+    return `<tr><td class="l mu">${new Date(e.ct + TF_MS[e.tf]).toLocaleString([], {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})}</td>
+      <td class="l pair"><span class="jopen" data-jsym="${e.sym}">${e.sym.replace('USDT', '')}</span></td><td class="c">${e.tf.toUpperCase()}</td>
+      <td class="c"><span class="setup ${e.dir > 0 ? 'b' : 's'}">${e.dir > 0 ? 'LONG' : 'SHORT'}</span></td><td class="l">${e.kind === 'setup' ? 'Setup ⚡' : 'Aligned'}</td><td>${e.score}/5</td>
+      <td class="l">${e.trig.map(t => `<span class="tg ${e.dir > 0 ? 'b' : 's'}">${TRIG_SHORT[t] || t}</span>`).join('') || '<span class="mu">—</span>'}</td>
+      <td class="l mu" style="font-size:11.5px">${ctx || '—'}</td><td>${fp(e.price, dec)}</td><td>${pc(o.r4)}</td><td>${pc(o.r12)}</td><td>${pc(o.r24)}</td>
+      <td class="up">${o.mfe != null ? o.mfe.toFixed(2) + '%' : '—'}</td><td class="dn">${o.mae != null ? o.mae.toFixed(2) + '%' : '—'}</td>
+      <td class="l">${o.expired ? '<span class="mu">expired</span>' : rs ? `<b class="${rs[1]}">${rs[0]}</b> <span class="mu">${fR(o.rr)}${o.hitBar ? ' · ' + o.hitBar + 'c' : ''}</span>` : '<span class="mu">open</span>'}</td>
+      <td><button class="jdel" data-jdel="${e.id}" title="Delete this entry" aria-label="Delete entry">✕</button></td></tr>`; }).join('')
+    : '<tr><td class="empty" colspan="16">The log is empty.</td></tr>';
+  $('jPager').innerHTML = pages > 1 ? `<span class="pinfo">${list.length} signals</span>` + Array.from({length: pages}, (_, i) => `<button data-jp="${i}" class="${i === J.page ? 'on' : ''}">${i * size + 1}–${Math.min((i + 1) * size, list.length)}</button>`).join('') : '';
+}
+function journalCSV(){
+  const head = ['signal_time','pair','tf','side','kind','score','triggers','regime','mtf','ext_atr','positioning','funding_crowded','entry','atr','r4_pct','r12_pct','r24_pct','mfe_pct','mae_pct','result','r_multiple','bars_to_result'];
+  const lines = [head.join(',')].concat(J.entries.map(e => { const o = e.out || {}; return [new Date(e.ct + TF_MS[e.tf]).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.kind, e.score, e.trig.join('|'), e.regime, e.mtf ?? '', e.ext?.toFixed(2) ?? '', e.pos ?? '', e.fFlag === e.dir ? 1 : 0, e.price, e.atr, o.r4?.toFixed(3) ?? '', o.r12?.toFixed(3) ?? '', o.r24?.toFixed(3) ?? '', o.mfe?.toFixed(3) ?? '', o.mae?.toFixed(3) ?? '', o.expired ? 'expired' : o.res ?? 'open', o.rr?.toFixed(3) ?? '', o.hitBar ?? ''].join(','); }));
+  downloadText(lines.join('\n'), `signal-journal-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
+}
+function downloadText(text, name, type){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+
 /* ---------- Watchlist, changes since last scan, alerts ---------- */
 const WATCH_KEY = 'onslaught-watch', SNAP_KEY = tf => 'onslaught-snap-' + tf, ALERT_KEY = 'onslaught-alerts';
 const WATCH = new Set((() => { try { return JSON.parse(localStorage.getItem(WATCH_KEY) || '[]'); } catch { return []; } })());
@@ -1279,16 +1463,16 @@ function renderChanges(){
     <span class="grp"><b class="mu">Exited ${ch.exited.length}</b> ${ch.exited.slice(0, 12).map(e => `<span class="chg out">${e.sym.replace('USDT', '')}</span>`).join('')}${ch.exited.length > 12 ? `<span class="mu"> +${ch.exited.length - 12}</span>` : ''}</span>`;
 }
 const ALERT = {on: false, ctx: null};
-try { ALERT.on = JSON.parse(localStorage.getItem(ALERT_KEY) || 'false') && 'Notification' in window && Notification.permission === 'granted'; } catch {}
+try { ALERT.on = JSON.parse(localStorage.getItem(ALERT_KEY) || 'false') && !!window.Notification && Notification.permission === 'granted'; } catch {}
 function paintAlertBtn(){ $('alertBtn').textContent = ALERT.on ? '🔔 Alerts on' : '🔕 Alerts off'; $('alertBtn').classList.toggle('on', ALERT.on); }
 async function toggleAlerts(){
   if (ALERT.on){ ALERT.on = false; }
   else {
-    if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
+    if (!!window.Notification && Notification.permission === 'default') await Notification.requestPermission();
     ALERT.on = true;
     try { ALERT.ctx = ALERT.ctx || new (window.AudioContext || window.webkitAudioContext)(); } catch {}
     const msgs = [];
-    if (!('Notification' in window) || Notification.permission !== 'granted') msgs.push('Desktop notifications are blocked, so alerts will show on this page only.');
+    if (!(!!window.Notification) || Notification.permission !== 'granted') msgs.push('Desktop notifications are blocked, so alerts will show on this page only.');
     if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); msgs.push('Auto-refresh set to 2m so alerts can fire.'); }
     toast(['Alerts on: ' + ($('alertWhat').value === 'setup' ? 'triggered setups' : 'setups and new alignments') + '. Keep this tab open.'].concat(msgs).join(' '));
   }
@@ -1307,6 +1491,58 @@ function toast(msg, items){
   el.innerHTML = `<div>${msg}</div>${items ? `<div class="tl">${items}</div>` : ''}<button class="tx" aria-label="Dismiss">✕</button>`;
   el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 12000);
 }
+/* ---------- Telegram ---------- */
+const TG_KEY = 'onslaught-tg';
+function tgLoad(){ let o = {}; try { o = JSON.parse(localStorage.getItem(TG_KEY) || '{}'); } catch {}
+  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; }
+function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked})); } catch {} }
+const tgReady = () => /^\d+:[\w-]{20,}$/.test($('tgToken').value.trim()) && $('tgChat').value.trim() !== '';
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/* Form-encoded POST = a "simple" CORS request (no preflight). If the browser can't read the reply, the message has usually still gone. */
+async function tgSend(html){
+  if (!tgReady()) throw new Error('Add the bot token and chat ID in Settings first.');
+  const body = new URLSearchParams({chat_id: $('tgChat').value.trim(), text: html, parse_mode: 'HTML', disable_web_page_preview: 'true'});
+  let r;
+  try { r = await fetch(`https://api.telegram.org/bot${$('tgToken').value.trim()}/sendMessage`, {method: 'POST', body}); }
+  catch { return 'unconfirmed'; }
+  let j = null; try { j = await r.json(); } catch {}
+  if (j && !j.ok) throw new Error(`Telegram: ${j.description || r.status}`);
+  if (!r.ok) throw new Error(`Telegram HTTP ${r.status}`);
+  return 'sent';
+}
+async function planFor(sym, dir){
+  const base = S.rows.find(r => r.sym === sym); if (!base) return null;
+  let cd = await Cache.get(`k:${sym}:${S.tf}`); if (!cd) return null;
+  const cur = Math.floor(Date.now() / TF_MS[S.tf]) * TF_MS[S.tf]; cd = cd.filter(k => k[0] < cur);
+  if (cd.length < 60) return null;
+  let slMode = 'swing', atrMult = 1.5; try { const o = JSON.parse(localStorage.getItem(PLAN_KEY) || '{}'); slMode = o.slMode || slMode; atrMult = parseFloat(o.atrMult) || atrMult; } catch {}
+  return tradePlan(cd, dir, {slMode, atrMult, entry: null});
+}
+async function tgAlertText(items){
+  const c = cfg(), lines = [`⚡ <b>Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} · ${S.tf.toUpperCase()}</b>`];
+  if (S.regime) lines.push(`Regime: ${S.regimeDir > 0 ? 'Risk-on 🟢' : S.regimeDir < 0 ? 'Risk-off 🔴' : 'Mixed 🟠'}`);
+  for (const e of items.slice(0, 6)){
+    const base = S.rows.find(r => r.sym === e.sym), x = base ? derive(base, c) : null;
+    lines.push('', `<b>${esc(e.sym.replace('USDT', ''))} ${e.dir > 0 ? 'LONG 🟢' : 'SHORT 🔴'}</b> · ${x ? (e.dir > 0 ? x.bull : x.bear) + '/5' : ''} · ${e.kind === 'setup' ? 'triggered' : 'aligned'}`);
+    if (x){
+      const tr = x.trig.filter(t => t.dir === e.dir).map(t => t.name);
+      if (tr.length) lines.push('Triggers: ' + esc(tr.join(', ')));
+      const ctx = [x.mtf ? 'MTF ' + MTF_TFS.map(t => MTF_LBL[t] + (x.mtf[t] > 0 ? '▲' : x.mtf[t] < 0 ? '▼' : '◆')).join(' ') : null, x.pos ? POS[x.pos][0] : null,
+        x.fund != null ? `funding ${(x.fund > 0 ? '+' : '') + x.fund.toFixed(4)}%${x.fFlag === e.dir ? ' 🔥 crowded' : ''}` : null,
+        x.ext != null && x.ext * e.dir >= 3 ? `stretched ${Math.abs(x.ext).toFixed(1)} ATR ⚠️` : null, x.against ? 'against regime ⚠️' : null].filter(Boolean);
+      if (ctx.length) lines.push(esc(ctx.join(' · ')));
+    }
+    if ($('tgPlan').checked){
+      const P = await planFor(e.sym, e.dir);
+      if (P){ const dec = decFor(P.entry), pc = v => fmtPct((v / P.entry - 1) * 100);
+        lines.push(`Entry ${fp(P.entry, dec)} · SL ${fp(P.sl, dec)} (${pc(P.sl)})`, P.tps.map((t, i) => `TP${i + 1} ${fp(t.price, dec)} (${t.r.toFixed(1)}R)`).join(' · ')); }
+    }
+    lines.push(`<a href="https://www.tradingview.com/chart/?symbol=BINANCE:${e.sym}.P">Chart</a>`);
+  }
+  if (items.length > 6) lines.push('', `+${items.length - 6} more in the screener`);
+  return lines.join('\n');
+}
+
 function fireAlerts(entered){
   if (!ALERT.on || !entered.length) return;
   let items = entered.filter(e => $('alertWhat').value === 'aligned' || e.kind === 'setup');
@@ -1315,11 +1551,12 @@ function fireAlerts(entered){
   const line = e => `${e.sym.replace('USDT', '')} ${e.dir > 0 ? 'LONG' : 'SHORT'}${e.kind === 'setup' ? ' (triggered)' : ' (aligned)'}`;
   const title = `Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} on ${S.tf.toUpperCase()}`;
   const body = items.slice(0, 6).map(line).join('\n') + (items.length > 6 ? `\n+${items.length - 6} more` : '');
-  if ('Notification' in window && Notification.permission === 'granted'){
+  if (!!window.Notification && Notification.permission === 'granted'){
     try { const n = new Notification(title, {body, tag: 'onslaught-' + S.tf, renotify: true}); n.onclick = () => { window.focus(); openDrawer(items[0].sym); n.close(); }; } catch {}
   }
   toast(title, items.slice(0, 8).map(e => `<button class="chg ${e.dir > 0 ? 'b' : 's'}" data-open="${e.sym}">${line(e)}</button>`).join(''));
   beep();
+  if ($('tgOn').checked && tgReady()) tgAlertText(items).then(tgSend).catch(e => toast(e.message));
   if (document.hidden){ S.unseen = (S.unseen || 0) + items.length; document.title = `(${S.unseen}) Onslaught Screener`; }
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden){ S.unseen = 0; document.title = 'Onslaught Screener'; } });
@@ -1498,14 +1735,28 @@ for (const id of ['fundHot','fundCold']) $(id).onchange = () => { saveSettings()
 $('auto').onchange = () => { saveSettings(); setAuto(); };
 $('scanBtn').onclick = scan;
 $('tabs').onclick = e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); };
-$('secLoad').onclick = loadSectors; $('secCsv').onclick = exportSectors;
+$('secLoad').onclick = loadSectors;
+loadJournal();
+$('jUpdate').onclick = () => updateOutcomes(true);
+$('jCsv').onclick = journalCSV;
+$('jBackup').onclick = () => downloadText(JSON.stringify({v: 1, entries: J.entries}), `onslaught-journal-${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
+$('jRestore').onchange = async e => { const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()), add = Array.isArray(d.entries) ? d.entries : [], ids = new Set(J.entries.map(x => x.id)); let n = 0;
+    for (const x of add) if (x && x.id && !ids.has(x.id)){ J.entries.push(x); n++; }
+    J.entries.sort((a, b) => a.ct - b.ct); await saveJournal(); renderJournal(); toast(`Restored ${n} new journal entries.`); }
+  catch { toast('That file is not a valid journal backup.'); } e.target.value = ''; };
+$('jClear').onclick = async () => { if (!confirm('Delete all journal entries? Consider a Backup first.')) return; J.entries = []; await saveJournal(); renderJournal(); };
+$('jBody').onclick = async e => { const d = e.target.closest('[data-jdel]'); if (d){ J.entries = J.entries.filter(x => x.id !== d.dataset.jdel); await saveJournal(); renderJournal(); return; }
+  const o = e.target.closest('[data-jsym]'); if (o){ if (S.rows.find(r => r.sym === o.dataset.jsym)) openDrawer(o.dataset.jsym); else toast('Scan a universe that includes this pair to open its trade plan.'); } };
+$('jPager').onclick = e => { const b = e.target.closest('[data-jp]'); if (b){ J.page = +b.dataset.jp; renderJournal(); } };
+for (const id of ['jOn','jWhat']) $(id).onchange = saveSettings; $('secCsv').onclick = exportSectors;
 for (const id of ['secMin','secMinCoins','secMajors','secOther']) $(id).onchange = () => { if (id === 'secMin' && SEC.coins && +$('secMin').value < SEC.minLoaded) loadSectors(); else renderSectors(); };
 $('secHead').onclick = e => { const th = e.target.closest('th'); if (!th) return; const k = th.dataset.k; SEC.sort = SEC.sort.k === k ? {k, dir: -SEC.sort.dir} : {k, dir: ['sector','verdict'].includes(k) ? 1 : -1}; renderSectors(); };
 $('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.target.closest('[data-coin]');
   if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Trend Confirmation scan that includes this coin to open its trade plan.'); return; }
   const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
 $('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
-try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors') setView('sectors'); } catch {}
+try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal') setView(v); } catch {}
 $('alertBtn').onclick = toggleAlerts; paintAlertBtn();
 for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
 for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
@@ -1520,6 +1771,13 @@ for (const id of ['pSlMode','pAtr','pAcct','pRisk','pLev']) $(id).oninput = () =
 $('pEntry').oninput = () => { const v = parseFloat($('pEntry').value); D.entry = v > 0 ? v : null; updatePlan(); };
 $('pEntryLast').onclick = () => { D.entry = null; $('pEntry').value = ''; updatePlan(); };
 $('pEntryEma').onclick = () => { if (!D.plan) return; D.entry = D.plan.ema20; $('pEntry').value = fp(D.plan.ema20, decFor(D.plan.ema20)); updatePlan(); };
+$('dTg').onclick = async () => { try { const txt = `<b>Onslaught plan</b>\n<pre>${esc(planText())}</pre>`; const r = await tgSend(txt); $('dCopied').textContent = r === 'sent' ? 'Sent to Telegram' : 'Sent (unconfirmed)'; }
+  catch(e){ $('dCopied').textContent = e.message; } setTimeout(() => $('dCopied').textContent = '', 3500); };
+tgLoad();
+for (const id of ['tgToken','tgChat','tgOn','tgPlan']) $(id).onchange = () => { tgSave(); if (id === 'tgOn' && $('tgOn').checked && !ALERT.on) toast('Telegram is on. Turn on 🔔 Alerts too: Telegram messages go out when an alert fires.'); };
+$('tgTest').onclick = async () => { tgSave(); $('tgStatus').textContent = 'Sending…';
+  try { const r = await tgSend('✅ <b>Onslaught Screener</b> is connected. Alerts will arrive here.'); $('tgStatus').textContent = r === 'sent' ? 'Sent. Check Telegram.' : 'Sent, but the browser could not confirm. Check Telegram.'; }
+  catch(e){ $('tgStatus').textContent = e.message; } };
 $('dCopy').onclick = async () => { try { await navigator.clipboard.writeText(planText()); $('dCopied').textContent = 'Copied'; } catch { $('dCopied').textContent = 'Copy failed: select and copy manually'; } setTimeout(() => $('dCopied').textContent = '', 2500); };
 $('csvBtn').onclick = exportCSV;
 $('pageSize').onchange = () => { saveSettings(); render(); };
