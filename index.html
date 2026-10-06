@@ -301,12 +301,36 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
 .lqbottom{display:grid;grid-template-columns:minmax(280px,1fr) 2fr;gap:12px}
 .lqfh{margin-bottom:8px;font-size:13px}
 .lqfeed{display:flex;flex-direction:column;gap:3px;max-height:300px;overflow:auto;font:12px var(--mono)}
-.lqrow{display:grid;grid-template-columns:62px 88px 1fr auto;gap:8px;align-items:center;padding:3px 6px;border-radius:5px;background:var(--panel2)}
+.lqrow{display:grid;grid-template-columns:minmax(62px,auto) 88px 1fr auto;gap:8px;align-items:center;padding:3px 6px;border-radius:5px;background:var(--panel2)}
 .lqrow.fresh{animation:lqIn .8s ease-out}
 @keyframes lqIn{from{background:rgba(188,172,212,.35)}to{background:var(--panel2)}}
 .lqside{font:700 10px system-ui;padding:1px 6px;border-radius:4px;text-align:center} .lqside.l{background:var(--bear-bg);color:var(--bear)} .lqside.s{background:var(--bull-bg);color:var(--bull)}
 @media (max-width:760px){.lqlev{flex-wrap:wrap} #viewLiq .row{gap:8px}}
 @media (max-width:900px){.lqgrid{grid-template-columns:1fr 90px} #lqProf{width:90px} .lqbottom{grid-template-columns:1fr}}
+.macv{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 16px;margin-bottom:12px;display:grid;grid-template-columns:auto 1fr auto;gap:6px 18px;align-items:center}
+.macv .mname{font:800 20px system-ui;letter-spacing:.3px} .macv .mtext{font-size:13.5px;color:var(--text)}
+.macv .mbias{display:flex;flex-direction:column;gap:4px;font-size:12px;white-space:nowrap}
+.macv .mbias span b{font-family:var(--mono)}
+.macv.good{border-left-color:var(--bull)} .macv.good .mname{color:var(--bull)} .macv.bad{border-left-color:var(--bear)} .macv.bad .mname{color:var(--bear)}
+.macv.warn{border-left-color:var(--warn)} .macv.warn .mname{color:var(--warn)} .macv.neut .mname{color:var(--accent-lt)}
+.macv .mdirs{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.froth{font:700 11px system-ui;color:#000;background:var(--warn);border-radius:4px;padding:2px 7px}
+.maccards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.mcard{background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--accent-dk);border-radius:10px;padding:12px;cursor:pointer;transition:border-color .15s}
+.mcard:hover{border-color:var(--accent)} .mcard.on{border-color:var(--accent-lt)}
+.mcard .mh{display:flex;justify-content:space-between;align-items:baseline} .mcard .mk{font:700 13px system-ui} .mcard .ms{font-size:11px;color:var(--muted)}
+.mcard .mv{font:600 22px var(--mono);margin:4px 0 2px} .mcard .mc{font:12px var(--mono);display:flex;gap:10px;flex-wrap:wrap}
+.mcard svg{display:block;width:100%;margin-top:8px}
+.mdir{font:700 11px system-ui;padding:2px 8px;border-radius:10px;white-space:nowrap} .mdir.g{background:var(--bull-bg);color:var(--bull)} .mdir.r{background:var(--bear-bg);color:var(--bear)} .mdir.w{background:rgba(255,122,10,.14);color:var(--warn)} .mdir.n{background:var(--panel2);color:var(--muted)}
+.mcard.g{border-top-color:var(--bull)} .mcard.r{border-top-color:var(--bear)} .mcard.w{border-top-color:var(--warn)}
+.macbottom{display:grid;grid-template-columns:minmax(340px,1fr) 1.6fr;gap:12px}
+.mtab{width:100%;min-width:0;border-collapse:collapse;font-size:12.5px} .mtab td{padding:6px 8px;border-top:1px solid var(--line);vertical-align:top;text-align:left;white-space:normal;font-family:system-ui} .mtab td.mu{font:11.5px var(--mono)} .mtab td:first-child{font-weight:700;white-space:nowrap}
+.mtab tr.on td{background:rgba(138,82,156,.18)} .mtab tr.on td:first-child{box-shadow:inset 3px 0 0 var(--accent-lt)} .mtab .cond{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+.macchart .seg{flex-wrap:wrap} .mactv{height:460px;border-radius:8px;overflow:hidden;background:#07070b} .mactv iframe{width:100%;height:100%;border:0}
+.chip.macchip{cursor:pointer} .chip.macchip.good b{color:var(--bull)} .chip.macchip.bad b{color:var(--bear)} .chip.macchip.warn b{color:var(--warn)}
+@media (max-width:1100px){.maccards{grid-template-columns:1fr 1fr} .macbottom{grid-template-columns:1fr}}
+@media (max-width:600px){.maccards{grid-template-columns:1fr} .macv{grid-template-columns:1fr} .mtab .cond,.mtab td:first-child{white-space:normal} .macv .mbias{white-space:normal}}
+.macbottom>*{min-width:0} #macMatrix{overflow-x:auto}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 .pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .pager .pinfo{color:var(--muted);font-size:12px;margin-right:auto}
@@ -373,6 +397,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <button role="tab" data-view="trend" class="on">Trend Confirmation</button>
     <button role="tab" data-view="map">Market Map</button>
     <button role="tab" data-view="sectors">Sector Flow</button>
+    <button role="tab" data-view="macro">Macro</button>
     <button role="tab" data-view="liq">Liquidations</button>
     <button role="tab" data-view="journal">Journal</button>
   </nav>
@@ -582,6 +607,32 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
   </div><!-- /viewSectors -->
 
+  <div id="viewMacro" hidden>
+    <div class="panel">
+      <div class="row">
+        <span class="mu">Chart window</span><div class="seg" id="macWin"><button data-v="30">30d</button><button data-v="60">60d</button><button data-v="90" class="on">90d</button></div>
+        <label title="Add the macro regime to every setup's grade: from −2 points (alt longs in risk-off) to +1 (alt longs in alt season)."><input id="macGrade" type="checkbox" checked> Use macro in grades</label>
+        <button id="macLoad">Refresh</button>
+        <span class="mu" id="macStatus"></span>
+      </div>
+    </div>
+    <div id="macVerdict"></div>
+    <div class="maccards" id="macCards"></div>
+    <div class="macbottom">
+      <div class="panel"><div class="lqfh"><b>Macro regimes</b> <span class="mu">how the four indices combine · current one highlighted</span></div><div id="macMatrix"></div></div>
+      <div class="panel macchart"><div class="row" style="margin-bottom:8px"><b>TradingView</b><div class="seg" id="macTv"><button data-v="CRYPTOCAP:BTC.D" class="on">BTC.D</button><button data-v="CRYPTOCAP:USDT.D+CRYPTOCAP:USDC.D">USDT.D+USDC.D</button><button data-v="CRYPTOCAP:TOTAL3ES">TOTAL3ES</button><button data-v="CRYPTOCAP:OTHERS.D">OTHERS.D</button><button data-v="CRYPTOCAP:TOTAL">TOTAL</button></div><span class="mu">official indices, draw your own levels</span></div><div id="macTvBox" class="mactv"></div></div>
+    </div>
+    <div class="panel"><details><summary>How the macro read works</summary><ul>
+      <li><b>BTC.D</b>: Bitcoin's share of the crypto market. Rising = money concentrating in BTC (or alts bleeding); falling = rotation into alts.</li>
+      <li><b>USDT.D + USDC.D</b>: share held in the two big stablecoins, the market's cash. Rising = risk-off, money to the sidelines; falling = cash being deployed.</li>
+      <li><b>TOTAL3ES</b>: value of all alts excluding BTC, ETH and stablecoins. Rising = real money flowing into alts.</li>
+      <li><b>OTHERS.D</b>: share of everything outside the top 10. Rising = small-cap speculation; a 15%+ jump in 30 days is flagged as froth.</li>
+      <li>Each index gets a direction from its 7-day change plus its 20/50-day average structure. The four directions map to one regime (table above).</li>
+      <li>With <b>Use macro in grades</b> on, the regime adds or removes grade points: for example −2 for alt longs in Risk-off, +1 in Alt season. The points appear in each grade's tooltip and in the trade plan.</li>
+      <li>Numbers are rebuilt from CoinGecko (today's market caps and the BTC, ETH, USDT and USDC history) and Binance daily prices (everything else, assuming supply stays constant over the window). They run a few tenths off TradingView's indices because the coin universe differs; the direction is what counts. The TradingView chart shows the official ones.</li>
+    </ul></details></div>
+  </div><!-- /viewMacro -->
+
   <div id="viewLiq" hidden>
     <div class="panel">
       <div class="row">
@@ -602,7 +653,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="maptip" id="lqTip" hidden></div>
     </div>
     <div class="lqbottom">
-      <div class="panel"><div class="lqfh"><b>Real liquidations</b> <span class="mu" id="lqFeedS">since you opened this tab</span></div><div id="lqFeed" class="lqfeed"><div class="mu">Waiting for liquidations…</div></div></div>
+      <div class="panel"><div class="lqfh"><b>Real liquidations</b> <span class="mu" id="lqFeedS">since you opened this tab</span><label style="float:right;font-size:12px"><input id="lqAll" type="checkbox"> All pairs</label></div><div id="lqFeed" class="lqfeed"><div class="mu">Waiting for liquidations…</div></div></div>
       <div class="panel"><details open><summary>How to read the liquidation map</summary><ul>
         <li><b>It's an estimate.</b> Binance doesn't publish where positions get liquidated. The map assumes that every rise in open interest is new positions opened at that candle's price, split between longs and shorts by who was buying or selling aggressively, and spread across the leverage levels you tick. Each one gets a liquidation price, and the band stays lit until price trades through it.</li>
         <li><b>Brighter = more estimated liquidations</b> at that price. Bands <b class="up">above</b> price are short liquidations (forced buying that can fuel a squeeze up); bands <b class="dn">below</b> are long liquidations (forced selling that can fuel a flush down).</li>
@@ -986,10 +1037,10 @@ function coreScore(d, oi, mtf, fund, c){
 }
 /* Setup grade A/B/C. x = {dir, s: coreScore(), d: evaluate(), mtf, regime, fund, qv}; o = {minLiq ($ 24h), extremeFund (%)}.
  Points: score 5/5 +1 · MTF all agree +2, 1D agrees +1, 1D against −2 · regime with +1, against −2 · extension <1.5 ATR +1, ≥3 ATR −2 ·
- positioning on my side +1, covering/liquidation rally −1 · funding crowded on my side −1, against me +1 · 2+ same-side triggers +1.
+ macro regime −2…+1 (see macroBias) · positioning on my side +1, covering/liquidation rally −1 · funding crowded on my side −1, against me +1 · 2+ same-side triggers +1.
  A ≥ 5, B ≥ 2, else C. Risk flags cap the grade at C: listed < 30 days, extreme funding, thin liquidity. */
 function gradeSetup(x, o = {}){
-  const {dir, s, d, mtf, regime, fund, qv} = x, minLiq = o.minLiq ?? 5e6, xf = o.extremeFund ?? 0.5;
+  const {dir, s, d, mtf, regime, fund, qv, macro} = x, minLiq = o.minLiq ?? 5e6, xf = o.extremeFund ?? 0.5;
   if (!dir || !d) return null;
   const R = [], add = (v, t) => { if (v) R.push({v, t}); };
   const sc = dir > 0 ? s.bull : s.bear;
@@ -999,6 +1050,7 @@ function gradeSetup(x, o = {}){
     if (all) add(2, 'all timeframes agree'); else if (d1 === dir) add(1, '1D agrees'); else if (d1 === -dir) add(-2, '1D trend is against');
   }
   if (regime) add(regime === dir ? 1 : -2, regime === dir ? 'with the market regime' : 'against the market regime');
+  if (macro) add(macro.v, macro.t);
   const e = d.ext == null ? null : d.ext * dir;
   if (e != null){ if (e >= 3) add(-2, `stretched ${e.toFixed(1)} ATR`); else if (e < 1.5) add(1, 'near its average (good entry)'); }
   if ((dir > 0 && s.pos === 'longs') || (dir < 0 && s.pos === 'shorts')) add(1, dir > 0 ? 'new longs opening' : 'new shorts opening');
@@ -1026,6 +1078,75 @@ function regimeScore(d1, h4, bullPct, bearPct){
   const br = bullPct - bearPct >= 15 ? 1 : bullPct - bearPct <= -15 ? -1 : 0;
   const score = 2 * (d1 || 0) + (h4 || 0) + br;
   return score >= 2 ? 1 : score <= -2 ? -1 : 0;
+}
+/* ---- Macro: BTC.D, USDT.D+USDC.D, TOTAL3ES, OTHERS.D rebuilt from CoinGecko + Binance ----
+ in = {total, coins: [{sym, mcap, stable, closes: Map(dayMs → close)}] (current market-cap ranking, CoinGecko),
+       hist: {btc, eth, usdt, usdc: [[ms, mcap], …]} (CoinGecko daily market caps)}.
+ Coins with Binance closes are rescaled by price (supply assumed constant over the window); other stablecoins are held at
+ today's value; everything else (the residual) follows the median move of covered coins ranked 50+. Today = CoinGecko's own total. */
+const MACRO_STABLES = new Set(['USDT', 'USDC', 'USDE', 'DAI', 'USDS', 'FDUSD', 'PYUSD', 'TUSD', 'USD1', 'RLUSD', 'USDD', 'FRAX', 'BUSD', 'GHO', 'USDTB', 'USDF', 'USDG', 'USDX', 'LUSD', 'CRVUSD', 'SUSD', 'USDB', 'USD0', 'EURC', 'EURT', 'BFUSD', 'USDO', 'USDP', 'GUSD', 'DOLA', 'USDY', 'USYC', 'BUIDL', 'SUSDE', 'SUSDS']);
+function macroBuild(inp){
+  const day = t => Math.floor(t / 864e5) * 864e5, med = a => { const s = a.filter(Number.isFinite).sort((x, y) => x - y); return s.length ? s[s.length >> 1] : 1; };
+  const H = {}; for (const k of ['btc', 'eth', 'usdt', 'usdc']) H[k] = new Map((inp.hist[k] || []).map(([t, v]) => [day(t), v]));
+  const days = [...H.btc.keys()].sort((a, b) => a - b); if (days.length < 30) return null;
+  const today = days.at(-1), skip = new Set(['BTC', 'ETH', 'USDT', 'USDC']);
+  const coins = inp.coins.map((c, i) => ({...c, rank: i + 1})), top10 = new Set(coins.slice(0, 10).map(c => c.sym));
+  const cov = coins.filter(c => !skip.has(c.sym) && !c.stable && c.closes && c.closes.size > 20);
+  for (const c of cov){ c.last = c.closes.get(today) ?? [...c.closes.values()].at(-1); }
+  const otherSt = coins.filter(c => c.stable && !skip.has(c.sym)).reduce((a, c) => a + c.mcap, 0);
+  const now = k => H[k].get(today) || 0;
+  const covNow = cov.reduce((a, c) => a + c.mcap, 0), resid = Math.max(0, inp.total - now('btc') - now('eth') - now('usdt') - now('usdc') - otherSt - covNow);
+  const small = cov.filter(c => c.rank > 50);
+  const out = [];
+  for (const t of days){
+    const r = c => { const v = c.closes.get(t); return v && c.last ? v / c.last : null; };
+    const ratios = small.map(r), m = med(ratios.length ? ratios : cov.map(r));
+    let alt = 0, t10 = 0;
+    for (const c of cov){ const q = r(c) ?? m, v = c.mcap * q; alt += v; if (top10.has(c.sym)) t10 += v; }
+    const b = H.btc.get(t), e = H.eth.get(t), u = H.usdt.get(t), uc = H.usdc.get(t);
+    if (!b || !e || !u || !uc) continue;
+    const res = resid * m, total = b + e + u + uc + otherSt + alt + res;
+    for (const s of ['BTC', 'ETH', 'USDT', 'USDC']) if (top10.has(s)) t10 += {BTC: b, ETH: e, USDT: u, USDC: uc}[s];
+    t10 += coins.filter(c => c.stable && top10.has(c.sym) && !skip.has(c.sym)).reduce((a, c) => a + c.mcap, 0);
+    out.push({t, total, btcD: 100 * b / total, ethD: 100 * e / total, usdtD: 100 * u / total, usdcD: 100 * uc / total, stD: 100 * (u + uc) / total,
+      t3es: total - b - e - u - uc - otherSt, othD: 100 * (total - t10) / total});
+  }
+  return out.length >= 30 ? out : null;
+}
+/* Trend of one series: 7d and 30d % change, EMA20/50 structure. th = 7d % move that counts as a trend. */
+function macroTrend(vals, th){
+  const n = vals.length; if (n < 30) return null;
+  const ema = p => { const k = 2 / (p + 1); let e = vals[0]; for (const v of vals) e = v * k + e * (1 - k); return e; };
+  const v = vals[n - 1], e20 = ema(20), e50 = ema(Math.min(50, n)), r7 = (v / vals[n - 8] - 1) * 100, r30 = (v / vals[Math.max(0, n - 31)] - 1) * 100;
+  const mo = r7 >= th ? 1 : r7 <= -th ? -1 : 0, st = v > e20 && e20 > e50 ? 1 : v < e20 && e20 < e50 ? -1 : 0;
+  const dir = mo && st && mo !== st ? 0 : mo || st;
+  return {v, e20, e50, r7, r30, dir};
+}
+const MACRO_REGIMES = {
+  riskoff: ['Risk-off', 'Cash is building in stablecoins while alts drain. Stand aside or favour shorts; alt longs fight the tide.', {alt: [-2, 1], btc: [-1, 1]}],
+  flight: ['Flight to BTC', 'BTC dominance rising while alts lose value: money is hiding in BTC. Alts tend to drop hardest; avoid alt longs.', {alt: [-2, 1], btc: [0, 0]}],
+  caution: ['Caution: cash building', 'Stablecoin dominance is rising: money is moving to the sidelines. Trim size and take profits faster.', {alt: [-1, 0], btc: [-1, 0]}],
+  btcled: ['BTC-led', 'BTC dominance rising while alts hold: BTC is leading. Prefer BTC; alt longs only with strong relative strength.', {alt: [-1, 0], btc: [1, -1]}],
+  btcrally: ['BTC-led rally', 'Cash is being deployed and alts are rising, but BTC is rising faster. Broad longs work; BTC leads.', {alt: [0, 0], btc: [1, -1]}],
+  riskon: ['Broad risk-on', 'Cash is leaving stablecoins and alts are gaining value. Trend-following longs have the macro wind behind them.', {alt: [1, -1], btc: [1, -1]}],
+  altseason: ['Alt season', 'BTC dominance falling while alts gain: money is rotating into alts. Favour alt longs with good relative strength.', {alt: [1, -1], btc: [0, 0]}],
+  mixed: ['Mixed', 'The macro indices disagree. No macro edge: trade the chart and size normally.', {alt: [0, 0], btc: [0, 0]}]};
+function macroRegime(series){
+  if (!series) return null;
+  const tr = {btcD: macroTrend(series.map(x => x.btcD), 1.5), stD: macroTrend(series.map(x => x.stD), 3), t3es: macroTrend(series.map(x => x.t3es), 4), othD: macroTrend(series.map(x => x.othD), 4)};
+  if (Object.values(tr).some(x => !x)) return null;
+  const bd = tr.btcD.dir, st = tr.stD.dir, t3 = tr.t3es.dir;
+  const key = st > 0 && t3 < 0 ? 'riskoff' : bd > 0 && t3 < 0 ? 'flight' : st > 0 ? 'caution' : bd < 0 && t3 > 0 ? 'altseason'
+    : st < 0 && t3 > 0 ? (bd > 0 ? 'btcrally' : 'riskon') : bd > 0 ? 'btcled' : t3 > 0 && st <= 0 ? 'riskon' : 'mixed';
+  const froth = tr.othD.dir > 0 && tr.othD.r30 >= 15;
+  const [name, text, bias] = MACRO_REGIMES[key];
+  return {key, name, text, bias, tr, froth, t: series.at(-1).t};
+}
+/* Grade points from the macro regime for a setup on sym in direction dir. */
+function macroBias(M, sym, dir){
+  if (!M || !dir) return null;
+  const v = M.bias[sym === 'BTCUSDT' ? 'btc' : 'alt'][dir > 0 ? 0 : 1];
+  return v ? {v, t: `macro: ${M.name.toLowerCase()}`} : null;
 }
 // ==ENGINE END==
 
@@ -1246,7 +1367,7 @@ function derive(r, c){
   const {oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, pD, pos, fFlag} = core;
   const against = S.regimeDir && ((S.regimeDir < 0 && bull >= 4) || (S.regimeDir > 0 && bear >= 4));
   const gdir = setup || (bull >= 4 ? 1 : bear >= 4 ? -1 : 0);
-  const G = d && gdir ? gradeSetup({dir: gdir, s: core, d, mtf: r.mtf, regime: S.regimeDir || 0, fund: r.fund, qv: r.qv}, {minLiq: c.minLiq, extremeFund: c.extremeFund}) : null;
+  const G = d && gdir ? gradeSetup({dir: gdir, s: core, d, mtf: r.mtf, regime: S.regimeDir || 0, fund: r.fund, qv: r.qv, macro: S.macro && S.macroOn !== false ? macroBias(S.macro.reg, r.sym, gdir) : null}, {minLiq: c.minLiq, extremeFund: c.extremeFund}) : null;
   const rs = relStrength(r.chg, r.ret7, S.ref);
   return {...r, d, rs, ext: d ? d.ext : null, pD, pos, fFlag, against, oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, G, inc: !d || r.oi == null,
     score: Math.max(bull, bear) + (bull >= 4 || bear >= 4 ? 10 : 0) + (setup ? 5 : 0) + (G ? {A: 4, B: 2, C: 0}[G.grade] : 0)};
@@ -1391,6 +1512,7 @@ function renderRegime(all, c){
     <span class="chip" title="Median last funding rate across all USDT perpetuals. Around +0.01% is normal. Clearly higher = longs are paying to stay in (crowded long market); negative = shorts are crowded.">Funding median <b>${fMed == null ? '—' : (fMed > 0 ? '+' : '') + fMed.toFixed(4) + '%'}</b></span>
     ${S.ref && S.ref.eth?.r7 != null && S.ref.btc?.r7 != null ? `<span class="chip" title="ETH minus BTC over 7 days. ETH outperforming BTC often comes before altcoins outperform; ETH lagging means money is staying in BTC.">ETH vs BTC 7d <b class="${cls(S.ref.eth.r7 - S.ref.btc.r7)}">${ppf(S.ref.eth.r7 - S.ref.btc.r7)} pp</b></span>` : ''}
     <span class="chip" title="Median change in open interest over the last N candles across scanned pairs. Rising = new positions entering the market; falling = positions closing (deleveraging).">OI median <b class="${cls(oMed)}">${fmtPct(oMed)}</b> over ${c.oiN} candles</span>
+    ${macroChip()}
     <span class="note">${notes.join(' ')}</span>`;
 }
 function renderPager(total, size, pages, start, n){
@@ -1559,13 +1681,14 @@ function exportCSV(){
 /* ---------- Views ---------- */
 function setView(v){
   S.view = v;
-  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq';
+  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = {liq: 'Liquidation Map', map: 'Market Map', trend: 'Trend Confirmation', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
+  $('viewName').textContent = {macro: 'Macro', liq: 'Liquidation Map', map: 'Market Map', trend: 'Trend Confirmation', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   if (v === 'journal') renderJournal();
   if (v === 'map'){ MAP.anim = true; renderMap(); }
+  if (v === 'macro'){ renderMacro(); if (!S.macro || Date.now() - S.macro.t > 36e5) loadMacro(false); }
   if (v === 'liq') liqEnter(); else liqWs();   // the live liquidation stream only runs while its tab is open
 }
 
@@ -1877,7 +2000,7 @@ async function planFor(sym, dir){
 }
 async function tgAlertText(items){
   const c = cfg(), lines = [`⚡ <b>Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} · ${S.tf.toUpperCase()}</b>`];
-  if (S.regime) lines.push(`Regime: ${S.regimeDir > 0 ? 'Risk-on 🟢' : S.regimeDir < 0 ? 'Risk-off 🔴' : 'Mixed 🟠'}`);
+  if (S.regime) lines.push(`Regime: ${S.regimeDir > 0 ? 'Risk-on 🟢' : S.regimeDir < 0 ? 'Risk-off 🔴' : 'Mixed 🟠'}${S.macro && S.macro.reg ? ` · 🌐 Macro: ${S.macro.reg.name}${S.macro.reg.froth ? ' 🔥' : ''}` : ''}`);
   for (const e of items.slice(0, 6)){
     const base = S.rows.find(r => r.sym === e.sym), x = base ? derive(base, c) : null;
     lines.push('', `<b>${esc(e.sym.replace('USDT', ''))} ${e.dir > 0 ? 'LONG 🟢' : 'SHORT 🔴'}</b> · ${x ? (e.dir > 0 ? x.bull : x.bear) + '/5' : ''}${x && x.G ? ' · <b>Grade ' + x.G.grade + '</b>' : ''} · ${e.kind === 'setup' ? 'triggered' : 'aligned'}`);
@@ -2208,6 +2331,108 @@ function mapDrag(){
   box.addEventListener('dblclick', () => { if (MAP.zoom){ MAP.zoom = null; MAP.anim = true; renderMap(); } });
 }
 
+/* ---------- Macro (BTC.D, USDT.D+USDC.D, TOTAL3ES, OTHERS.D) ---------- */
+const MAC = {loading: false, win: 90, tv: 'CRYPTOCAP:BTC.D', tvShown: null};
+const MAC_TONE = {riskoff: 'bad', flight: 'bad', caution: 'warn', btcled: 'warn', btcrally: 'good', riskon: 'good', altseason: 'good', mixed: 'neut'};
+const MAC_COND = {riskoff: 'stables ↑ · alts ↓', flight: 'BTC.D ↑ · alts ↓', caution: 'stables ↑', btcled: 'BTC.D ↑ · alts flat', btcrally: 'stables ↓ · alts ↑ · BTC.D ↑',
+  riskon: 'stables ↓ · alts ↑ · BTC.D flat', altseason: 'BTC.D ↓ · alts ↑', mixed: 'anything else'};
+const MAC_METRICS = [
+  {k: 'btcD', name: 'BTC.D', sub: 'Bitcoin dominance', fmt: v => v.toFixed(2) + '%', tone: d => d > 0 ? 'w' : d < 0 ? 'g' : 'n', words: ['rising', 'falling']},
+  {k: 'stD', name: 'USDT.D + USDC.D', sub: 'stablecoin dominance (cash)', fmt: v => v.toFixed(2) + '%', tone: d => d > 0 ? 'r' : d < 0 ? 'g' : 'n', words: ['rising: risk-off', 'falling: risk-on']},
+  {k: 't3es', name: 'TOTAL3ES', sub: 'alts excl. BTC, ETH, stables', fmt: v => '$' + fmtBig(v), tone: d => d > 0 ? 'g' : d < 0 ? 'r' : 'n', words: ['rising: money into alts', 'falling: alts draining']},
+  {k: 'othD', name: 'OTHERS.D', sub: 'share outside the top 10', fmt: v => v.toFixed(2) + '%', tone: d => d > 0 ? 'g' : d < 0 ? 'r' : 'n', words: ['rising: small caps bid', 'falling: flight to large caps']}];
+function macStatus(t){ const e = $('macStatus'); if (e) e.textContent = t || ''; }
+async function cgJSON(path){
+  let r; try { r = await fetch('https://api.coingecko.com/api/v3' + path); } catch { throw new Error('Cannot reach CoinGecko for the macro data. Check your connection or ad-blocker.'); }
+  if (r.status === 429) throw new Error('CoinGecko is rate limiting this browser. The macro data will retry in a few minutes.');
+  if (!r.ok) throw new Error(`CoinGecko HTTP ${r.status}`);
+  return r.json();
+}
+async function perpSyms(){
+  if (!infoCache || Date.now() - infoCache.t > 36e5){
+    const info = await getJSON(FAPI + '/fapi/v1/exchangeInfo', WEIGHT, 1);
+    infoCache = {t: Date.now(), syms: info.symbols.filter(s => s.contractType === 'PERPETUAL' && s.quoteAsset === 'USDT' && s.status === 'TRADING').map(s => s.symbol)};
+  }
+  return new Set(infoCache.syms);
+}
+function macApply(v){
+  S.macro = v; render(); if (S.view === 'macro') renderMacro();
+}
+async function loadMacro(force){
+  if (MAC.loading) return;
+  try { const ck = await Cache.get('macro:v2'); if (!force && ck && Date.now() - ck.t < 36e5){ if (!S.macro || S.macro.t !== ck.t) macApply(ck); return; } } catch {}
+  MAC.loading = true; if ($('macLoad')) $('macLoad').disabled = true;
+  try {
+    macStatus('Loading global market caps…');
+    const g = (await cgJSON('/global')).data; await sleep(1500);
+    const mk = await cgJSON('/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1');
+    const hist = {};
+    for (const [k, id] of [['btc', 'bitcoin'], ['eth', 'ethereum'], ['usdt', 'tether'], ['usdc', 'usd-coin']]){
+      macStatus(`Loading ${k.toUpperCase()} history…`); await sleep(1500);
+      hist[k] = (await cgJSON(`/coins/${id}/market_chart?vs_currency=usd&days=90&interval=daily`)).market_caps;
+    }
+    const perps = await perpSyms(), seen = new Set();
+    const coins = mk.filter(x => x.market_cap > 0 && !seen.has(x.symbol.toUpperCase()) && seen.add(x.symbol.toUpperCase())).map(x => { const sym = x.symbol.toUpperCase();
+      return {sym, mcap: x.market_cap, stable: MACRO_STABLES.has(sym) || (/USD|EUR/.test(sym) && Math.abs((x.current_price || 0) - 1) < .03), closes: null}; });
+    const want = coins.filter(c => !c.stable && !['BTC', 'ETH'].includes(c.sym)).slice(0, 160).map(c => ({c, bs: ['', '1000', '1000000', '1M'].map(p => p + c.sym + 'USDT').find(s => perps.has(s))})).filter(x => x.bs);
+    for (let i = 0; i < want.length; i += 8){
+      macStatus(`Loading daily prices ${Math.min(i + 8, want.length)}/${want.length}…`);
+      await Promise.all(want.slice(i, i + 8).map(async ({c, bs}) => { try {
+        const k = await getJSON(`${FAPI}/fapi/v1/klines?symbol=${bs}&interval=1d&limit=92`, WEIGHT, 1);
+        c.closes = new Map(k.map(x => [Math.floor(x[0] / 864e5) * 864e5, +x[4]])); } catch {} }));
+    }
+    const series = macroBuild({total: g.total_market_cap.usd, coins, hist});
+    if (!series) throw new Error('Not enough macro history to compute the indices.');
+    const v = {t: Date.now(), series, reg: macroRegime(series), cg: {btcD: g.market_cap_percentage.btc, usdtD: g.market_cap_percentage.usdt, usdcD: g.market_cap_percentage.usdc, total: g.total_market_cap.usd}};
+    await Cache.set('macro:v2', v); macApply(v);
+    macStatus(`Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})} · refreshes hourly`);
+  } catch(e){ macStatus(e.message); if (!S.macro){ const ck = await Cache.get('macro:v2').catch(() => null); if (ck) macApply(ck); } }
+  finally { MAC.loading = false; if ($('macLoad')) $('macLoad').disabled = false; }
+}
+function macChart(vals, e20s, tone){
+  const W = 300, H = 70, lo = Math.min(...vals, ...e20s), hi = Math.max(...vals, ...e20s), rg = hi - lo || 1;
+  const pt = (v, i, n) => `${(i / (n - 1) * W).toFixed(1)},${(H - 4 - (v - lo) / rg * (H - 10)).toFixed(1)}`;
+  const line = vals.map((v, i) => pt(v, i, vals.length)).join(' '), el = e20s.map((v, i) => pt(v, i, e20s.length)).join(' ');
+  const col = {g: 'var(--bull)', r: 'var(--bear)', w: 'var(--warn)', n: 'var(--accent-lt)'}[tone];
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" height="${H}"><polyline points="0,${H} ${line} ${W},${H}" fill="${col}" fill-opacity=".09" stroke="none"/>
+    <polyline points="${el}" fill="none" stroke="#8b8b90" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
+    <polyline points="${line}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function emaSeries(vals, p){ const k = 2 / (p + 1); let e = vals[0]; return vals.map(v => (e = v * k + e * (1 - k))); }
+const signed = (v, d = 1) => v == null || !Number.isFinite(v) ? '—' : (v > 0 ? '+' : '') + v.toFixed(d);
+function biasTxt(v){ return v >= 1 ? `<b class="up">favoured (+${v})</b>` : v <= -2 ? `<b class="dn">avoid (${v})</b>` : v < 0 ? `<b style="color:var(--warn)">cautious (${v})</b>` : '<b class="mu">neutral (0)</b>'; }
+function renderMacro(){
+  if ($('viewMacro').hidden) return;
+  const M = S.macro, R = M && M.reg;
+  if (!M || !R){ $('macVerdict').innerHTML = `<div class="panel dload" style="height:160px">${MAC.loading ? 'Loading the macro indices…' : 'Press Refresh to load the macro indices.'}</div>`; $('macCards').innerHTML = ''; macMatrix(null); macTv(); return; }
+  const tone = MAC_TONE[R.key], arrow = d => d > 0 ? '▲' : d < 0 ? '▼' : '◆';
+  $('macVerdict').innerHTML = `<div class="macv ${tone}"><span class="mname">${R.name}</span><span class="mtext">${R.text}${R.froth ? ' <span class="froth">🔥 Froth</span> Small caps jumped over 15% in share this month: late-stage speculation, tighten stops on small-cap longs.' : ''}</span>
+    <span class="mbias"><span>Alt longs ${biasTxt(R.bias.alt[0])} · shorts ${biasTxt(R.bias.alt[1])}</span><span>BTC longs ${biasTxt(R.bias.btc[0])} · shorts ${biasTxt(R.bias.btc[1])}</span><span class="mu">grade points${S.macroOn === false ? ' (off)' : ''}</span></span>
+    <div class="mdirs">${MAC_METRICS.map(m => { const t = R.tr[m.k]; return `<span class="mdir ${m.tone(t.dir)}">${m.name} ${arrow(t.dir)} ${t.dir ? m.words[t.dir > 0 ? 0 : 1] : 'flat'}</span>`; }).join('')}<span class="mu" style="margin-left:auto;font-size:11.5px">as of ${new Date(M.t).toLocaleString([], {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})}</span></div></div>`;
+  const ser = M.series.slice(-MAC.win);
+  $('macCards').innerHTML = MAC_METRICS.map(m => { const t = R.tr[m.k], vals = ser.map(x => x[m.k]), e20 = emaSeries(M.series.map(x => x[m.k]), 20).slice(-MAC.win), tn = m.tone(t.dir);
+    const extra = m.k === 'stD' ? `<span class="mu">USDT ${ser.at(-1).usdtD.toFixed(2)}% · USDC ${ser.at(-1).usdcD.toFixed(2)}%</span>` : '';
+    const wr = (vals.at(-1) / vals[0] - 1) * 100;
+    return `<div class="mcard ${tn} ${MAC.tv.includes(m.name.split(' ')[0]) ? 'on' : ''}" data-tv="${m.k === 'stD' ? 'CRYPTOCAP:USDT.D+CRYPTOCAP:USDC.D' : 'CRYPTOCAP:' + m.name}" title="Click to show the official TradingView chart">
+      <div class="mh"><span class="mk">${m.name}</span><span class="mdir ${tn}">${arrow(t.dir)} ${t.dir ? m.words[t.dir > 0 ? 0 : 1].split(':')[0] : 'flat'}</span></div><div class="ms">${m.sub}</div>
+      <div class="mv">${m.fmt(t.v)}</div><div class="mc"><span>7d <b class="${cls(t.r7)}">${signed(t.r7)}%</b></span><span>30d <b class="${cls(t.r30)}">${signed(t.r30)}%</b></span><span>${MAC.win}d <b class="${cls(wr)}">${signed(wr)}%</b></span>${extra}</div>
+      ${macChart(vals, e20, tn)}<div class="ms">${MAC.win} days · dashed = 20-day average</div></div>`; }).join('');
+  macMatrix(R); macTv();
+}
+function macMatrix(R){
+  $('macMatrix').innerHTML = `<table class="mtab">${Object.entries(MACRO_REGIMES).map(([k, [name, , b]]) => `<tr class="${R && R.key === k ? 'on' : ''}"><td>${name}</td><td class="cond">${MAC_COND[k]}</td><td class="mu">alts L ${signed(b.alt[0], 0)} / S ${signed(b.alt[1], 0)} · BTC L ${signed(b.btc[0], 0)} / S ${signed(b.btc[1], 0)}</td></tr>`).join('')}</table>`;
+}
+function macTv(){
+  [...$('macTv').children].forEach(b => b.classList.toggle('on', b.dataset.v === MAC.tv));
+  if (MAC.tvShown === MAC.tv) return; MAC.tvShown = MAC.tv;
+  $('macTvBox').innerHTML = `<iframe title="TradingView ${MAC.tv}" loading="lazy" src="https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(MAC.tv)}&interval=D&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&allow_symbol_change=1&hide_side_toolbar=0&saveimage=0&locale=en&studies=%5B%22MAExp%40tv-basicstudies%22%5D"></iframe>`;
+}
+function macroChip(){
+  const R = S.macro && S.macro.reg; if (!R) return '';
+  const a = d => d > 0 ? '▲' : d < 0 ? '▼' : '◆', t = R.tr;
+  return `<span class="chip macchip ${MAC_TONE[R.key]}" data-goto="macro" title="${R.text} BTC.D ${a(t.btcD.dir)} · stables ${a(t.stD.dir)} · TOTAL3ES ${a(t.t3es.dir)} · OTHERS.D ${a(t.othD.dir)}. Click for the Macro tab.">Macro <b>${R.name}</b>${R.froth ? ' 🔥' : ''}</span>`;
+}
+
 /* ---------- Liquidation map (estimated) + real liquidations ---------- */
 // Leverage mix and maintenance margin the model assumes. A level is lit from the candle after it was opened until price trades through it.
 const LEV_MIX = {10: .3, 25: .3, 50: .25, 100: .15}, LQ_MMR = .004;
@@ -2284,7 +2509,8 @@ function lqStats(){
     bb >= 0 && sm[bb] > 0 ? card('Biggest cluster below', fmtPrice(pAt(bb)), `${lqUsd(sm[bb])} est. longs · <b class="dn">${dist(pAt(bb)).toFixed(2)}%</b>`, 'var(--bear)') : card('Biggest cluster below', '—', 'nothing in range'),
     card('Within 3% of price', `<span class="up">${lqUsd(up3)}</span> <small>/</small> <span class="dn">${lqUsd(dn3)}</span>`, 'est. shorts above / longs below', 'var(--accent)'),
     card('Swept last 24h (est.)', lqUsd(sw24), 'model liquidity price traded through', 'var(--warn)'),
-    card('Real liquidations', `<span class="dn">${lqUsd(rl)}</span> <small>/</small> <span class="up">${lqUsd(rs)}</span>`, `longs / shorts · ${since.length} orders since open`, 'var(--info)')].join('');
+    (() => { const ml = LQ.real.filter(e => e.side === 'l').reduce((a, e) => a + e.usd, 0), ms = LQ.real.filter(e => e.side === 's').reduce((a, e) => a + e.usd, 0);
+      return card(`Real liquidations · ${D.sym.replace('USDT', '')}`, `<span class="dn">${lqUsd(rl)}</span> <small>/</small> <span class="up">${lqUsd(rs)}</span>`, `longs / shorts · ${since.length} orders · all pairs <b class="dn">${lqUsd(ml)}</b> / <b class="up">${lqUsd(ms)}</b>`, 'var(--info)'); })()].join('');
   const note = $('lqNote'), tot = up3 + dn3; note.hidden = !tot;
   const best = (a, z) => { let bi = -1; for (let b = a; b < z; b++) if (b >= 0 && b < M.nb && sm[b] > 0 && (bi < 0 || sm[b] > sm[bi])) bi = b; return bi; };
   const w3 = Math.ceil(.03 / ((M.hi - M.lo) / M.cur) * M.nb), na = best(cb + 1, cb + 1 + w3), nbl = best(cb - w3, cb);
@@ -2374,27 +2600,28 @@ function lqHover(e){
   tip.style.left = tx + 'px'; tip.style.top = ty + 'px';
 }
 function renderLiqFeed(){
-  const list = LQ.real.filter(e => e.sym === LQ.sym).slice(-40).reverse(), el = $('lqFeed'); if (!el) return;
+  const all = $('lqAll').checked, list = LQ.real.filter(e => all || e.sym === LQ.sym).slice(-60).reverse(), el = $('lqFeed'); if (!el) return;
   const ws = LQ.ws && LQ.ws.readyState === 1;
-  $('lqFeedS').textContent = !$('lqReal').checked ? 'off' : ws ? `${LQ.sym.replace('USDT', '')} · live since you opened this tab` : 'connecting…';
-  el.innerHTML = list.length ? list.map(e => `<div class="lqrow ${e.id > LQ.seen ? 'fresh' : ''}"><span class="mu">${new Date(e.t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'})}</span><span class="lqside ${e.side}">${e.side === 'l' ? 'LONG LIQ' : 'SHORT LIQ'}</span><span>${fmtPrice(e.p)}</span><b>${lqUsd(e.usd)}</b></div>`).join('')
+  $('lqFeedS').textContent = !$('lqReal').checked ? 'off' : ws ? `${all ? 'all pairs' : LQ.sym.replace('USDT', '')} · live since you opened this tab · ${LQ.real.length} market-wide` : LQ.wsErr ? 'cannot connect: your network may block Binance WebSockets' : 'connecting…';
+  el.innerHTML = list.length ? list.map(e => `<div class="lqrow ${e.id > LQ.seen ? 'fresh' : ''}"><span class="mu">${new Date(e.t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'})}${all ? ` <b style="color:var(--text)">${e.sym.replace('USDT', '')}</b>` : ''}</span><span class="lqside ${e.side}">${e.side === 'l' ? 'LONG LIQ' : 'SHORT LIQ'}</span><span>${fmtPrice(e.p)}</span><b>${lqUsd(e.usd)}</b></div>`).join('')
     : `<div class="mu">${$('lqReal').checked ? 'No liquidations yet. Binance pushes them as they happen, at most one per second; quiet markets can go minutes without one.' : 'Real liquidations are off.'}</div>`;
   LQ.seen = LQ.real.length ? LQ.real[LQ.real.length - 1].id : 0;
 }
 let lqId = 0;
 function liqWs(){
-  const want = $('lqReal').checked && S.view === 'liq' ? LQ.sym : null;
+  const want = $('lqReal').checked && S.view === 'liq' ? 'all' : null;
   if (LQ.ws && LQ.wsSym === want) return;
   if (LQ.ws){ try { LQ.ws.onclose = null; LQ.ws.close(); } catch {} LQ.ws = null; LQ.wsSym = null; }
   if (!want) return;
-  let ws; try { ws = new WebSocket(`wss://fstream.binance.com/ws/${want.toLowerCase()}@forceOrder`); } catch { return; }
+  // all pairs, on Binance's /market endpoint (the legacy /ws path stopped serving market streams on 2026-04-23)
+  let ws; try { ws = new WebSocket('wss://fstream.binance.com/market/ws/!forceOrder@arr'); } catch { return; }
   LQ.ws = ws; LQ.wsSym = want;
-  ws.onopen = () => renderLiqFeed();
+  ws.onopen = () => renderLiqFeed(); ws.onerror = () => { LQ.wsErr = true; renderLiqFeed(); };
   ws.onmessage = ev => { try { const o = JSON.parse(ev.data).o; if (!o) return;
       const p = +o.ap || +o.p, q = +o.z || +o.q;
       LQ.real.push({id: ++lqId, sym: o.s, t: +o.T || Date.now(), p, usd: p * q, side: o.S === 'SELL' ? 'l' : 's'});
-      if (LQ.real.length > 2000) LQ.real.splice(0, LQ.real.length - 2000);
-      if (!LQ.raf) LQ.raf = requestAnimationFrame(() => { LQ.raf = 0; if (S.view === 'liq') renderLiq(); });
+      if (LQ.real.length > 5000) LQ.real.splice(0, LQ.real.length - 5000);
+      if (!LQ.raf) LQ.raf = requestAnimationFrame(() => { LQ.raf = 0; if (S.view !== 'liq') return; if (o.s === LQ.sym) renderLiq(); else { lqStats(); renderLiqFeed(); } });
     } catch {} };
   ws.onclose = () => { if (LQ.ws === ws){ LQ.ws = null; LQ.wsSym = null; setTimeout(liqWs, 5000); } };
 }
@@ -2523,7 +2750,7 @@ const LIVE = {ws: null, on: true, retry: 0, q: new Map(), raf: 0, t: 0};
 function liveSet(state){ const b = $('liveBtn'); b.classList.toggle('on', state === 'on'); b.classList.toggle('err', state === 'err'); b.textContent = state === 'off' ? '○ Live off' : state === 'err' ? '● Live (reconnecting)' : '● Live'; }
 function liveConnect(){
   if (!LIVE.on || LIVE.ws || location.protocol === 'about:') return;
-  let ws; try { ws = new WebSocket('wss://fstream.binance.com/ws/!miniTicker@arr'); } catch { liveSet('err'); return; }
+  let ws; try { ws = new WebSocket('wss://fstream.binance.com/market/ws/!miniTicker@arr'); } catch { liveSet('err'); return; }
   LIVE.ws = ws;
   ws.onopen = () => { LIVE.retry = 0; liveSet('on'); };
   ws.onmessage = ev => {
@@ -2603,7 +2830,7 @@ $('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.
   if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Trend Confirmation scan that includes this coin to open its trade plan.'); return; }
   const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
 $('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
-try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq') setView(v); } catch {}
+try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'macro') setView(v); } catch {}
 $('alertBtn').onclick = toggleAlerts; paintAlertBtn();
 for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
 for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
@@ -2624,6 +2851,17 @@ $('lqRange').onclick = e => { const b = e.target.closest('button'); if (!b) retu
 $('lqLev').onchange = () => { buildLiq(); renderLiq(); };
 $('lqReal').onchange = () => { liqWs(); renderLiq(); };
 $('lqLoad').onclick = loadLiq;
+$('lqAll').onchange = renderLiqFeed;
+try { S.macroOn = localStorage.getItem('onslaught-macro-grade') !== '0'; } catch {}
+$('macGrade').checked = S.macroOn !== false;
+$('macGrade').onchange = e => { S.macroOn = e.target.checked; try { localStorage.setItem('onslaught-macro-grade', e.target.checked ? '1' : '0'); } catch {} render(); renderMacro(); };
+$('macLoad').onclick = () => loadMacro(true);
+$('macWin').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.win = +b.dataset.v; [...$('macWin').children].forEach(x => x.classList.toggle('on', x === b)); renderMacro(); };
+$('macTv').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.tv = b.dataset.v; renderMacro(); };
+$('macCards').onclick = e => { const c = e.target.closest('[data-tv]'); if (!c) return; MAC.tv = c.dataset.tv; renderMacro(); $('macTvBox').scrollIntoView({behavior: 'smooth', block: 'center'}); };
+$('regime').addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (g) setView(g.dataset.goto); });
+setTimeout(() => loadMacro(false), 2500);
+setInterval(() => { if (!document.hidden && (!S.macro || Date.now() - S.macro.t > 36e5)) loadMacro(false); }, 5 * 60000);
 $('lqOver').addEventListener('mousemove', lqHover);
 $('lqOver').addEventListener('mouseleave', () => { $('lqTip').hidden = true; const c = $('lqOver'); c.getContext('2d').clearRect(0, 0, c.width, c.height); });
 setInterval(() => { if (S.view === 'liq' && !document.hidden && !LQ.loading && Date.now() - LQ.t > 3e5) loadLiq(); }, 60000);
