@@ -16,7 +16,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 a{color:inherit}
-.wrap{max-width:1500px;margin:0 auto;padding:16px}
+.wrap{max-width:none;margin:0;padding:12px 16px}
 header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;margin-bottom:12px}
 .brand{display:flex;align-items:center;gap:12px}
 .brand svg{width:40px;height:40px;flex:none;filter:drop-shadow(0 0 10px rgba(138,82,156,.55))}
@@ -65,6 +65,9 @@ button:disabled{opacity:.5;cursor:default}
 .regime.on .verdict{background:var(--bull);color:#000} .regime.off .verdict{background:var(--bear);color:#fff} .regime.mixed .verdict{background:var(--warn);color:#000}
 .regime .chip{font-size:12px;color:var(--muted);background:var(--panel2);border-radius:5px;padding:4px 9px;white-space:nowrap}
 .regime .chip b{font-family:var(--mono);color:var(--text);font-weight:600}
+.btcrow{display:inline-flex;align-items:center;gap:4px}
+.btf{font:600 11px var(--mono);padding:1px 5px;border-radius:3px;background:var(--panel);color:var(--muted)}
+.btf.b{color:var(--bull)} .btf.s{color:var(--bear)} .btf.key{box-shadow:inset 0 -2px 0 var(--accent-lt)}
 .regime .note{font-size:12px;color:var(--accent-lt);flex-basis:100%}
 .regime:empty{display:none}
 .pos{font:600 11px system-ui;border-radius:4px;padding:2px 6px;white-space:nowrap}
@@ -170,6 +173,15 @@ td.trigs{white-space:nowrap}
 .jopen{cursor:pointer;text-decoration:underline dotted var(--dim)} .jopen:hover{color:var(--accent-lt)}
 .jdel{background:none;border:0;color:var(--dim);padding:2px 6px} .jdel:hover{color:var(--bear)}
 .filebtn{border:1px solid var(--line);border-radius:6px;padding:6px 12px;background:var(--panel2);color:var(--text);font-size:13px;cursor:pointer}
+.toolbar{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.searchbox{position:relative;display:flex;align-items:center}
+.searchbox .sicon{position:absolute;left:10px;color:var(--bull);font-size:15px;pointer-events:none;line-height:1}
+#search{width:240px;padding:7px 10px 7px 30px;background:#0b1206;color:var(--bull);border:1px solid var(--bull);border-radius:8px;
+  box-shadow:0 0 6px rgba(158,255,0,.45),inset 0 0 6px rgba(158,255,0,.10);font-family:var(--mono);caret-color:var(--bull);transition:box-shadow .15s}
+#search::placeholder{color:rgba(158,255,0,.55)}
+#search:focus{outline:none;border-color:var(--bull);box-shadow:0 0 12px rgba(158,255,0,.75),0 0 2px rgba(158,255,0,.9),inset 0 0 8px rgba(158,255,0,.15)}
+#search::-webkit-search-cancel-button{filter:hue-rotate(40deg) saturate(3)}
+@media (max-width:900px){.toolbar{margin-left:0;width:100%}#search{width:100%}.searchbox{flex:1}}
 .pager{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .pager .pinfo{color:var(--muted);font-size:12px;margin-right:auto}
 .pager button{font-family:var(--mono);font-size:12px;padding:5px 10px}
@@ -179,7 +191,14 @@ td.trigs{white-space:nowrap}
 .stat.bull .v{color:var(--bull)} .stat.bear .v{color:var(--bear)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
 table{border-collapse:collapse;width:100%;min-width:1100px}
-th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th[title]{cursor:help} th[title].sortable{cursor:pointer}
+#thead th:nth-child(1),#tbody td:nth-child(1){position:sticky;left:0;width:30px;min-width:30px;max-width:30px;z-index:2;background:var(--panel)}
+#thead th:nth-child(2),#tbody td:nth-child(2){position:sticky;left:30px;z-index:2;background:var(--panel);box-shadow:1px 0 0 var(--line)}
+#thead th:nth-child(1),#thead th:nth-child(2){background:var(--panel2);z-index:3}
+#tbody tr:hover td:nth-child(1),#tbody tr:hover td:nth-child(2){background:#231f2e}
+#tbody tr.sel td:nth-child(1),#tbody tr.sel td:nth-child(2){background:#2a2234}
+label[title]{cursor:help}
+th,td{padding:6px 7px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th{position:sticky;top:0;background:var(--panel2);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;cursor:pointer;user-select:none}
 th.l,td.l{text-align:left} th.c,td.c{text-align:center}
 th.sorted{color:var(--accent-lt)}
@@ -249,6 +268,12 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       </label>
       <label><input id="closed" type="checkbox" checked> Closed candles only</label>
       <label title="Also fetch 1D, 4H and 1H candles for the multi-timeframe column (more requests, cached)"><input id="mtfOn" type="checkbox" checked> MTF</label>
+      <div class="toolbar">
+        <div class="searchbox"><span class="sicon" aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search pair…" aria-label="Search pair"></div>
+        <label>Rows <select id="pageSize"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="0">All</option></select></label>
+        <button id="clearBtn">Clear filters</button>
+        <button id="csvBtn">Export CSV</button>
+      </div>
     </div>
     <div class="row">
       <div class="seg" id="showSeg">
@@ -260,17 +285,12 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <label>RSI&gt;50 <select class="mf" data-k="rsi50"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
       <label>OBV&gt;EMA50 <select class="mf" data-k="obv"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
       <label>OI rising <select class="mf" data-k="oi"><option value="">Any</option><option value="1">Yes</option><option value="0">No</option></select></label>
-      <label><input id="newOnly" type="checkbox"> New only</label>
-      <label><input id="starOnly" type="checkbox"> ★ only</label>
-      <label title="Keep starred pairs at the top"><input id="pinStar" type="checkbox" checked> Pin ★</label>
-      <label>Trigger <select id="trigF"><option value="">Any</option><option value="b">Bull</option><option value="s">Bear</option><option value="none">None</option></select></label>
-      <label>within <select id="trigN"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles</label>
-      <label>MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
-      <button id="clearBtn">Clear filters</button>
-      <span class="sep"></span>
-      <input id="search" type="search" placeholder="Search pair…" style="width:130px">
-      <label>Rows <select id="pageSize"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="0">All</option></select></label>
-      <button id="csvBtn">Export CSV</button>
+      <label title="Only pairs that became aligned on the latest candle"><input id="newOnly" type="checkbox"> New only</label>
+      <label title="Show only the pairs you starred"><input id="starOnly" type="checkbox"> ★ only</label>
+      <label title="Keep starred pairs at the top of the table, whatever the sort"><input id="pinStar" type="checkbox" checked> Pin ★</label>
+      <label title="Filter by trigger direction: Bull = at least one bullish trigger, Bear = at least one bearish, None = no fresh trigger">Trigger <select id="trigF"><option value="">Any</option><option value="b">Bull</option><option value="s">Bear</option><option value="none">None</option></select></label>
+      <label title="How recent a trigger must be to count, in candles of the selected timeframe. Also sets what counts as a LONG/SHORT setup and the Triggered setups card.">within <select id="trigN"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles</label>
+      <label title="Multi-timeframe filter: All bull / All bear = 1D, 4H and 1H all agree">MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
     </div>
   </div>
 
@@ -994,6 +1014,7 @@ function trigCell(r){
   const shown = r.trig.slice(0, 3).map(t => `<span class="tg ${t.dir > 0 ? 'b' : t.dir < 0 ? 's' : 'n'}" title="${t.name}${t.t === 'coil' ? '' : ', ' + (t.ago === 0 ? 'last candle' : t.ago + ' candle' + (t.ago > 1 ? 's' : '') + ' ago')}">${TRIG_SHORT[t.t]}${t.ago && t.t !== 'coil' ? '<sub>' + t.ago + '</sub>' : ''}</span>`).join('');
   return shown + (r.trig.length > 3 ? `<span class="tg n" title="${r.trig.slice(3).map(t => t.name).join(', ')}">+${r.trig.length - 3}</span>` : '');
 }
+const COL_HELP = {"star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
 const COLS = [
   {k:'star', t:'★', c:'c'}, {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA50', c:'c'},
@@ -1041,6 +1062,25 @@ function filtered(){
 const POS = {longs: ['New longs', 'Price ↑ OI ↑: new positions opening on the long side'], shorts: ['New shorts', 'Price ↓ OI ↑: new positions opening on the short side'],
   cover: ['Short covering', 'Price ↑ OI ↓: shorts closing; rallies on covering often fade'], liq: ['Long liquidation', 'Price ↓ OI ↓: longs closing or being liquidated'], flat: ['Flat', 'Price and OI both moved less than 0.5%']};
 function posCell(r){ if (!r.pos) return '<span class="mu">—</span>'; const [t, tip] = POS[r.pos]; return `<span class="pos ${r.pos}" title="${tip} (price ${fmtPct(r.pD)}, OI ${fmtPct(r.oiD)})">${t}</span>`; }
+/* BTC trend on every timeframe for the regime bar. Binance returns the forming candle last, so it is dropped. Cached per timeframe for 5 min (1M/1W: 1 h). */
+const BTC_TFS = [['1M', '1M'], ['1w', '1W'], ['1d', '1D'], ['4h', '4H'], ['1h', '1H'], ['30m', '30m'], ['15m', '15m']];
+const btcCache = {};
+async function btcTrends(c, have){
+  const out = {};
+  await Promise.all(BTC_TFS.map(async ([tf]) => {
+    if (have[tf] !== undefined){ out[tf] = have[tf]; return; }
+    const ttl = tf === '1M' || tf === '1w' ? 36e5 : 3e5, hit = btcCache[tf];
+    if (hit && Date.now() - hit.t < ttl){ out[tf] = hit.v; return; }
+    try {
+      const d = await getJSON(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=${tf}&limit=300`, WEIGHT, 2);
+      const k = d.slice(0, -1).map(x => [x[0], +x[1], +x[2], +x[3], +x[4], +x[5]]);
+      const e = evaluate(k, {...c, noTrig: true});
+      out[tf] = e.incomplete ? null : {dir: e.bull >= 3 ? 1 : e.bear >= 3 ? -1 : 0, e};
+      btcCache[tf] = {t: Date.now(), v: out[tf]};
+    } catch { out[tf] = null; }
+  }));
+  return out;
+}
 function renderRegime(all, c){
   const el = $('regime'), R = S.regime;
   if (!R || !all.length){ el.innerHTML = ''; el.className = 'regime'; S.regimeDir = 0; return; }
@@ -1058,10 +1098,11 @@ function renderRegime(all, c){
   if (fMed != null && fMed <= c.fundCold * 0.6) notes.push('Market-wide funding is negative: shorts are crowded, squeezes are likely.');
   el.className = 'regime ' + (dir > 0 ? 'on' : dir < 0 ? 'off' : 'mixed');
   el.innerHTML = `<span class="verdict">${dir > 0 ? 'Risk-on' : dir < 0 ? 'Risk-off' : 'Mixed'}</span>
-    <span class="chip">BTC 1D ${arrow(R.d1)}</span><span class="chip">BTC 4H ${arrow(R.h4)}</span>
-    <span class="chip">Breadth <b class="up">${bullPct.toFixed(0)}%</b> bull · <b class="dn">${bearPct.toFixed(0)}%</b> bear</span>
-    <span class="chip">Funding median <b>${fMed == null ? '—' : (fMed > 0 ? '+' : '') + fMed.toFixed(4) + '%'}</b></span>
-    <span class="chip">OI median <b class="${cls(oMed)}">${fmtPct(oMed)}</b> over ${c.oiN} candles</span>
+    <span class="chip btcrow" title="BTC trend per timeframe: ▲ bull / ▼ bear = 3+ of the 4 TA checks agree (DMI, RSI vs EMA, RSI vs 50, OBV vs EMA50), ◆ = mixed. The Risk-on/off verdict uses 1D (double weight) and 4H, marked with a dot, plus breadth.">BTC ${BTC_TFS.map(([tf, l]) => { const x = (R.btc || {})[tf] ?? (tf === '1d' ? R.d1 : tf === '4h' ? R.h4 : undefined);
+      return `<span class="btf ${!x ? 'na' : x.dir > 0 ? 'b' : x.dir < 0 ? 's' : 'n'}${tf === '1d' || tf === '4h' ? ' key' : ''}">${l} ${!x ? '—' : x.dir > 0 ? '▲' : x.dir < 0 ? '▼' : '◆'}</span>`; }).join('')}</span>
+    <span class="chip" title="Of the pairs scanned, the share that are bull-aligned (4–5/5) and bear-aligned. A wide gap shows a one-sided market; it counts toward the verdict when the gap is 15 points or more.">Breadth <b class="up">${bullPct.toFixed(0)}%</b> bull · <b class="dn">${bearPct.toFixed(0)}%</b> bear</span>
+    <span class="chip" title="Median last funding rate across all USDT perpetuals. Around +0.01% is normal. Clearly higher = longs are paying to stay in (crowded long market); negative = shorts are crowded.">Funding median <b>${fMed == null ? '—' : (fMed > 0 ? '+' : '') + fMed.toFixed(4) + '%'}</b></span>
+    <span class="chip" title="Median change in open interest over the last N candles across scanned pairs. Rising = new positions entering the market; falling = positions closing (deleveraging).">OI median <b class="${cls(oMed)}">${fmtPct(oMed)}</b> over ${c.oiN} candles</span>
     <span class="note">${notes.join(' ')}</span>`;
 }
 function renderPager(total, size, pages, start, n){
@@ -1099,7 +1140,7 @@ function render(){
   $('sSetup').textContent = all.filter(r => r.setup).length; $('sSetupS').textContent = `aligned + trigger in last ${c.trigN}`;
   renderRegime(all, c);
 
-  $('thead').innerHTML = COLS.map(col => `<th class="${col.c || ''} ${S.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}">${col.t}${S.sort.k === col.k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
+  $('thead').innerHTML = COLS.map(col => `<th class="${col.c || ''} ${S.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}" title="${(COL_HELP[col.k] || '').replace(/"/g, '&quot;')} (click to sort)">${col.t}${S.sort.k === col.k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
   const rows = filtered(), {k, dir} = S.sort;
   rows.sort((a, b) => { const x = sortVal(a, k), y = sortVal(b, k); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
   if ($('pinStar').checked) rows.sort((a, b) => WATCH.has(b.sym) - WATCH.has(a.sym));   // stable: keeps the sort within each group
@@ -1161,7 +1202,7 @@ async function scan(){
     try {
       const [b4, b1] = await Promise.all([getKlines('BTCUSDT', '4h', true), getKlines('BTCUSDT', '1d', true)]);
       const st = k => { const e = evaluate(k, c); return e.incomplete ? null : {dir: e.bull >= 3 ? 1 : e.bear >= 3 ? -1 : 0, e}; };
-      S.regime = {h4: st(b4), d1: st(b1), funds: uni.map(u => u.fund)};
+      S.regime = {h4: st(b4), d1: st(b1), funds: uni.map(u => u.fund), btc: await btcTrends(c, {'4h': st(b4), '1d': st(b1)})};
     } catch { S.regime = null; }
     if (mcapMin) list = list.filter(u => u.mcap >= mcapMin);   // don't spend requests on pairs that will be filtered out
     const out = new Array(list.length); let done = 0, i = 0;
