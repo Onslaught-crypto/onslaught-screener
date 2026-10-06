@@ -741,6 +741,28 @@ function jStats(list){
   const avg = f => { const v = d.map(f).filter(Number.isFinite); return v.length ? v.reduce((a, x) => a + x, 0) / v.length : null; };
   return {n: d.length, win: d.length ? 100 * d.filter(e => e.out.res === 'win').length / d.length : null, avgR: avg(e => e.out.rr), r12: avg(e => e.out.r12), mfe: avg(e => e.out.mfe), mae: avg(e => e.out.mae)};
 }
+/* ---------- Shared scoring (used by the page and the PC runner) ----------
+ d = evaluate() result or null; oi = OI history; mtf = {'1d','4h','1h': dir|null} or null; fund = funding %; c = {oiN, oiThr, trigN, fundHot, fundCold} */
+function coreScore(d, oi, mtf, fund, c){
+  const oiD = oiDelta(oi, c.oiN), oiUp = oiD != null && oiD >= c.oiThr ? 1 : 0;
+  const bull = d ? d.bull + oiUp : 0, bear = d ? d.bear + oiUp : 0;
+  const isNew = d ? ((bull >= 4 && d.prevBull + oiUp < 4) || (bear >= 4 && d.prevBear + oiUp < 4)) : false;
+  const trig = d && d.trig ? d.trig.filter(t => t.ago < c.trigN) : [];
+  const tB = trig.filter(t => t.dir > 0).length, tS = trig.filter(t => t.dir < 0).length;
+  const setup = bull >= 4 && tB ? 1 : bear >= 4 && tS ? -1 : 0;
+  const mv = mtf ? Object.values(mtf).filter(x => x != null) : [], nT = mtf ? Object.keys(mtf).length : 0;
+  const mtfNet = mv.reduce((a, x) => a + x, 0), mtfAll = nT && mv.length === nT && Math.abs(mtfNet) === nT ? Math.sign(mtfNet) : 0;
+  const t = d && d.tail, pD = t && t.length > c.oiN ? (t[t.length - 1] / t[t.length - 1 - c.oiN] - 1) * 100 : null;
+  const pos = positioning(pD, oiD);
+  const fFlag = fund == null ? 0 : fund >= c.fundHot ? 1 : fund <= c.fundCold ? -1 : 0;
+  return {oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, pD, pos, fFlag};
+}
+/* Market regime: 2×BTC 1D + BTC 4H + breadth (±1 when bull/bear-aligned shares differ by 15+ points). */
+function regimeScore(d1, h4, bullPct, bearPct){
+  const br = bullPct - bearPct >= 15 ? 1 : bullPct - bearPct <= -15 ? -1 : 0;
+  const score = 2 * (d1 || 0) + (h4 || 0) + br;
+  return score >= 2 ? 1 : score <= -2 ? -1 : 0;
+}
 // ==ENGINE END==
 
 /* ---------- Config & constants ---------- */
@@ -956,18 +978,7 @@ const chk = (s, title) => `<td class="c chk ${s === 1 ? 'up' : s === -1 ? 'dn' :
 /* ---------- Derived rows ---------- */
 function derive(r, c){
   const d = r.ev && !r.ev.incomplete ? r.ev : null;
-  const oiD = oiDelta(r.oi, c.oiN);
-  const oiUp = oiD != null && oiD >= c.oiThr ? 1 : 0;
-  const bull = d ? d.bull + oiUp : 0, bear = d ? d.bear + oiUp : 0;
-  const isNew = d ? ((bull >= 4 && d.prevBull + oiUp < 4) || (bear >= 4 && d.prevBear + oiUp < 4)) : false;
-  const trig = d && d.trig ? d.trig.filter(t => t.ago < c.trigN) : [];
-  const tB = trig.filter(t => t.dir > 0).length, tS = trig.filter(t => t.dir < 0).length;
-  const setup = bull >= 4 && tB ? 1 : bear >= 4 && tS ? -1 : 0;
-  const mv = r.mtf ? Object.values(r.mtf).filter(x => x != null) : [];
-  const mtfNet = mv.reduce((a, x) => a + x, 0), mtfAll = mv.length === MTF_TFS.length && Math.abs(mtfNet) === MTF_TFS.length ? Math.sign(mtfNet) : 0;
-  const t = d && d.tail, pD = t && t.length > c.oiN ? (t[t.length - 1] / t[t.length - 1 - c.oiN] - 1) * 100 : null;
-  const pos = positioning(pD, oiD);
-  const fFlag = r.fund == null ? 0 : r.fund >= c.fundHot ? 1 : r.fund <= c.fundCold ? -1 : 0;
+  const {oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, pD, pos, fFlag} = coreScore(d, r.oi, r.mtf, r.fund, c);
   const against = S.regimeDir && ((S.regimeDir < 0 && bull >= 4) || (S.regimeDir > 0 && bear >= 4));
   return {...r, d, ext: d ? d.ext : null, pD, pos, fFlag, against, oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, inc: !d || r.oi == null, score: Math.max(bull, bear) + (bull >= 4 || bear >= 4 ? 10 : 0) + (setup ? 5 : 0) + (mtfAll && (mtfAll > 0 ? bull >= 4 : bear >= 4) ? 3 : 0)};
 }
@@ -1037,9 +1048,7 @@ function renderRegime(all, c){
   const bullPct = 100 * scored.filter(r => r.bull >= 4).length / n, bearPct = 100 * scored.filter(r => r.bear >= 4).length / n;
   const fMed = median(R.funds), oMed = median(all.map(r => r.oiD));
   const arrow = x => !x ? '<span class="mu">—</span>' : x.dir > 0 ? '<b class="up">▲ Bull</b>' : x.dir < 0 ? '<b class="dn">▼ Bear</b>' : '<b class="mu">◆ Neutral</b>';
-  const br = bullPct - bearPct >= 15 ? 1 : bullPct - bearPct <= -15 ? -1 : 0;
-  const score = 2 * (R.d1?.dir || 0) + (R.h4?.dir || 0) + br;
-  const dir = score >= 2 ? 1 : score <= -2 ? -1 : 0;
+  const dir = regimeScore(R.d1?.dir, R.h4?.dir, bullPct, bearPct);
   S.regimeDir = dir;
   const notes = [];
   if (dir > 0) notes.push('Trend-following longs have the wind behind them. Be selective with shorts.');
