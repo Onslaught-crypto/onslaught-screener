@@ -613,6 +613,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <span class="mu">Chart window</span><div class="seg" id="macWin"><button data-v="30">30d</button><button data-v="60">60d</button><button data-v="90" class="on">90d</button></div>
         <label title="Add the macro regime to every setup's grade: from −2 points (alt longs in risk-off) to +1 (alt longs in alt season)."><input id="macGrade" type="checkbox" checked> Use macro in grades</label>
         <button id="macLoad">Refresh</button>
+        <label title="Optional. CoinGecko's keyless API allows only a few requests a minute. A free Demo key (coingecko.com → Developer Dashboard) makes the macro data load reliably. It stays in this browser only.">CoinGecko key <input id="cgKey" type="password" placeholder="optional, free demo key" style="width:170px"></label>
         <span class="mu" id="macStatus"></span>
       </div>
     </div>
@@ -620,7 +621,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="maccards" id="macCards"></div>
     <div class="macbottom">
       <div class="panel"><div class="lqfh"><b>Macro regimes</b> <span class="mu">how the four indices combine · current one highlighted</span></div><div id="macMatrix"></div></div>
-      <div class="panel macchart"><div class="row" style="margin-bottom:8px"><b>TradingView</b><div class="seg" id="macTv"><button data-v="CRYPTOCAP:BTC.D" class="on">BTC.D</button><button data-v="CRYPTOCAP:USDT.D+CRYPTOCAP:USDC.D">USDT.D+USDC.D</button><button data-v="CRYPTOCAP:TOTAL3ES">TOTAL3ES</button><button data-v="CRYPTOCAP:OTHERS.D">OTHERS.D</button><button data-v="CRYPTOCAP:TOTAL">TOTAL</button></div><span class="mu">official indices, draw your own levels</span></div><div id="macTvBox" class="mactv"></div></div>
+      <div class="panel macchart"><div class="row" style="margin-bottom:8px"><b>TradingView</b><div class="seg" id="macTv"><button data-v="CRYPTOCAP:BTC.D" class="on">BTC.D</button><button data-v="CRYPTOCAP:USDT.D+CRYPTOCAP:USDC.D">USDT.D+USDC.D</button><button data-v="CRYPTOCAP:USDT.D">USDT.D</button><button data-v="CRYPTOCAP:USDC.D">USDC.D</button><button data-v="CRYPTOCAP:TOTAL3ES">TOTAL3ES</button><button data-v="CRYPTOCAP:OTHERS.D">OTHERS.D</button><button data-v="CRYPTOCAP:TOTAL">TOTAL</button></div><span class="mu">official indices, draw your own levels</span></div><div id="macTvBox" class="mactv"></div></div>
     </div>
     <div class="panel"><details><summary>How the macro read works</summary><ul>
       <li><b>BTC.D</b>: Bitcoin's share of the crypto market. Rising = money concentrating in BTC (or alts bleeding); falling = rotation into alts.</li>
@@ -1265,10 +1266,9 @@ async function getMcaps(){
   const m = {};
   try {
     for (let p = 1; p <= 4; p++){
-      const r = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${p}`);
-      if (!r.ok) break;
-      for (const x of await r.json()){ const s = x.symbol.toUpperCase(); if (!(s in m) && x.market_cap) m[s] = x.market_cap; }
-      await sleep(1200);
+      let j; try { j = await cgJSON(`/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${p}`, 2); } catch { break; }
+      if (p === 1) await Cache.set('cg:p1', {t: Date.now(), v: j.map(x => ({symbol: x.symbol, market_cap: x.market_cap, current_price: x.current_price}))});
+      for (const x of j){ const s = x.symbol.toUpperCase(); if (!(s in m) && x.market_cap) m[s] = x.market_cap; }
     }
   } catch {}
   if (Object.keys(m).length) await Cache.set(k, {t: Date.now(), m});
@@ -2342,11 +2342,24 @@ const MAC_METRICS = [
   {k: 't3es', name: 'TOTAL3ES', sub: 'alts excl. BTC, ETH, stables', fmt: v => '$' + fmtBig(v), tone: d => d > 0 ? 'g' : d < 0 ? 'r' : 'n', words: ['rising: money into alts', 'falling: alts draining']},
   {k: 'othD', name: 'OTHERS.D', sub: 'share outside the top 10', fmt: v => v.toFixed(2) + '%', tone: d => d > 0 ? 'g' : d < 0 ? 'r' : 'n', words: ['rising: small caps bid', 'falling: flight to large caps']}];
 function macStatus(t){ const e = $('macStatus'); if (e) e.textContent = t || ''; }
-async function cgJSON(path){
-  let r; try { r = await fetch('https://api.coingecko.com/api/v3' + path); } catch { throw new Error('Cannot reach CoinGecko for the macro data. Check your connection or ad-blocker.'); }
-  if (r.status === 429) throw new Error('CoinGecko is rate limiting this browser. The macro data will retry in a few minutes.');
-  if (!r.ok) throw new Error(`CoinGecko HTTP ${r.status}`);
-  return r.json();
+let cgChain = Promise.resolve(), cgLast = 0;
+function cgKey(){ try { return (localStorage.getItem('onslaught-cg-key') || '').trim(); } catch { return ''; } }
+function cgJSON(path, tries = 4){
+  const run = async () => {
+    const gap = cgKey() ? 2200 : 6500;                            // keyless ≈ 10 calls/min; free demo key ≈ 30/min
+    for (let a = 0; a < tries; a++){
+      const wait = cgLast + gap * (a ? 3 * a : 1) - Date.now(); if (wait > 0) await sleep(wait);
+      cgLast = Date.now();
+      const k = cgKey(), url = 'https://api.coingecko.com/api/v3' + path + (k ? (path.includes('?') ? '&' : '?') + 'x_cg_demo_api_key=' + encodeURIComponent(k) : '');
+      let r; try { r = await fetch(url); } catch { if (a < tries - 1){ macStatus(`CoinGecko is busy, retrying (${a + 1}/${tries - 1})…`); continue; }
+        throw new Error('CoinGecko is not answering (usually its free rate limit). Retrying automatically in 10 minutes; a free CoinGecko demo key makes this reliable.'); }
+      if (r.status === 429 || r.status >= 500){ if (a < tries - 1){ macStatus(`CoinGecko rate limit, retrying (${a + 1}/${tries - 1})…`); continue; } throw new Error('CoinGecko rate limit. Retrying automatically in 10 minutes.'); }
+      if (r.status === 401 || r.status === 403) throw new Error('CoinGecko rejected the API key. Check it, or clear it to use the keyless API.');
+      if (!r.ok) throw new Error(`CoinGecko HTTP ${r.status}`);
+      return r.json();
+    }
+  };
+  const p = cgChain.then(run, run); cgChain = p.catch(() => {}); return p;
 }
 async function perpSyms(){
   if (!infoCache || Date.now() - infoCache.t > 36e5){
@@ -2364,13 +2377,21 @@ async function loadMacro(force){
   MAC.loading = true; if ($('macLoad')) $('macLoad').disabled = true;
   try {
     macStatus('Loading global market caps…');
-    const g = (await cgJSON('/global')).data; await sleep(1500);
-    const mk = await cgJSON('/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1');
+    const g = (await cgJSON('/global')).data;
+    const p1 = await Cache.get('cg:p1').catch(() => null);
+    const mk = p1 && Date.now() - p1.t < 36e5 ? p1.v : await cgJSON('/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1');
+    if (!(p1 && Date.now() - p1.t < 36e5)) await Cache.set('cg:p1', {t: Date.now(), v: mk.map(x => ({symbol: x.symbol, market_cap: x.market_cap, current_price: x.current_price}))});
     const hist = {};
     for (const [k, id] of [['btc', 'bitcoin'], ['eth', 'ethereum'], ['usdt', 'tether'], ['usdc', 'usd-coin']]){
-      macStatus(`Loading ${k.toUpperCase()} history…`); await sleep(1500);
+      const ck = await Cache.get('cg:h:' + id).catch(() => null);
+      if (ck && Date.now() - ck.t < 12 * 36e5){ hist[k] = ck.v; continue; }      // history moves slowly: refetch twice a day
+      macStatus(`Loading ${k.toUpperCase()} market-cap history…`);
       hist[k] = (await cgJSON(`/coins/${id}/market_chart?vs_currency=usd&days=90&interval=daily`)).market_caps;
+      await Cache.set('cg:h:' + id, {t: Date.now(), v: hist[k]});
     }
+    // today's point from the live global snapshot keeps the latest reading current between history refreshes
+    const tot = g.total_market_cap.usd, pc = g.market_cap_percentage || {};
+    for (const [k, sym] of [['btc', 'btc'], ['eth', 'eth'], ['usdt', 'usdt'], ['usdc', 'usdc']]) if (pc[sym]) hist[k] = hist[k].concat([[Date.now(), tot * pc[sym] / 100]]);
     const perps = await perpSyms(), seen = new Set();
     const coins = mk.filter(x => x.market_cap > 0 && !seen.has(x.symbol.toUpperCase()) && seen.add(x.symbol.toUpperCase())).map(x => { const sym = x.symbol.toUpperCase();
       return {sym, mcap: x.market_cap, stable: MACRO_STABLES.has(sym) || (/USD|EUR/.test(sym) && Math.abs((x.current_price || 0) - 1) < .03), closes: null}; });
@@ -2386,7 +2407,7 @@ async function loadMacro(force){
     const v = {t: Date.now(), series, reg: macroRegime(series), cg: {btcD: g.market_cap_percentage.btc, usdtD: g.market_cap_percentage.usdt, usdcD: g.market_cap_percentage.usdc, total: g.total_market_cap.usd}};
     await Cache.set('macro:v2', v); macApply(v);
     macStatus(`Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})} · refreshes hourly`);
-  } catch(e){ macStatus(e.message); if (!S.macro){ const ck = await Cache.get('macro:v2').catch(() => null); if (ck) macApply(ck); } }
+  } catch(e){ macStatus(e.message); MAC.failT = Date.now(); if (!S.macro){ const ck = await Cache.get('macro:v2').catch(() => null); if (ck) macApply(ck); } }
   finally { MAC.loading = false; if ($('macLoad')) $('macLoad').disabled = false; }
 }
 function macChart(vals, e20s, tone){
@@ -2425,7 +2446,15 @@ function macMatrix(R){
 function macTv(){
   [...$('macTv').children].forEach(b => b.classList.toggle('on', b.dataset.v === MAC.tv));
   if (MAC.tvShown === MAC.tv) return; MAC.tvShown = MAC.tv;
-  $('macTvBox').innerHTML = `<iframe title="TradingView ${MAC.tv}" loading="lazy" src="https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(MAC.tv)}&interval=D&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&allow_symbol_change=1&hide_side_toolbar=0&saveimage=0&locale=en&studies=%5B%22MAExp%40tv-basicstudies%22%5D"></iframe>`;
+  // The script-based Advanced Chart widget takes its settings as JSON, so spread symbols such as USDT.D+USDC.D survive
+  // (the old URL-based embed turned the "+" into a space).
+  const box = $('macTvBox');
+  box.innerHTML = '<div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div>';
+  const sc = document.createElement('script');
+  sc.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'; sc.async = true; sc.type = 'text/javascript';
+  sc.text = JSON.stringify({autosize: true, symbol: MAC.tv, interval: 'D', timezone: 'Etc/UTC', theme: 'dark', style: '1', locale: 'en',
+    backgroundColor: '#07070b', gridColor: 'rgba(255,255,255,0.05)', allow_symbol_change: true, withdateranges: true, hide_side_toolbar: false, save_image: false, calendar: false, support_host: 'https://www.tradingview.com'});
+  box.firstChild.appendChild(sc);
 }
 function macroChip(){
   const R = S.macro && S.macro.reg; if (!R) return '';
@@ -2856,12 +2885,14 @@ try { S.macroOn = localStorage.getItem('onslaught-macro-grade') !== '0'; } catch
 $('macGrade').checked = S.macroOn !== false;
 $('macGrade').onchange = e => { S.macroOn = e.target.checked; try { localStorage.setItem('onslaught-macro-grade', e.target.checked ? '1' : '0'); } catch {} render(); renderMacro(); };
 $('macLoad').onclick = () => loadMacro(true);
+$('cgKey').value = cgKey();
+$('cgKey').onchange = e => { try { localStorage.setItem('onslaught-cg-key', e.target.value.trim()); } catch {} };
 $('macWin').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.win = +b.dataset.v; [...$('macWin').children].forEach(x => x.classList.toggle('on', x === b)); renderMacro(); };
 $('macTv').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.tv = b.dataset.v; renderMacro(); };
 $('macCards').onclick = e => { const c = e.target.closest('[data-tv]'); if (!c) return; MAC.tv = c.dataset.tv; renderMacro(); $('macTvBox').scrollIntoView({behavior: 'smooth', block: 'center'}); };
 $('regime').addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (g) setView(g.dataset.goto); });
-setTimeout(() => loadMacro(false), 2500);
-setInterval(() => { if (!document.hidden && (!S.macro || Date.now() - S.macro.t > 36e5)) loadMacro(false); }, 5 * 60000);
+setTimeout(() => loadMacro(false), 4000);
+setInterval(() => { if (!document.hidden && (!S.macro || Date.now() - S.macro.t > 36e5) && Date.now() - (MAC.failT || 0) > 6e5) loadMacro(false); }, 60000);
 $('lqOver').addEventListener('mousemove', lqHover);
 $('lqOver').addEventListener('mouseleave', () => { $('lqTip').hidden = true; const c = $('lqOver'); c.getContext('2d').clearRect(0, 0, c.width, c.height); });
 setInterval(() => { if (S.view === 'liq' && !document.hidden && !LQ.loading && Date.now() - LQ.t > 3e5) loadLiq(); }, 60000);
