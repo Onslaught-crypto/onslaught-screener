@@ -314,6 +314,7 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
 .macv.good{border-left-color:var(--bull)} .macv.good .mname{color:var(--bull)} .macv.bad{border-left-color:var(--bear)} .macv.bad .mname{color:var(--bear)}
 .macv.warn{border-left-color:var(--warn)} .macv.warn .mname{color:var(--warn)} .macv.neut .mname{color:var(--accent-lt)}
 .macv .mdirs{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.mname .mtf{font:700 10px system-ui;letter-spacing:1px;text-transform:uppercase;background:var(--panel2);color:var(--muted);border-radius:4px;padding:2px 6px;margin-right:8px;vertical-align:4px}
 .froth{font:700 11px system-ui;color:#000;background:var(--warn);border-radius:4px;padding:2px 7px}
 .maccards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
 .mcard{background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--accent-dk);border-radius:10px;padding:12px;cursor:pointer;transition:border-color .15s}
@@ -374,6 +375,19 @@ details p,details li{margin:6px 0}
 footer{color:var(--muted);font-size:12px;margin-top:12px}
 .err{color:var(--bear);font-size:13px;margin-bottom:10px;display:none}
 @media (max-width:640px){.wrap{padding:10px}.stat .v{font-size:18px}}
+.dvgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:10px;margin-bottom:12px}
+.dvsum{margin:0 0 10px;font-size:13px}
+.dvc{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--neutral);border-radius:10px;padding:10px;cursor:pointer;min-width:0}
+.dvc.bull{border-left-color:var(--bull)} .dvc.bear{border-left-color:var(--bear)}
+.dvc:hover,.dvc:focus-visible{background:#262935;outline:none;border-color:var(--accent-lt)}
+.dvh{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px} .dvh b{font-size:15px}
+.dvside{font:700 11px var(--mono)}
+.dvind{font:700 10.5px var(--mono);border-radius:4px;padding:1px 6px;background:var(--panel2);color:var(--text)} .dvind.both{background:var(--accent-dk);color:#fff}
+.dvsvg{display:block;width:100%;height:auto;margin:2px 0 6px}
+.dvf{display:flex;flex-wrap:wrap;gap:3px 12px;font:12px var(--mono);color:var(--muted);margin-top:3px} .dvf b{color:var(--text);font-weight:600} .dvf .warn{color:var(--warn)}
+.dvs{border-radius:4px;padding:1px 6px;font:700 11px var(--mono);cursor:help} .dvs.strong{background:var(--accent-dk);color:#fff} .dvs.medium{background:var(--panel2);color:var(--text)} .dvs.weak{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.ddiv{margin:0 0 10px;padding:8px 10px;border-left:3px solid var(--accent);background:var(--panel2);border-radius:6px;font-size:12.5px;line-height:1.5}
+.ddiv.bull{border-left-color:var(--bull)} .ddiv.bear{border-left-color:var(--bear)} .ddiv[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -400,6 +414,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <button role="tab" data-view="map">Market Map</button>
     <button role="tab" data-view="sectors">Sector Flow</button>
     <button role="tab" data-view="macro">Macro</button>
+    <button role="tab" data-view="div">Divergences</button>
     <button role="tab" data-view="liq">Liquidations</button>
     <button role="tab" data-view="journal">Journal</button>
   </nav>
@@ -531,6 +546,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label title="Your chat ID (message @userinfobot), or a group/channel ID">Chat ID <input id="tgChat" type="text" autocomplete="off" style="width:130px"></label>
         <label><input id="tgOn" type="checkbox"> Send alerts to Telegram</label>
         <label title="Include entry, stop and targets for each alert"><input id="tgPlan" type="checkbox" checked> with trade plan</label>
+        <label title="Also message me when RSI and MACD both diverge from price on a confirmed swing (1H, 4H or 1D, Strong). The Divergences tab scans in the background while this page is open."><input id="tgDiv" type="checkbox"> Divergence alerts</label>
         <button id="tgTest">Send test</button>
         <span class="mu" id="tgStatus" style="font-size:12px"></span>
         <button id="resetCache">Clear cache</button>
@@ -612,7 +628,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div id="viewMacro" hidden>
     <div class="panel">
       <div class="row">
-        <span class="mu">Chart window</span><div class="seg" id="macWin"><button data-v="30">30d</button><button data-v="60">60d</button><button data-v="90" class="on">90d</button></div>
+        <span class="mu">Timeframe</span><div class="seg" id="macTf"><button data-v="d" class="on">1D</button><button data-v="w">1W</button></div>
+        <span class="mu">Window</span><div class="seg" id="macWin"></div>
         <button id="macLoad">Refresh</button>
         <span class="mu" id="macStatus"></span>
       </div>
@@ -633,6 +650,36 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li>Numbers are rebuilt from CoinGecko (today's market caps and the BTC, ETH, USDT and USDC history) and Binance daily prices (everything else, assuming supply stays constant over the window). They run a few tenths off TradingView's indices because the coin universe differs; the direction is what counts. The TradingView chart shows the official ones.</li>
     </ul></details></div>
   </div><!-- /viewMacro -->
+
+  <div id="viewDiv" hidden>
+    <div class="panel">
+      <div class="row">
+        <span class="mu">Timeframes</span><div class="seg" id="dvTf"><button data-v="15m" class="on">15m</button><button data-v="1h" class="on">1H</button><button data-v="4h" class="on">4H</button><button data-v="1d" class="on">1D</button></div>
+        <span class="mu">Indicator</span><div class="seg" id="dvInd"><button data-v="all" class="on" title="Show RSI, MACD and both">All</button><button data-v="rsi" title="Pairs where RSI diverges from price (includes the ones where MACD agrees too)">RSI</button><button data-v="macd" title="Pairs where the MACD histogram diverges from price (includes the ones where RSI agrees too)">MACD</button><button data-v="both" title="RSI and MACD diverge on the same two swings: the most reliable kind">Both</button></div>
+        <span class="mu">Direction</span><div class="seg" id="dvDir"><button data-v="0" class="on">All</button><button data-v="1">Bullish</button><button data-v="-1">Bearish</button></div>
+      </div>
+      <div class="row">
+        <label title="A swing is confirmed once 5 candles have closed after it. Unconfirmed (forming) swings can still change with the next candle."><input id="dvConf" type="checkbox" checked> Confirmed only</label>
+        <label>Age <select id="dvAge"><option value="3">last 3 candles</option><option value="5" selected>last 5 candles</option><option value="10">last 10 candles</option></select></label>
+        <label>Strength <select id="dvStr"><option value="0">Any</option><option value="50">Medium or better</option><option value="70">Strong only</option></select></label>
+        <button id="dvScan" class="primary">Scan</button>
+        <span class="mu" id="dvStatus"></span>
+      </div>
+      <div class="progress" style="margin:10px 0 0"><div id="dvProg"></div></div>
+    </div>
+    <p class="mu dvsum" id="dvSum"></p>
+    <div class="dvgrid" id="dvGrid"></div>
+    <div class="panel"><details><summary>How to read divergences</summary><ul>
+      <li><b>Bullish divergence:</b> price makes a lower low but the indicator makes a higher low, so selling momentum is fading. <b>Bearish:</b> price makes a higher high but the indicator makes a lower high, so buying momentum is fading. Both are early warnings that a move may turn, not entries on their own.</li>
+      <li><b>RSI</b> compares the two RSI(14) lows or highs. <b>MACD</b> compares the two swings of the MACD histogram, which must be separate waves (the histogram crosses zero between them). <b>RSI + MACD</b> means both disagree with price on the same two swings, and is the most reliable kind.</li>
+      <li>Swings are found with 5 candles on each side, so a divergence is <b>confirmed</b> five candles after the second swing. <b>Forming</b> ones (shown when "Confirmed only" is off) can disappear with the next candle.</li>
+      <li><b>Strength</b> (0 to 100) adds up: how many indicators agree, how deep RSI is in oversold or overbought, how far the indicator disagrees, how far price pushed on, confirmation and freshness. 70 or more is Strong.</li>
+      <li><b>With trend</b> means the divergence points the same way as the EMA20 / EMA50 trend (a pullback or bounce may be ending). <b>Against trend</b> is a reversal attempt: it fails more often, so size down and wait for confirmation.</li>
+      <li>The mini chart shows the last 100 candles. The white line joins the two swings on price and on each indicator. Click a card for the trade plan, already set to the direction of the divergence.</li>
+      <li>The scan covers the top 100 pairs by volume on 15m, 1H, 4H and 1D, using closed candles. Divergences fail often in strong trends. 15m is noisy; 4H and 1D are slower but more reliable.</li>
+      <li><b>Telegram:</b> with "Divergence alerts" ticked in Settings, you get a message when RSI + MACD both diverge on a confirmed swing, with Strong strength, on 1H, 4H or 1D. The page must stay open and auto-refreshing (the PC runner does the same without a browser).</li>
+    </ul></details></div>
+  </div><!-- /viewDiv -->
 
   <div id="viewLiq" hidden>
     <div class="panel">
@@ -710,6 +757,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div><div class="dtitle" id="dTitle"></div><div class="dsub" id="dSub"></div></div>
     <div class="dact"><a id="dTv" target="_blank" rel="noopener">TradingView ↗</a><button id="dClose" aria-label="Close trade plan">✕</button></div>
   </div>
+  <div class="ddiv" id="dDiv" hidden></div>
   <div class="dchips" id="dChips"></div>
   <div class="dchart" id="dChart"></div>
   <div class="dlegend"><span><i style="background:var(--accent-lt)"></i>EMA20</span><span><i style="background:var(--info)"></i>EMA50</span><span><i style="background:var(--bull)"></i>Targets</span><span><i style="background:var(--bear)"></i>Stop</span></div>
@@ -1134,9 +1182,9 @@ const MACRO_REGIMES = {
   riskon: ['Broad risk-on', 'Cash is leaving stablecoins and alts are gaining value. Trend-following longs have the macro wind behind them.', {alt: [1, -1], btc: [1, -1]}],
   altseason: ['Alt season', 'BTC dominance falling while alts gain: money is rotating into alts. Favour alt longs with good relative strength.', {alt: [1, -1], btc: [0, 0]}],
   mixed: ['Mixed', 'The macro indices disagree. No macro edge: trade the chart and size normally.', {alt: [0, 0], btc: [0, 0]}]};
-function macroRegime(series){
+function macroRegime(series, k = 1){   // k scales the 7-period thresholds (2 for weekly bars)
   if (!series) return null;
-  const tr = {btcD: macroTrend(series.map(x => x.btcD), 1.5), stD: macroTrend(series.map(x => x.stD), 3), t3es: macroTrend(series.map(x => x.t3es), 4), othD: macroTrend(series.map(x => x.othD), 4)};
+  const tr = {btcD: macroTrend(series.map(x => x.btcD), 1.5 * k), stD: macroTrend(series.map(x => x.stD), 3 * k), t3es: macroTrend(series.map(x => x.t3es), 4 * k), othD: macroTrend(series.map(x => x.othD), 4 * k)};
   if (Object.values(tr).some(x => !x)) return null;
   const bd = tr.btcD.dir, st = tr.stD.dir, t3 = tr.t3es.dir;
   const key = st > 0 && t3 < 0 ? 'riskoff' : bd > 0 && t3 < 0 ? 'flight' : st > 0 ? 'caution' : bd < 0 && t3 > 0 ? 'altseason'
@@ -1150,6 +1198,113 @@ function macroBias(M, sym, dir){
   if (!M || !dir) return null;
   const v = M.bias[sym === 'BTCUSDT' ? 'btc' : 'alt'][dir > 0 ? 0 : 1];
   return v ? {v, t: `macro: ${M.name.toLowerCase()}`} : null;
+}
+
+/* ---------- Divergences: RSI and MACD histogram, regular bullish / bearish ---------- */
+function macdHist(c, f = 12, s = 26, g = 9){
+  const ef = ema(c, f), es = ema(c, s), m = c.map((_, i) => ef[i] - es[i]), sg = ema(m, g);
+  return m.map((v, i) => v - sg[i]);                        // NaN until the signal line exists
+}
+/* Swing highs / lows with k bars on each side. Swings in the last k bars are returned too (still forming). */
+function divPivots(h, l, k){
+  const hi = [], lo = [], L = h.length - 1;
+  for (let i = k; i <= L; i++){
+    let isH = true, isL = true;
+    for (let j = i - k; j <= Math.min(L, i + k); j++){
+      if (j === i) continue;
+      if (j < i ? h[j] >= h[i] : h[j] > h[i]) isH = false;     // ties: the first bar of an equal pair is the pivot
+      if (j < i ? l[j] <= l[i] : l[j] < l[i]) isL = false;
+    }
+    if (isH) hi.push(i); if (isL) lo.push(i);
+  }
+  return {hi, lo};
+}
+/* index of the indicator's low (side 1) or high (side -1) within ±w bars of a price swing */
+function divNear(v, i, side, w = 2){
+  let best = -1, bv = side > 0 ? Infinity : -Infinity;
+  for (let j = Math.max(0, i - w); j <= Math.min(v.length - 1, i + w); j++){
+    if (Number.isFinite(v[j]) && (side > 0 ? v[j] < bv : v[j] > bv)){ bv = v[j]; best = j; }
+  }
+  return best;
+}
+/* Does the swing pair a→b diverge on this indicator? side 1 = bullish (lows), -1 = bearish (highs). */
+function divPair(side, a, b, ind, h, l, A){
+  const px = side > 0 ? l : h, dp = side > 0 ? px[a] - px[b] : px[b] - px[a];
+  if (!(dp > 0.3 * A)) return null;                          // price must make a meaningful lower low / higher high
+  const ia = divNear(ind.v, a, side), ib = divNear(ind.v, b, side);
+  if (ia < 0 || ib < 0 || ib <= ia) return null;
+  const va = ind.v[ia], vb = ind.v[ib], di = side > 0 ? vb - va : va - vb;
+  if (!(di >= ind.minDiff)) return null;                     // the indicator must disagree by a real margin
+  if (ind.kind === 'rsi' && (side > 0 ? (va > 50 || vb > 50) : (va < 50 || vb < 50))) return null;      // RSI must be on the weak side (bullish) or strong side (bearish) of 50
+  if (ind.kind === 'macd'){                                  // two separate momentum waves: both extremes on the same side of zero, with a swing through zero between them
+    if (side > 0 ? (va >= -ind.tol * 5 || vb >= 0) : (va <= ind.tol * 5 || vb <= 0)) return null;
+    let cross = false; for (let j = ia + 1; j < ib; j++) if (side > 0 ? ind.v[j] > 0 : ind.v[j] < 0){ cross = true; break; }
+    if (!cross) return null;
+  }
+  for (let j = a + 1; j < b; j++){                           // nothing in between may cut through either line
+    const pl = px[a] + (px[b] - px[a]) * (j - a) / (b - a);
+    if (side > 0 ? px[j] < pl - 0.1 * A : px[j] > pl + 0.1 * A) return null;
+  }
+  for (let j = ia + 1; j < ib; j++){
+    const il = va + (vb - va) * (j - ia) / (ib - ia);
+    if (side > 0 ? ind.v[j] < il - ind.tol : ind.v[j] > il + ind.tol) return null;
+  }
+  return {ia, ib, va, vb, di, dp};
+}
+/*
+ * Regular divergences on one timeframe. cd = candles [t, o, h, l, c, v] (closed candles).
+ * Returns signals, newest first: {side, ind: 'rsi'|'macd'|'both', conf, ago, bars, a, b, tA, tB, pA, pB, rsiA, rsiB, mhA, mhB, score, level, trend, view}
+ *   conf  = the swing has k bars after it (it can no longer move); a still-forming swing can change with the next candle
+ *   ago   = candles since the swing was confirmed (0 = on the last closed candle); bars = candles since the swing itself
+ *   view  = the last ~100 bars with RSI and MACD histogram, for drawing (shared by the signals of one call)
+ */
+function divergences(cd, o = {}){
+  const P = {k: 5, minGap: 8, maxGap: 60, maxAgo: 10, back: 3, rsiLen: 14, ...o}, n = cd.length;
+  if (n < 80) return [];
+  const h = cd.map(x => x[2]), l = cd.map(x => x[3]), c = cd.map(x => x[4]), L = n - 1;
+  const R = rsi(c, P.rsiLen), M = macdHist(c), A = atr(h, l, c, 14), e20 = ema(c, 20), e50 = ema(c, 50);
+  let ms = 0, q = 0; for (let i = Math.max(0, n - 120); i < n; i++) if (Number.isFinite(M[i])){ ms += Math.abs(M[i]); q++; }
+  ms = q ? ms / q : 0;
+  if (!(ms > 0) || !Number.isFinite(A[L])) return [];
+  const IND = {rsi: {kind: 'rsi', v: R, minDiff: 3, tol: 1}, macd: {kind: 'macd', v: M, minDiff: 0.2 * ms, tol: 0.05 * ms}};
+  const from = Math.max(0, n - 100), pv = divPivots(h, l, P.k), out = [];
+  const view = {from, t: cd.slice(from).map(x => x[0]), o: cd.slice(from).map(x => x[1]), h: h.slice(from), l: l.slice(from), c: c.slice(from), r: R.slice(from), m: M.slice(from)};
+  const trend = Number.isFinite(e20[L]) && Number.isFinite(e50[L]) ? (e20[L] > e50[L] ? 1 : -1) : 0;
+  for (const side of [1, -1]){
+    const piv = side > 0 ? pv.lo : pv.hi, px = side > 0 ? l : h; let doneConf = false, doneForm = false;
+    for (let bi = piv.length - 1; bi >= 1; bi--){
+      const b = piv[bi], conf = L - b >= P.k, ago = conf ? L - b - P.k : 0;
+      if (ago > P.maxAgo) break;
+      if (conf ? doneConf : doneForm) continue;
+      let both = null, rs = null, mc = null;
+      for (let ai = bi - 1; ai >= Math.max(0, bi - P.back); ai--){
+        const a = piv[ai], gap = b - a;
+        if (a < 20 || gap > P.maxGap) break;                // indicators need ~20 bars of warm-up
+        if (gap < P.minGap) continue;
+        const r = divPair(side, a, b, IND.rsi, h, l, A[b]), m = divPair(side, a, b, IND.macd, h, l, A[b]);
+        if (r && m && !both) both = {a, r, m};
+        if (r && !rs) rs = {a, r};
+        if (m && !mc) mc = {a, m};
+      }
+      const mk = (ind, a, r, m) => {
+        const rb = r ? r.vb : R[divNear(R, b, side)], ra = r ? r.va : R[divNear(R, a, side)];
+        let s = ind === 'both' ? 35 : ind === 'rsi' ? 20 : 15;
+        s += Math.max(0, Math.min(15, (side > 0 ? 50 - rb : rb - 50) - 5));        // deep in oversold / overbought
+        s += r ? Math.min(15, r.di) : Math.min(15, m.di / ms * 8);                 // how far the indicator disagrees
+        s += Math.min(10, (r || m).dp / A[b] * 2);                                  // how far price pushed on
+        s += conf ? 10 : 0; s += ago <= 1 ? 10 : ago <= 3 ? 5 : 0;
+        s = Math.round(Math.max(0, Math.min(100, s)));
+        return {side, ind, conf, ago, bars: L - b, a, b, tA: cd[a][0], tB: cd[b][0], pA: px[a], pB: px[b], rsiA: ra, rsiB: rb,
+          mhA: m ? m.va : null, mhB: m ? m.vb : null, ri: r ? [r.ia, r.ib] : null, mi: m ? [m.ia, m.ib] : null,
+          score: s, level: s >= 70 ? 'strong' : s >= 50 ? 'medium' : 'weak', trend, view};
+      };
+      let emitted = false;
+      if (both){ out.push(mk('both', both.a, both.r, both.m)); emitted = true; }
+      else { if (rs){ out.push(mk('rsi', rs.a, rs.r, null)); emitted = true; } if (mc){ out.push(mk('macd', mc.a, null, mc.m)); emitted = true; } }
+      if (emitted){ if (conf) doneConf = true; else doneForm = true; }
+    }
+  }
+  return out.sort((x, y) => (x.bars - y.bars) || (y.score - x.score));
 }
 // ==ENGINE END==
 
@@ -1664,7 +1819,7 @@ async function scan(){
 
 function setAuto(){
   clearInterval(S.timer); const s = +$('auto').value;
-  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on || tgActive()) scan(); }, s * 1000);
+  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on || tgActive()) scan(); if (tgActive() && $('tgDiv').checked) divScan(); }, s * 1000);
 }
 
 function exportCSV(){
@@ -1683,14 +1838,15 @@ function exportCSV(){
 /* ---------- Views ---------- */
 function setView(v){
   S.view = v;
-  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro';
+  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = {macro: 'Macro', liq: 'Liquidation Map', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
+  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', liq: 'Liquidation Map', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   if (v === 'journal') renderJournal();
   if (v === 'map'){ MAP.anim = true; renderMap(); }
   if (v === 'macro'){ renderMacro(); if (!S.macro || Date.now() - S.macro.t > 36e5) loadMacro(false); }
+  if (v === 'div'){ dvSync(); renderDiv(); if (!DIV.t || Date.now() - DIV.t > 3e5) divScan(); }
   if (v === 'liq') liqEnter(); else liqWs();   // the live liquidation stream only runs while its tab is open
 }
 
@@ -1981,8 +2137,8 @@ function toast(msg, items){
 /* ---------- Telegram ---------- */
 const TG_KEY = 'onslaught-tg';
 function tgLoad(){ let o = {}; try { o = JSON.parse(localStorage.getItem(TG_KEY) || '{}'); } catch {}
-  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; }
-function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked})); } catch {} }
+  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgDiv').checked = !!o.div; }
+function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, div: $('tgDiv').checked})); } catch {} }
 const tgReady = () => /^\d+:[\w-]{20,}$/.test($('tgToken').value.trim()) && $('tgChat').value.trim() !== '';
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 /* Form-encoded POST = a "simple" CORS request (no preflight). If the browser can't read the reply, the message has usually still gone. */
@@ -2057,7 +2213,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden){ S.u
 
 /* ---------- Trade drawer ---------- */
 const PLAN_KEY = 'onslaught-plan';
-const D = {sym: null, dir: 1, entry: null, candles: null, row: null, plan: null, chart: null, series: null, lines: [], ro: null};
+const D = {sym: null, tf: null, div: null, dir: 1, entry: null, candles: null, row: null, plan: null, chart: null, series: null, lines: [], ro: null};
 let lwcLoading = null;
 function loadLWC(){
   if (window.LightweightCharts) return Promise.resolve();
@@ -2080,26 +2236,35 @@ function loadAcct(){
 function saveAcct(){
   try { localStorage.setItem(PLAN_KEY, JSON.stringify({acct: $('pAcct').value, risk: $('pRisk').value, lev: $('pLev').value, slMode: $('pSlMode').value, atrMult: $('pAtr').value})); } catch {}
 }
-async function openDrawer(sym){
-  const base = S.rows.find(r => r.sym === sym); if (!base) return;
-  const c = cfg();
-  Object.assign(D, {sym, row: derive(base, c), entry: null, candles: null, plan: null});
-  D.dir = D.row.bear >= 4 && D.row.bear > D.row.bull ? -1 : 1;
+async function openDrawer(sym, o = {}){
+  const tf = o.tf || S.tf, c = cfg();
+  let base = tf === S.tf ? S.rows.find(r => r.sym === sym) : null;
+  const info = base || DIV.uni.get(sym); if (!info) return;                 // scanner rows, or a pair from the Divergences tab
+  Object.assign(D, {sym, tf, div: o.div || null, row: null, entry: null, candles: null, plan: null});
+  D.dir = o.dir || 1;
   $('drawer').classList.add('open'); $('drawer').setAttribute('aria-hidden', 'false'); $('scrim').classList.add('open'); document.body.classList.add('noscroll');
-  $('dTitle').textContent = `${sym.replace('USDT', '')} · ${S.tf.toUpperCase()}`;
-  $('dSub').innerHTML = `${fmtPrice(base.price)} · <span class="${cls(base.chg)}">${fmtPct(base.chg)}</span> 24h · ${tagsOf(base.base).join(', ')}`;
+  $('dTitle').textContent = `${sym.replace('USDT', '')} · ${tf.toUpperCase()}`;
+  $('dSub').innerHTML = `${fmtPrice(info.price)} · <span class="${cls(info.chg)}">${fmtPct(info.chg)}</span> 24h · ${tagsOf(info.base).join(', ')}`;
   $('dTv').href = `https://www.tradingview.com/chart/?symbol=BINANCE:${sym}.P`;
-  renderChips(); $('pEntry').value = ''; $('dPlan').innerHTML = ''; $('dSize').innerHTML = ''; $('dWarn').innerHTML = ''; $('dCopied').textContent = '';
+  const dd = $('dDiv'); dd.hidden = !o.div; dd.className = 'ddiv' + (o.div ? o.div.side > 0 ? ' bull' : ' bear' : ''); dd.innerHTML = o.div ? dvBanner(o.div) : '';
+  $('dChips').innerHTML = ''; $('pEntry').value = ''; $('dPlan').innerHTML = ''; $('dSize').innerHTML = ''; $('dWarn').innerHTML = ''; $('dCopied').textContent = '';
   $('dChart').innerHTML = '<div class="dload">Loading chart…</div>';
+  if (base){ D.row = derive(base, c); if (!o.dir) D.dir = D.row.bear >= 4 && D.row.bear > D.row.bull ? -1 : 1; renderChips(); }
   render();
-  try { D.candles = await getKlines(sym, S.tf, c.closed); } catch { D.candles = null; }
+  if (!base){
+    try { base = await buildRow(info, tf, c); } catch { base = null; }
+    if (D.sym !== sym) return;
+    if (!base){ $('dChart').innerHTML = '<div class="dload">Could not load data for this pair.</div>'; return; }
+    D.row = derive(base, c); if (!o.dir) D.dir = D.row.bear >= 4 && D.row.bear > D.row.bull ? -1 : 1; renderChips();
+  }
+  try { D.candles = await getKlines(sym, tf, c.closed); } catch { D.candles = null; }
   if (D.sym !== sym) return;
   updatePlan(); drawChart();
 }
 function closeDrawer(){
   $('drawer').classList.remove('open'); $('drawer').setAttribute('aria-hidden', 'true'); $('scrim').classList.remove('open'); document.body.classList.remove('noscroll');
   if (D.ro) D.ro.disconnect(); if (D.chart) D.chart.remove();
-  Object.assign(D, {sym: null, chart: null, series: null, lines: [], ro: null});
+  Object.assign(D, {sym: null, tf: null, div: null, chart: null, series: null, lines: [], ro: null});
   render();
 }
 function renderChips(){
@@ -2119,7 +2284,8 @@ function renderChips(){
 }
 function updatePlan(){
   [...$('dDir').children].forEach(b => b.classList.toggle('on', +b.dataset.v === D.dir));
-  if (!D.candles || D.candles.length < 60){ $('dPlan').innerHTML = '<p class="mu">Not enough candle history for a plan.</p>'; return; }
+  if (!D.row || !D.candles){ $('dPlan').innerHTML = '<p class="mu">Loading…</p>'; return; }
+  if (D.candles.length < 60){ $('dPlan').innerHTML = '<p class="mu">Not enough candle history for a plan.</p>'; return; }
   const P = tradePlan(D.candles, D.dir, {slMode: $('pSlMode').value, atrMult: parseFloat($('pAtr').value) || 1.5, entry: D.entry});
   D.plan = P;
   const dec = decFor(P.entry), pct = x => fmtPct((x / P.entry - 1) * 100);
@@ -2140,7 +2306,7 @@ function updatePlan(){
 function renderWarnings(P, z){
   const r = D.row, w = [], long = P.dir > 0;
   const aligned = long ? r.bull >= 4 : r.bear >= 4;
-  if (r.d) w.push(aligned ? ['ok', `${long ? 'Bull' : 'Bear'}-aligned ${long ? r.bull : r.bear}/5 on ${S.tf.toUpperCase()}.`] : ['', `Not ${long ? 'bull' : 'bear'}-aligned (${long ? r.bull : r.bear}/5). This is a counter-signal trade.`]);
+  if (r.d) w.push(aligned ? ['ok', `${long ? 'Bull' : 'Bear'}-aligned ${long ? r.bull : r.bear}/5 on ${D.tf.toUpperCase()}.`] : ['', `Not ${long ? 'bull' : 'bear'}-aligned (${long ? r.bull : r.bear}/5). This is a counter-signal trade.`]);
   if (r.mtf){ const hi = r.mtf['1d']; if (hi != null && hi === -P.dir) w.push(['', `The 1D trend points the other way (${hi > 0 ? 'bull' : 'bear'}). Counter-trend trades need tighter management.`]); else if (r.mtfAll === P.dir) w.push(['ok', 'All three timeframes (1D, 4H, 1H) agree with this direction.']); }
   const tSame = r.trig.filter(t => t.dir === P.dir);
   if (tSame.length) w.push(['ok', `Fresh trigger${tSame.length > 1 ? 's' : ''}: ${tSame.map(t => t.name).join(', ')}.`]);
@@ -2172,7 +2338,7 @@ async function drawChart(){
   const ch = LightweightCharts.createChart(el, {width: el.clientWidth, height: el.clientHeight,
     layout: {background: {type: 'solid', color: cssv('--panel')}, textColor: cssv('--muted'), fontSize: 11},
     grid: {vertLines: {color: 'rgba(255,255,255,.04)'}, horzLines: {color: 'rgba(255,255,255,.04)'}},
-    rightPriceScale: {borderColor: cssv('--line')}, timeScale: {borderColor: cssv('--line'), timeVisible: S.tf !== '1d'}, crosshair: {mode: 0}});
+    rightPriceScale: {borderColor: cssv('--line')}, timeScale: {borderColor: cssv('--line'), timeVisible: D.tf !== '1d'}, crosshair: {mode: 0}});
   const cs = ch.addCandlestickSeries({upColor: cssv('--bull'), downColor: cssv('--bear'), borderVisible: false, wickUpColor: cssv('--bull'), wickDownColor: cssv('--bear'),
     priceFormat: {type: 'price', precision: dec, minMove: Math.pow(10, -dec)}});
   cs.setData(D.candles.map(k => ({time: T(k), open: k[1], high: k[2], low: k[3], close: k[4]})));
@@ -2184,6 +2350,15 @@ async function drawChart(){
     ls.setData(D.candles.map((k, i) => ({time: T(k), value: arr[i]})).filter(x => Number.isFinite(x.value))); };
   line(ema(cl, 20), cssv('--accent-lt')); line(ema(cl, 50), cssv('--info'));
   ch.timeScale().setVisibleLogicalRange({from: D.candles.length - 120, to: D.candles.length + 6});
+  if (D.div){                                               // the two swings of the divergence
+    const x = D.div, col = x.side > 0 ? cssv('--bull') : cssv('--bear'), tt = t => Math.floor(t / 1000), has = t => D.candles.some(k => k[0] === t);
+    if (has(x.tA) && has(x.tB)){
+      const dl = ch.addLineSeries({color: '#ffffff', lineWidth: 2, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false});
+      dl.setData([{time: tt(x.tA), value: x.pA}, {time: tt(x.tB), value: x.pB}]);
+      const mk = t => ({time: tt(t), position: x.side > 0 ? 'belowBar' : 'aboveBar', color: col, shape: x.side > 0 ? 'arrowUp' : 'arrowDown'});
+      cs.setMarkers([mk(x.tA), mk(x.tB)]);
+    }
+  }
   D.chart = ch; D.series = cs; D.lines = [];
   D.ro = new ResizeObserver(() => ch.applyOptions({width: el.clientWidth, height: el.clientHeight})); D.ro.observe(el);
   drawLines();
@@ -2199,7 +2374,7 @@ function drawLines(){
 function planText(){
   const P = D.plan, z = D.size; if (!P) return '';
   const dec = decFor(P.entry), pct = x => fmtPct((x / P.entry - 1) * 100);
-  return [`${P.dir > 0 ? 'LONG' : 'SHORT'} ${D.sym}.P (${S.tf.toUpperCase()})`,
+  return [`${P.dir > 0 ? 'LONG' : 'SHORT'} ${D.sym}.P (${D.tf.toUpperCase()})`,
     `Entry ${fp(P.entry, dec)}`,
     `SL ${fp(P.sl, dec)} (${pct(P.sl)}, ${P.slNote})`,
     ...P.tps.map((t, i) => `TP${i + 1} ${fp(t.price, dec)} (${pct(t.price)}, ${t.r.toFixed(1)}R, ${t.label})`),
@@ -2342,7 +2517,7 @@ function mapDrag(){
 }
 
 /* ---------- Macro (BTC.D, USDT.D+USDC.D, TOTAL3ES, OTHERS.D) ---------- */
-const MAC = {loading: false, win: 90, tv: 'CRYPTOCAP:BTC.D', tvShown: null};
+const MAC = {loading: false, win: 90, tf: 'd', tv: 'CRYPTOCAP:BTC.D', tvShown: null};
 const MAC_TONE = {riskoff: 'bad', flight: 'bad', caution: 'warn', btcled: 'warn', btcrally: 'good', riskon: 'good', altseason: 'good', mixed: 'neut'};
 const MAC_COND = {riskoff: 'stables ↑ · alts ↓', flight: 'BTC.D ↑ · alts ↓', caution: 'stables ↑', btcled: 'BTC.D ↑ · alts flat', btcrally: 'stables ↓ · alts ↑ · BTC.D ↑',
   riskon: 'stables ↓ · alts ↑ · BTC.D flat', altseason: 'BTC.D ↓ · alts ↑', mixed: 'anything else'};
@@ -2383,7 +2558,7 @@ function macApply(v){
 }
 async function loadMacro(force){
   if (MAC.loading) return;
-  try { const ck = await Cache.get('macro:v2'); if (!force && ck && Date.now() - ck.t < 36e5){ if (!S.macro || S.macro.t !== ck.t) macApply(ck); return; } } catch {}
+  try { const ck = await Cache.get('macro:v3'); if (!force && ck && Date.now() - ck.t < 36e5){ if (!S.macro || S.macro.t !== ck.t) macApply(ck); return; } } catch {}
   MAC.loading = true; if ($('macLoad')) $('macLoad').disabled = true;
   try {
     macStatus('Loading global market caps…');
@@ -2393,11 +2568,11 @@ async function loadMacro(force){
     if (!(p1 && Date.now() - p1.t < 36e5)) await Cache.set('cg:p1', {t: Date.now(), v: mk.map(x => ({symbol: x.symbol, market_cap: x.market_cap, current_price: x.current_price}))});
     const hist = {};
     for (const [k, id] of [['btc', 'bitcoin'], ['eth', 'ethereum'], ['usdt', 'tether'], ['usdc', 'usd-coin']]){
-      const ck = await Cache.get('cg:h:' + id).catch(() => null);
+      const ck = await Cache.get('cg:h365:' + id).catch(() => null);
       if (ck && Date.now() - ck.t < 12 * 36e5){ hist[k] = ck.v; continue; }      // history moves slowly: refetch twice a day
       macStatus(`Loading ${k.toUpperCase()} market-cap history…`);
-      hist[k] = (await cgJSON(`/coins/${id}/market_chart?vs_currency=usd&days=90&interval=daily`)).market_caps;
-      await Cache.set('cg:h:' + id, {t: Date.now(), v: hist[k]});
+      hist[k] = (await cgJSON(`/coins/${id}/market_chart?vs_currency=usd&days=365&interval=daily`)).market_caps;
+      await Cache.set('cg:h365:' + id, {t: Date.now(), v: hist[k]});
     }
     // today's point from the live global snapshot keeps the latest reading current between history refreshes
     const tot = g.total_market_cap.usd, pc = g.market_cap_percentage || {};
@@ -2409,15 +2584,15 @@ async function loadMacro(force){
     for (let i = 0; i < want.length; i += 8){
       macStatus(`Loading daily prices ${Math.min(i + 8, want.length)}/${want.length}…`);
       await Promise.all(want.slice(i, i + 8).map(async ({c, bs}) => { try {
-        const k = await getJSON(`${FAPI}/fapi/v1/klines?symbol=${bs}&interval=1d&limit=92`, WEIGHT, 1);
+        const k = await getJSON(`${FAPI}/fapi/v1/klines?symbol=${bs}&interval=1d&limit=366`, WEIGHT, 2);
         c.closes = new Map(k.map(x => [Math.floor(x[0] / 864e5) * 864e5, +x[4]])); } catch {} }));
     }
     const series = macroBuild({total: g.total_market_cap.usd, coins, hist});
     if (!series) throw new Error('Not enough macro history to compute the indices.');
     const v = {t: Date.now(), series, reg: macroRegime(series), cg: {btcD: g.market_cap_percentage.btc, usdtD: g.market_cap_percentage.usdt, usdcD: g.market_cap_percentage.usdc, total: g.total_market_cap.usd}};
-    await Cache.set('macro:v2', v); macApply(v);
+    await Cache.set('macro:v3', v); macApply(v);
     macStatus(`Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})} · refreshes hourly`);
-  } catch(e){ macStatus(e.message); MAC.failT = Date.now(); if (!S.macro){ const ck = await Cache.get('macro:v2').catch(() => null); if (ck) macApply(ck); } }
+  } catch(e){ macStatus(e.message); MAC.failT = Date.now(); if (!S.macro){ const ck = await Cache.get('macro:v3').catch(() => null); if (ck) macApply(ck); } }
   finally { MAC.loading = false; if ($('macLoad')) $('macLoad').disabled = false; }
 }
 function macChart(vals, e20s, tone){
@@ -2432,22 +2607,36 @@ function macChart(vals, e20s, tone){
 function emaSeries(vals, p){ const k = 2 / (p + 1); let e = vals[0]; return vals.map(v => (e = v * k + e * (1 - k))); }
 const signed = (v, d = 1) => v == null || !Number.isFinite(v) ? '—' : (v > 0 ? '+' : '') + v.toFixed(d);
 function biasTxt(v){ return v >= 1 ? `<b class="up">favoured (+${v})</b>` : v <= -2 ? `<b class="dn">avoid (${v})</b>` : v < 0 ? `<b style="color:var(--warn)">cautious (${v})</b>` : '<b class="mu">neutral (0)</b>'; }
+const MAC_WINS = {d: [[30, '30d'], [60, '60d'], [90, '90d'], [180, '6M'], [365, '1Y']], w: [[13, '3M'], [26, '6M'], [52, '1Y']]};
+function weekly(series){                                          // last reading of each week (weeks start Monday, UTC)
+  const out = [], wk = t => Math.floor((t / 864e5 + 3) / 7);
+  for (const x of series){ if (out.length && wk(out.at(-1).t) === wk(x.t)) out[out.length - 1] = x; else out.push(x); }
+  return out;
+}
+function macWinBar(){
+  const w = MAC_WINS[MAC.tf]; if (!w.some(([v]) => v === MAC.win)) MAC.win = MAC.tf === 'w' ? 26 : 90;
+  $('macWin').innerHTML = w.map(([v, l]) => `<button data-v="${v}" class="${v === MAC.win ? 'on' : ''}">${l}</button>`).join('');
+}
 function renderMacro(){
   if ($('viewMacro').hidden) return;
-  const M = S.macro, R = M && M.reg;
-  if (!M || !R){ $('macVerdict').innerHTML = `<div class="panel dload" style="height:160px">${MAC.loading ? 'Loading the macro indices…' : 'Press Refresh to load the macro indices.'}</div>`; $('macCards').innerHTML = ''; macMatrix(null); macTv(); return; }
+  macWinBar();
+  const M = S.macro, W = MAC.tf === 'w';
+  if (M && W && !M.regW && M.series){ M.weekly = weekly(M.series); M.regW = macroRegime(M.weekly, 2); }
+  const R = M && (W ? M.regW : M.reg), SER = M && (W ? M.weekly : M.series), u = W ? 'w' : 'd', uL = W ? 'week' : 'day';
+  if (!M || !M.reg){ $('macVerdict').innerHTML = `<div class="panel dload" style="height:160px">${MAC.loading ? 'Loading the macro indices…' : 'Press Refresh to load the macro indices.'}</div>`; $('macCards').innerHTML = ''; macMatrix(null); macTv(); return; }
+  if (W && !R){ $('macVerdict').innerHTML = '<div class="panel dload" style="height:120px">Not enough weekly history yet for a weekly read. Press Refresh to load a full year.</div>'; $('macCards').innerHTML = ''; macMatrix(null); macTv(); return; }
   const tone = MAC_TONE[R.key], arrow = d => d > 0 ? '▲' : d < 0 ? '▼' : '◆';
-  $('macVerdict').innerHTML = `<div class="macv ${tone}"><span class="mname">${R.name}</span><span class="mtext">${R.text}${R.froth ? ' <span class="froth">🔥 Froth</span> Small caps jumped over 15% in share this month: late-stage speculation, tighten stops on small-cap longs.' : ''}</span>
-    <span class="mbias"><span>Alt longs ${biasTxt(R.bias.alt[0])} · shorts ${biasTxt(R.bias.alt[1])}</span><span>BTC longs ${biasTxt(R.bias.btc[0])} · shorts ${biasTxt(R.bias.btc[1])}</span><span class="mu">grade points</span></span>
+  $('macVerdict').innerHTML = `<div class="macv ${tone}"><span class="mname">${W ? '<span class="mtf">Weekly</span>' : ''}${R.name}</span><span class="mtext">${R.text}${R.froth ? ' <span class="froth">🔥 Froth</span> Small caps jumped over 15% in share this month: late-stage speculation, tighten stops on small-cap longs.' : ''}</span>
+    <span class="mbias"><span>Alt longs ${biasTxt(R.bias.alt[0])} · shorts ${biasTxt(R.bias.alt[1])}</span><span>BTC longs ${biasTxt(R.bias.btc[0])} · shorts ${biasTxt(R.bias.btc[1])}</span><span class="mu">${W ? 'bias on the weekly view · grades use the daily read' + (M.reg && M.reg.key !== R.key ? ` (${M.reg.name})` : '') : 'grade points'}</span></span>
     <div class="mdirs">${MAC_METRICS.map(m => { const t = R.tr[m.k]; return `<span class="mdir ${m.tone(t.dir)}">${m.name} ${arrow(t.dir)} ${t.dir ? m.words[t.dir > 0 ? 0 : 1] : 'flat'}</span>`; }).join('')}<span class="mu" style="margin-left:auto;font-size:11.5px">as of ${new Date(M.t).toLocaleString([], {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})}</span></div></div>`;
-  const ser = M.series.slice(-MAC.win);
-  $('macCards').innerHTML = MAC_METRICS.map(m => { const t = R.tr[m.k], vals = ser.map(x => x[m.k]), e20 = emaSeries(M.series.map(x => x[m.k]), 20).slice(-MAC.win), tn = m.tone(t.dir);
+  const ser = SER.slice(-MAC.win);
+  $('macCards').innerHTML = MAC_METRICS.map(m => { const t = R.tr[m.k], vals = ser.map(x => x[m.k]), e20 = emaSeries(SER.map(x => x[m.k]), 20).slice(-MAC.win), tn = m.tone(t.dir);
     const extra = m.k === 'stD' ? `<span class="mu">USDT ${ser.at(-1).usdtD.toFixed(2)}% · USDC ${ser.at(-1).usdcD.toFixed(2)}%</span>` : '';
     const wr = (vals.at(-1) / vals[0] - 1) * 100;
     return `<div class="mcard ${tn} ${MAC.tv.includes(m.name.split(' ')[0]) ? 'on' : ''}" data-tv="${m.k === 'stD' ? 'CRYPTOCAP:USDT.D+CRYPTOCAP:USDC.D' : 'CRYPTOCAP:' + m.name}" title="Click to show the official TradingView chart">
       <div class="mh"><span class="mk">${m.name}</span><span class="mdir ${tn}">${arrow(t.dir)} ${t.dir ? m.words[t.dir > 0 ? 0 : 1].split(':')[0] : 'flat'}</span></div><div class="ms">${m.sub}</div>
-      <div class="mv">${m.fmt(t.v)}</div><div class="mc"><span>7d <b class="${cls(t.r7)}">${signed(t.r7)}%</b></span><span>30d <b class="${cls(t.r30)}">${signed(t.r30)}%</b></span><span>${MAC.win}d <b class="${cls(wr)}">${signed(wr)}%</b></span>${extra}</div>
-      ${macChart(vals, e20, tn)}<div class="ms">${MAC.win} days · dashed = 20-day average</div></div>`; }).join('');
+      <div class="mv">${m.fmt(t.v)}</div><div class="mc"><span>${W ? '7w' : '7d'} <b class="${cls(t.r7)}">${signed(t.r7)}%</b></span><span>${W ? '30w' : '30d'} <b class="${cls(t.r30)}">${signed(t.r30)}%</b></span><span>${MAC_WINS[MAC.tf].find(([v]) => v === MAC.win)[1]} <b class="${cls(wr)}">${signed(wr)}%</b></span>${extra}</div>
+      ${macChart(vals, e20, tn)}<div class="ms">${vals.length} ${uL}s · dashed = 20-${uL} average</div></div>`; }).join('');
   macMatrix(R); macTv();
 }
 function macMatrix(R){
@@ -2455,14 +2644,14 @@ function macMatrix(R){
 }
 function macTv(){
   [...$('macTv').children].forEach(b => b.classList.toggle('on', b.dataset.v === MAC.tv));
-  if (MAC.tvShown === MAC.tv) return; MAC.tvShown = MAC.tv;
+  if (MAC.tvShown === MAC.tv + MAC.tf) return; MAC.tvShown = MAC.tv + MAC.tf;
   // The script-based Advanced Chart widget takes its settings as JSON, so spread symbols such as USDT.D+USDC.D survive
   // (the old URL-based embed turned the "+" into a space).
   const box = $('macTvBox');
   box.innerHTML = '<div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div>';
   const sc = document.createElement('script');
   sc.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'; sc.async = true; sc.type = 'text/javascript';
-  sc.text = JSON.stringify({autosize: true, symbol: MAC.tv, interval: 'D', timezone: 'Etc/UTC', theme: 'dark', style: '1', locale: 'en',
+  sc.text = JSON.stringify({autosize: true, symbol: MAC.tv, interval: MAC.tf === 'w' ? 'W' : 'D', timezone: 'Etc/UTC', theme: 'dark', style: '1', locale: 'en',
     backgroundColor: '#07070b', gridColor: 'rgba(255,255,255,0.05)', allow_symbol_change: true, withdateranges: true, hide_side_toolbar: false, save_image: false, calendar: false, support_host: 'https://www.tradingview.com'});
   box.firstChild.appendChild(sc);
 }
@@ -2820,6 +3009,187 @@ function liveFlush(){
 function liveToggle(){ LIVE.on = !LIVE.on; try { localStorage.setItem('onslaught-live', LIVE.on ? '1' : '0'); } catch {}
   if (LIVE.on) liveConnect(); else { if (LIVE.ws) LIVE.ws.close(); LIVE.ws = null; liveSet('off'); } }
 
+/* ---------- Divergences tab ---------- */
+const DV_TFS = ['15m', '1h', '4h', '1d'], DV_LBL = {'15m': '15m', '1h': '1H', '4h': '4H', '1d': '1D'};
+const DV_KEY = 'onslaught-div', DVSENT_KEY = 'onslaught-divsent', DV_ALERT_TFS = ['1h', '4h', '1d'], DV_ALERT_MIN = 70, DV_MAX = 60, DV_TOP = 100;
+const DIV = {rows: [], t: 0, scanning: false, uni: new Map(), tfs: new Set(DV_TFS), ind: 'all', dir: 0, conf: true, age: 5, str: 0, errShown: false};
+(function dvLoad(){
+  try { const o = JSON.parse(localStorage.getItem(DV_KEY) || '{}');
+    if (Array.isArray(o.tfs) && o.tfs.some(t => DV_TFS.includes(t))) DIV.tfs = new Set(o.tfs.filter(t => DV_TFS.includes(t)));
+    if (['all', 'rsi', 'macd', 'both'].includes(o.ind)) DIV.ind = o.ind;
+    if (o.dir === 1 || o.dir === -1) DIV.dir = o.dir;
+    if (o.conf === false) DIV.conf = false;
+    if ([3, 5, 10].includes(+o.age)) DIV.age = +o.age;
+    if ([0, 50, 70].includes(+o.str)) DIV.str = +o.str;
+  } catch {}
+})();
+function dvSave(){ try { localStorage.setItem(DV_KEY, JSON.stringify({tfs: [...DIV.tfs], ind: DIV.ind, dir: DIV.dir, conf: DIV.conf, age: DIV.age, str: DIV.str})); } catch {} }
+function dvSync(){
+  for (const b of $('dvTf').children) b.classList.toggle('on', DIV.tfs.has(b.dataset.v));
+  for (const b of $('dvInd').children) b.classList.toggle('on', b.dataset.v === DIV.ind);
+  for (const b of $('dvDir').children) b.classList.toggle('on', +b.dataset.v === DIV.dir);
+  $('dvConf').checked = DIV.conf; $('dvAge').value = DIV.age; $('dvStr').value = DIV.str;
+}
+
+async function divScan(o = {}){
+  if (DIV.scanning) return;
+  DIV.scanning = true; $('dvScan').disabled = true;
+  const st = t => $('dvStatus').textContent = t, pr = w => $('dvProg').style.width = w + '%';
+  let lastErr = null;
+  try {
+    st('Loading pairs…'); pr(2);
+    const list = (await getUniverse()).slice(0, DV_TOP);
+    DIV.uni = new Map(list.map(u => [u.sym, u]));
+    const jobs = []; for (const u of list) for (const tf of DV_TFS) jobs.push([u, tf]);
+    const out = []; let i = 0, done = 0, fails = 0;
+    async function worker(){
+      while (i < jobs.length){
+        const [u, tf] = jobs[i++];
+        try { const k = await getKlines(u.sym, tf, true); for (const s of divergences(k)) out.push({...s, sym: u.sym, tf}); }
+        catch (e){ if (/418|banned|refused/.test(e.message)) throw e; fails++; lastErr = e; }
+        done++;
+        if (done % 20 === 0 || done === jobs.length){ pr(2 + 98 * done / jobs.length); st(`Scanning ${done}/${jobs.length}…`); }
+        if (done % 100 === 0 && done < jobs.length){ DIV.rows = out.slice(); renderDiv(); }
+      }
+    }
+    await Promise.all(Array.from({length: Math.min(CONCURRENCY, jobs.length)}, worker));
+    if (!out.length && fails > jobs.length / 2) throw lastErr || new Error('Could not load candles.');
+    DIV.rows = out; DIV.t = Date.now();
+    st(`Done · ${list.length} pairs · ${new Date().toLocaleTimeString()}${fails ? ` · ${fails} skipped` : ''}`);
+    renderDiv();
+    await divAlert(out);
+  } catch(e){ st(location.protocol === 'about:' ? SANDBOX_MSG : e.message); }
+  finally { DIV.scanning = false; $('dvScan').disabled = false; setTimeout(() => { if (!DIV.scanning) pr(0); }, 800); }
+}
+
+const dvKey = x => `${x.sym}|${x.tf}|${x.side}|${x.tB}|${x.ind}`;
+function dvFiltered(){
+  const f = x => DIV.tfs.has(x.tf) && x.ago <= DIV.age && x.score >= DIV.str && (!DIV.dir || x.side === DIV.dir) && (!DIV.conf || x.conf)
+    && (DIV.ind === 'all' || (DIV.ind === 'both' ? x.ind === 'both' : x.ind === DIV.ind || x.ind === 'both'));
+  return DIV.rows.filter(f).sort((a, b) => b.score - a.score || a.bars - b.bars);
+}
+const dvAge = x => x.conf ? (x.ago === 0 ? 'Confirmed on the last candle' : `Confirmed ${x.ago} candle${x.ago > 1 ? 's' : ''} ago`) : `Forming · swing ${x.bars ? x.bars + ' candle' + (x.bars > 1 ? 's' : '') + ' ago' : 'on the last candle'}`;
+const dvIndLbl = x => x.ind === 'both' ? 'RSI + MACD' : x.ind === 'rsi' ? 'RSI' : 'MACD';
+const dvMacd = x => x.mhA != null && x.mhA !== 0 ? Math.round((1 - Math.abs(x.mhB) / Math.abs(x.mhA)) * 100) : null;   // how much weaker the histogram swing is
+const dvCtx = x => !x.trend ? null : x.side * x.trend > 0
+  ? ['With trend', 'In the direction of the EMA20 / EMA50 trend: a ' + (x.side > 0 ? 'pullback' : 'bounce') + ' may be ending.']
+  : ['Against trend', 'Against the EMA20 / EMA50 trend: a reversal attempt, riskier than a divergence with the trend.'];
+const dvTip = x => `${x.side > 0 ? 'Bullish' : 'Bearish'} divergence on ${DV_LBL[x.tf]}\nPrice ${fmtPrice(x.pA)} → ${fmtPrice(x.pB)}\nRSI ${x.rsiA.toFixed(1)} → ${x.rsiB.toFixed(1)}${x.mhA != null ? `\nMACD histogram ${x.mhA.toPrecision(3)} → ${x.mhB.toPrecision(3)}` : ''}\nStrength ${x.score}/100`;
+
+/* Mini chart: last 100 candles, the two swings joined by a line on price and on each indicator that diverges. */
+function dvChart(x){
+  const v = x.view, n = v.t.length, W = 300, both = x.ind === 'both', showR = x.ind !== 'macd', showM = x.ind !== 'rsi';
+  const pH = 62, iH = both ? 26 : 36, gap = 6, rT = pH + gap, mT = rT + (showR ? iH + gap : 0), H = pH + (showR ? gap + iH : 0) + (showM ? gap + iH : 0);
+  const px = i => 4 + (i + .5) * (W - 8) / n, bw = Math.max(1, (W - 8) / n * .62), f = q => q.toFixed(1), col = x.side > 0 ? 'var(--bull)' : 'var(--bear)';
+  let lo = Infinity, hi = -Infinity; for (let i = 0; i < n; i++){ if (v.l[i] < lo) lo = v.l[i]; if (v.h[i] > hi) hi = v.h[i]; }
+  const rg = hi - lo || 1, py = p => 3 + (hi - p) / rg * (pH - 6);
+  let uw = '', ub = '', dw = '', db = '';
+  for (let i = 0; i < n; i++){
+    const xx = f(px(i)), up = v.c[i] >= v.o[i], y1 = py(v.o[i]); let y2 = py(v.c[i]); if (Math.abs(y2 - y1) < .8) y2 = y1 + .8;
+    const w = `M${xx} ${f(py(v.h[i]))}V${f(py(v.l[i]))}`, b = `M${xx} ${f(y1)}V${f(y2)}`;
+    if (up){ uw += w; ub += b; } else { dw += w; db += b; }
+  }
+  let s = `<svg class="dvsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(dvTip(x).replace(/\n/g, ', '))}"><title>${esc(dvTip(x))}</title>`;
+  s += `<path d="${uw}" stroke="var(--bull)" stroke-width="1" fill="none" opacity=".75"/><path d="${ub}" stroke="var(--bull)" stroke-width="${f(bw)}" fill="none" opacity=".9"/>`;
+  s += `<path d="${dw}" stroke="var(--bear)" stroke-width="1" fill="none" opacity=".75"/><path d="${db}" stroke="var(--bear)" stroke-width="${f(bw)}" fill="none" opacity=".9"/>`;
+  const a = x.a - v.from, b = x.b - v.from;
+  const link = (xa, ya, xb, yb, hollow) => `<line x1="${f(xa)}" y1="${f(ya)}" x2="${f(xb)}" y2="${f(yb)}" stroke="#fff" stroke-width="1.5" ${hollow ? 'stroke-dasharray="3 2"' : ''} opacity=".95"/>`
+    + `<circle cx="${f(xa)}" cy="${f(ya)}" r="2.6" fill="${col}" stroke="#000" stroke-width=".8"/><circle cx="${f(xb)}" cy="${f(yb)}" r="2.6" fill="${hollow ? '#000' : col}" stroke="${hollow ? col : '#000'}" stroke-width=".8"/>`;
+  s += link(px(a), py(x.pA), px(b), py(x.pB), !x.conf);
+  if (showR){
+    const ry = r => rT + 2 + (1 - (Math.min(95, Math.max(5, r)) - 5) / 90) * (iH - 4);
+    s += `<rect x="0" y="${rT}" width="${W}" height="${iH}" fill="rgba(255,255,255,.03)"/><line x1="0" x2="${W}" y1="${f(ry(70))}" y2="${f(ry(70))}" stroke="var(--line)" stroke-dasharray="2 3"/><line x1="0" x2="${W}" y1="${f(ry(30))}" y2="${f(ry(30))}" stroke="var(--line)" stroke-dasharray="2 3"/>`;
+    let d = ''; for (let i = 0; i < n; i++) if (Number.isFinite(v.r[i])) d += (d ? 'L' : 'M') + f(px(i)) + ' ' + f(ry(v.r[i]));
+    s += `<path d="${d}" stroke="var(--info)" stroke-width="1.2" fill="none"/>`;
+    const [ia, ib] = x.ri.map(j => j - v.from);
+    s += link(px(ia), ry(v.r[ia]), px(ib), ry(v.r[ib]), !x.conf);
+    s += `<text x="3" y="${rT + 8}" font-size="7" fill="var(--muted)">RSI</text>`;
+  }
+  if (showM){
+    let mm = 0; for (let i = 0; i < n; i++) if (Number.isFinite(v.m[i])) mm = Math.max(mm, Math.abs(v.m[i]));
+    mm = mm || 1; const mid = mT + iH / 2, my = m => mid - m / mm * (iH / 2 - 2);
+    let pp = '', pn = ''; for (let i = 0; i < n; i++){ const m = v.m[i]; if (!Number.isFinite(m)) continue; const seg = `M${f(px(i))} ${f(mid)}V${f(my(m))}`; if (m >= 0) pp += seg; else pn += seg; }
+    s += `<rect x="0" y="${mT}" width="${W}" height="${iH}" fill="rgba(255,255,255,.03)"/><path d="${pp}" stroke="var(--bull)" stroke-width="${f(bw)}" opacity=".6" fill="none"/><path d="${pn}" stroke="var(--bear)" stroke-width="${f(bw)}" opacity=".6" fill="none"/><line x1="0" x2="${W}" y1="${f(mid)}" y2="${f(mid)}" stroke="var(--line)"/>`;
+    const [ia, ib] = x.mi.map(j => j - v.from);
+    s += link(px(ia), my(v.m[ia]), px(ib), my(v.m[ib]), !x.conf);
+    s += `<text x="3" y="${mT + 8}" font-size="7" fill="var(--muted)">MACD</text>`;
+  }
+  return s + '</svg>';
+}
+function dvCard(x){
+  const bull = x.side > 0, ctx = dvCtx(x), mc = dvMacd(x), base = x.sym.replace('USDT', '');
+  return `<article class="dvc ${bull ? 'bull' : 'bear'}" data-k="${esc(dvKey(x))}" tabindex="0" role="button" aria-label="${esc(base + ' ' + DV_LBL[x.tf] + ' ' + (bull ? 'bullish' : 'bearish') + ' divergence. Open trade plan')}">
+    <div class="dvh"><b>${esc(base)}</b><span class="tag">${DV_LBL[x.tf]}</span><span class="dvside ${bull ? 'up' : 'dn'}">${bull ? '▲ Bullish' : '▼ Bearish'}</span><span class="dvind ${x.ind}">${dvIndLbl(x)}</span></div>
+    ${dvChart(x)}
+    <div class="dvf"><span class="${x.conf ? '' : 'warn'}">${dvAge(x)}</span><span>Price <b>${fmtPrice(x.pA)} → ${fmtPrice(x.pB)}</b></span><span>RSI <b>${x.rsiA.toFixed(0)} → ${x.rsiB.toFixed(0)}</b></span>${mc != null ? `<span title="MACD histogram ${x.mhA.toPrecision(3)} → ${x.mhB.toPrecision(3)}">MACD hist <b>−${mc}%</b></span>` : ''}</div>
+    <div class="dvf"><span class="dvs ${x.level}" title="Strength 0–100: indicators that agree, RSI zone, size of the disagreement, how far price pushed, confirmation and freshness">${x.level[0].toUpperCase() + x.level.slice(1)} · ${x.score}</span>${ctx ? `<span title="${ctx[1]}">${ctx[0]}</span>` : ''}</div>
+  </article>`;
+}
+function renderDiv(){
+  if ($('viewDiv').hidden) return;
+  const all = dvFiltered(), rows = all.slice(0, DV_MAX);
+  const nb = all.filter(x => x.side > 0).length, nboth = all.filter(x => x.ind === 'both').length;
+  $('dvSum').innerHTML = DIV.t ? `<b>${all.length}</b> signal${all.length === 1 ? '' : 's'} · <span class="up">▲ ${nb} bullish</span> · <span class="dn">▼ ${all.length - nb} bearish</span> · ${nboth} with RSI + MACD${all.length > DV_MAX ? ` · showing the ${DV_MAX} strongest` : ''}` : '';
+  $('dvGrid').innerHTML = rows.length ? rows.map(dvCard).join('') : `<div class="panel mu" style="grid-column:1/-1">${DIV.scanning ? 'Scanning…' : DIV.t ? 'No divergences match these filters right now. Try a longer age, "Any" strength, or more timeframes.' : 'Press Scan to look for divergences in the top 100 pairs.'}</div>`;
+}
+
+/* ---------- Divergence alerts (Telegram) ---------- */
+const dvId = x => `${x.sym}|${x.tf}|${x.side}|${x.tB}`;
+function dvSentLoad(){ try { return JSON.parse(localStorage.getItem(DVSENT_KEY) || '{}'); } catch { return {}; } }
+function dvSentSave(o){ try { localStorage.setItem(DVSENT_KEY, JSON.stringify(o)); } catch {} }
+async function divPlan(sym, tf, dir){
+  let cd = await Cache.get(`k:${sym}:${tf}`); if (!cd) return null;
+  const cur = Math.floor(Date.now() / TF_MS[tf]) * TF_MS[tf]; cd = cd.filter(k => k[0] < cur);
+  if (cd.length < 60) return null;
+  let slMode = 'swing', atrMult = 1.5; try { const o = JSON.parse(localStorage.getItem(PLAN_KEY) || '{}'); slMode = o.slMode || slMode; atrMult = parseFloat(o.atrMult) || atrMult; } catch {}
+  return tradePlan(cd, dir, {slMode, atrMult, entry: null});
+}
+async function divAlertText(items){
+  const lines = [`🔀 <b>Onslaught · ${items.length} new divergence${items.length > 1 ? 's' : ''}</b>`];
+  if (S.macro && S.macro.reg) lines.push(`🌐 Macro: ${esc(S.macro.reg.name)}${S.macro.reg.froth ? ' 🔥' : ''}`);
+  for (const x of items.slice(0, 6)){
+    const bull = x.side > 0, dec = decFor(x.pB), mc = dvMacd(x), ctx = dvCtx(x);
+    lines.push('', `<b>${esc(x.sym.replace('USDT', ''))} ${DV_LBL[x.tf]} · ${bull ? 'BULLISH 🟢' : 'BEARISH 🔴'}</b> · RSI + MACD · ${x.level} (${x.score})`,
+      `Price ${fp(x.pA, dec)} → ${fp(x.pB, dec)} (${bull ? 'lower low' : 'higher high'}) · RSI ${x.rsiA.toFixed(0)} → ${x.rsiB.toFixed(0)}${mc != null ? ` · MACD hist −${mc}%` : ''}`,
+      `${dvAge(x)}${ctx ? ' · ' + ctx[0].toLowerCase() + (x.side * x.trend < 0 ? ' ⚠️' : '') : ''}`);
+    if ($('tgPlan').checked){
+      const P = await divPlan(x.sym, x.tf, x.side);
+      if (P){ const pc = v => fmtPct((v / P.entry - 1) * 100);
+        lines.push(`Entry ${fp(P.entry, dec)} · SL ${fp(P.sl, dec)} (${pc(P.sl)})`, P.tps.map((t, i) => `TP${i + 1} ${fp(t.price, dec)} (${t.r.toFixed(1)}R)`).join(' · '));
+        const w = Math.abs(P.sl / P.entry - 1) * 100; if (w >= 12) lines.push(`⚠️ wide stop (${w.toFixed(1)}%): size down`); }
+    }
+    lines.push(`<a href="https://www.tradingview.com/chart/?symbol=BINANCE:${x.sym}.P">Chart</a>`);
+  }
+  if (items.length > 6) lines.push('', `+${items.length - 6} more in the Divergences tab`);
+  return lines.join('\n');
+}
+/* Alerts: RSI + MACD on the same swings, confirmed, strong, on 1H / 4H / 1D. The first run only records what already exists. */
+async function divAlert(rows){
+  if (!tgActive() || !$('tgDiv').checked) return;
+  const cand = rows.filter(x => DV_ALERT_TFS.includes(x.tf) && x.ind === 'both' && x.conf && x.ago <= 2 && x.score >= DV_ALERT_MIN), sent = dvSentLoad(), now = Date.now();
+  for (const k of Object.keys(sent)) if (k !== '_base' && now - sent[k] > 14 * 864e5) delete sent[k];
+  if (!sent._base){ for (const x of cand) sent[dvId(x)] = now; sent._base = now; dvSentSave(sent); toast(`Divergence alerts are on. ${cand.length} existing signal${cand.length === 1 ? '' : 's'} noted; you'll be messaged about new ones.`); return; }
+  const fresh = cand.filter(x => !sent[dvId(x)]).sort((a, b) => b.score - a.score);
+  if (!fresh.length){ dvSentSave(sent); return; }
+  try { await tgSend(await divAlertText(fresh)); for (const x of fresh) sent[dvId(x)] = now; dvSentSave(sent); DIV.errShown = false; }
+  catch(e){ dvSentSave(sent); if (!DIV.errShown){ DIV.errShown = true; toast('Divergence alert not sent: ' + e.message); } }
+}
+
+/* Row for the trade drawer when the pair isn't in the Crypto Scanner results (same data the scanner builds). */
+async function buildRow(u, tf, c){
+  const others = $('mtfOn').checked ? MTF_TFS.filter(t => t !== tf) : [], needD = tf !== '1d' && !others.includes('1d');
+  const [k, oi, dExtra, ...ok] = await Promise.all([getKlines(u.sym, tf, c.closed), getOI(u.sym, tf), needD ? getKlines(u.sym, '1d', true).catch(() => null) : null, ...others.map(t => getKlines(u.sym, t, c.closed).catch(() => null))]);
+  const ev = evaluate(k, c);
+  let mtf = null;
+  if (others.length){ mtf = {}; for (const t of MTF_TFS) mtf[t] = t === tf ? (ev.incomplete ? null : ev.bull >= 3 ? 1 : ev.bear >= 3 ? -1 : 0) : (ok[others.indexOf(t)] ? tfDir(ok[others.indexOf(t)], c) : null); }
+  const today = Math.floor(Date.now() / 864e5) * 864e5, dRaw = tf === '1d' ? k : needD ? dExtra : ok[others.indexOf('1d')];
+  return {...u, ev, oi, mtf, ret7: ret7d(u.price, dRaw ? dRaw.filter(x => x[0] < today) : null)};
+}
+function dvBanner(x){
+  const bull = x.side > 0, mc = dvMacd(x), ctx = dvCtx(x);
+  return `<b class="${bull ? 'up' : 'dn'}">${bull ? 'Bullish' : 'Bearish'} divergence</b> · ${dvIndLbl(x)} · ${DV_LBL[x.tf]} · ${dvAge(x).toLowerCase()}<br><span class="mu">Price ${fmtPrice(x.pA)} → ${fmtPrice(x.pB)} · RSI ${x.rsiA.toFixed(0)} → ${x.rsiB.toFixed(0)}${mc != null ? ` · MACD hist −${mc}%` : ''} · ${x.level} (${x.score})${ctx ? ' · ' + ctx[0].toLowerCase() : ''}</span>`;
+}
+
 /* ---------- Wire up ---------- */
 const SANDBOX_MSG = 'This page is running inside a sandboxed preview that blocks network requests. Download the file and open it in a normal browser tab (or host it on GitHub Pages) to scan.';
 document.addEventListener('securitypolicyviolation', e => {
@@ -2869,7 +3239,7 @@ $('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.
   if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Crypto Scanner scan that includes this coin to open its trade plan.'); return; }
   const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
 $('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
-try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'macro') setView(v); } catch {}
+try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'macro' || v === 'div') setView(v); } catch {}
 $('alertBtn').onclick = toggleAlerts; paintAlertBtn();
 for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
 for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
@@ -2893,7 +3263,8 @@ $('lqLoad').onclick = loadLiq;
 $('lqAll').onchange = renderLiqFeed;
 $('macLoad').onclick = () => loadMacro(true);
 
-$('macWin').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.win = +b.dataset.v; [...$('macWin').children].forEach(x => x.classList.toggle('on', x === b)); renderMacro(); };
+$('macWin').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.win = +b.dataset.v; renderMacro(); };
+$('macTf').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.tf = b.dataset.v; [...$('macTf').children].forEach(x => x.classList.toggle('on', x === b)); renderMacro(); };
 $('macTv').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.tv = b.dataset.v; renderMacro(); };
 $('macCards').onclick = e => { const c = e.target.closest('[data-tv]'); if (!c) return; MAC.tv = c.dataset.tv; renderMacro(); $('macTvBox').scrollIntoView({behavior: 'smooth', block: 'center'}); };
 $('regime').addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (g) setView(g.dataset.goto); });
@@ -2971,6 +3342,25 @@ $('stats').onclick = e => { const c = e.target.closest('.stat'); if (!c) return;
 $('resetCache').onclick = async () => { await Cache.clear(); infoCache = null; setStatus('', 'Cache cleared'); };
 $('thead').onclick = e => { const th = e.target.closest('th'); if (!th) return; const k = th.dataset.k;
   S.sort = S.sort.k === k ? {k, dir: -S.sort.dir} : {k, dir: ['sym','sector'].includes(k) ? 1 : -1}; render(); };
+$('dvTf').onclick = e => { const b = e.target.closest('button'); if (!b) return; const t = b.dataset.v;
+  if (DIV.tfs.has(t)){ if (DIV.tfs.size > 1) DIV.tfs.delete(t); } else DIV.tfs.add(t); dvSave(); dvSync(); renderDiv(); };
+$('dvInd').onclick = e => { const b = e.target.closest('button'); if (!b) return; DIV.ind = b.dataset.v; dvSave(); dvSync(); renderDiv(); };
+$('dvDir').onclick = e => { const b = e.target.closest('button'); if (!b) return; DIV.dir = +b.dataset.v; dvSave(); dvSync(); renderDiv(); };
+$('dvConf').onchange = () => { DIV.conf = $('dvConf').checked; dvSave(); renderDiv(); };
+$('dvAge').onchange = () => { DIV.age = +$('dvAge').value; dvSave(); renderDiv(); };
+$('dvStr').onchange = () => { DIV.str = +$('dvStr').value; dvSave(); renderDiv(); };
+$('dvScan').onclick = () => divScan();
+const dvOpen = el => { const a = el.closest('.dvc'); if (!a) return; const x = DIV.rows.find(r => dvKey(r) === a.dataset.k); if (x) openDrawer(x.sym, {tf: x.tf, dir: x.side, div: x}); };
+$('dvGrid').onclick = e => dvOpen(e.target);
+$('dvGrid').onkeydown = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); dvOpen(e.target); } };
+$('tgDiv').onchange = () => {
+  if ($('tgDiv').checked && !$('tgOn').checked){ $('tgOn').checked = true; $('tgOn').dispatchEvent(new Event('change')); }
+  tgSave();
+  if ($('tgDiv').checked){ if (!tgReady()){ toast('Add the bot token and chat ID first, then tick this again.'); $('tgDiv').checked = false; tgSave(); return; }
+    if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); }
+    divScan(); }
+};
+dvSync();
 render(); setAuto();
 </script>
 </body>
