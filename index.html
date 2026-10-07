@@ -144,6 +144,7 @@ td.trigs{white-space:nowrap}
 .tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:8px 14px;color:var(--muted);font-weight:600}
 .tabs button.on{color:var(--text);border-bottom-color:var(--accent-lt)}
 .tabs button:hover{color:var(--text)}
+.newb[hidden]{display:none} .newb{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;letter-spacing:.04em;vertical-align:middle;line-height:1.5}
 .rot-head{font-size:12.5px;margin-bottom:10px}
 .rot-head b{font-size:13px;margin-right:6px}
 .rbar{display:grid;grid-template-columns:110px 1fr 80px;align-items:center;gap:10px;padding:3px 0;cursor:pointer;font-size:12.5px}
@@ -414,7 +415,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <button role="tab" data-view="map">Market Map</button>
     <button role="tab" data-view="sectors">Sector Flow</button>
     <button role="tab" data-view="macro">Macro</button>
-    <button role="tab" data-view="div">Divergences</button>
+    <button role="tab" data-view="div">Divergences<span class="newb" id="divNew" hidden>NEW</span></button>
     <button role="tab" data-view="liq">Liquidations</button>
     <button role="tab" data-view="journal">Journal</button>
   </nav>
@@ -1836,8 +1837,10 @@ function exportCSV(){
 }
 
 /* ---------- Views ---------- */
+try { if (!localStorage.getItem('onslaught-newseen')) $('divNew').hidden = false; } catch { $('divNew').hidden = false; }
 function setView(v){
   S.view = v;
+  if (v === 'div'){ try { localStorage.setItem('onslaught-newseen', '1'); } catch {} $('divNew').hidden = true; }
   $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
   $('viewName').textContent = {macro: 'Macro', div: 'Divergences', liq: 'Liquidation Map', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
