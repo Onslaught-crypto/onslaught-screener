@@ -738,6 +738,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       </div>
     </div>
     <div class="stats" id="jCards"></div>
+    <div class="panel"><div class="rot-head"><b>Equity curve</b> <span class="mu" id="jEqNote">Running total of R over completed signals, oldest to newest (setups only, 1R each).</span></div><div id="jEq"></div></div>
     <div class="panel">
       <div class="rot-head"><b>Where is the edge?</b> <span class="mu">Simulated trade per signal: entry at the signal close, stop 1.5 ATR away (1R), target 1.5R, closed after 24 candles. Groups with fewer than 10 completed signals are dimmed: too few to trust.</span></div>
       <div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Signals</th><th>Win rate</th><th>Avg R</th><th class="l">Expectancy</th><th>Avg +12</th><th>Avg MFE</th><th>Avg MAE</th></tr></thead><tbody id="jEdge"></tbody></table></div>
@@ -793,7 +794,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="dsize" id="dSize"></div>
   </div>
   <div class="dsec"><ul class="dwarn" id="dWarn"></ul></div>
-  <div class="dsec row"><button id="dCopy" class="primary">Copy plan</button><button id="dTg" title="Send this plan to your Telegram">Send to Telegram</button><span class="mu" id="dCopied" style="font-size:12px"></span></div>
+  <div class="dsec row"><button id="dCopy" class="primary">Copy plan</button><button id="dTg" title="Send this plan to your Telegram">Send to Telegram</button><button id="dLink" title="Copy a link that opens this coin and timeframe">Copy link</button><span class="mu" id="dCopied" style="font-size:12px"></span></div>
   <p class="dnote">Levels come from closed candles on the selected timeframe. Swing stop = nearest swing low/high beyond entry ± 0.25 ATR. Targets = nearest swing levels and 1.272 / 1.618 extensions of the last impulse, with R-multiples as fallback. A starting point for your own chart read, not advice.</p>
 </aside>
 
@@ -2050,6 +2051,20 @@ function edgeGroups(es){
   for (const [t, label] of Object.entries(TRIG_SHORT)) { const l = es.filter(e => e.trig.includes(t)); if (l.length) add('Trigger', label, l); }
   return g;
 }
+function jEquity(es){
+  const d = es.filter(e => e.out && e.out.res && Number.isFinite(e.out.rr)).sort((a, b) => (a.ct + (a.out.hitBar || 0) * TF_MS[a.tf]) - (b.ct + (b.out.hitBar || 0) * TF_MS[b.tf]));
+  const box = $('jEq');
+  if (d.length < 5){ box.innerHTML = '<div class="mu" style="padding:10px 0">The curve appears once 5 signals have a result.</div>'; return; }
+  let run = 0, peak = 0, dd = 0; const pts = d.map(e => { run += e.out.rr; peak = Math.max(peak, run); dd = Math.max(dd, peak - run); return run; });
+  const W = 800, H = 150, pad = 6, lo = Math.min(0, ...pts), hi = Math.max(0, ...pts), span = (hi - lo) || 1;
+  const X = i => pad + (W - 2 * pad) * i / (pts.length - 1), Y = v => pad + (H - 2 * pad) * (1 - (v - lo) / span);
+  const line = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join('');
+  const up = run >= 0;
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:150px;display:block" role="img" aria-label="Equity curve in R">
+    <line x1="0" x2="${W}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--line)" stroke-dasharray="4 4"/>
+    <path d="${line}" fill="none" stroke="${up ? 'var(--bull)' : 'var(--bear)'}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+    <div class="mu" style="font-size:12px;margin-top:4px">${d.length} completed · total <b class="${up ? 'up' : 'dn'}">${fR(run)}</b> · deepest drawdown <b class="dn">−${dd.toFixed(1)}R</b></div>`;
+}
 function renderJournal(){
   const es = J.entries.filter(e => e.kind !== 'div'), st = jStats(es), pending = es.filter(e => !e.out || !e.out.res).length;
   const card = (k, v, sub, c2) => `<div class="stat ${c2 || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
@@ -2057,6 +2072,7 @@ function renderJournal(){
     + card('Win rate', st.win == null ? '—' : st.win.toFixed(0) + '%', 'target before stop', st.win >= 50 ? 'bull' : '')
     + card('Expectancy', st.avgR == null ? '—' : fR(st.avgR), 'average R per signal', st.avgR > 0 ? 'bull' : st.avgR < 0 ? 'bear' : '')
     + card('Avg +12 candles', st.r12 == null ? '—' : fmtPct(st.r12), 'return in your favour', st.r12 > 0 ? 'bull' : st.r12 < 0 ? 'bear' : '');
+  jEquity(es);
   const groups = edgeGroups(es), maxR = Math.max(0.5, ...groups.map(g => Math.abs(g.avgR || 0)));
   let lastG = '';
   $('jEdge').innerHTML = groups.length ? groups.map(g => { const first = g.group !== lastG; lastG = g.group; const w = 50 * Math.abs(g.avgR || 0) / maxR;
@@ -3411,6 +3427,19 @@ for (const id of ['tgToken','tgChat','tgOn','tgPlan','tgQuiet','tgQFrom','tgQTo'
 $('tgTest').onclick = async () => { tgSave(); $('tgStatus').textContent = 'Sending…';
   try { const r = await tgSend('✅ <b>Onslaught Screener</b> is connected. Alerts will arrive here.'); $('tgStatus').textContent = r === 'sent' ? 'Sent. Check Telegram.' : 'Sent, but the browser could not confirm. Check Telegram.'; }
   catch(e){ $('tgStatus').textContent = e.message; } };
+/* Share link: #t=tab&c=PAIR&tf=timeframe&d=1|-1 opens that coin's trade plan for whoever follows it */
+const shareLink = () => `${location.origin}${location.pathname}#t=${S.view}&c=${D.sym}&tf=${D.tf}&d=${D.dir}`;
+$('dLink').onclick = async () => { try { await navigator.clipboard.writeText(shareLink()); $('dCopied').textContent = 'Link copied'; } catch { $('dCopied').textContent = 'Copy failed'; } setTimeout(() => $('dCopied').textContent = '', 2500); };
+async function applyHash(){
+  const h = new URLSearchParams(location.hash.replace(/^#/, '')); if (!h.has('t') && !h.has('c')) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  const t = h.get('t'), tf = h.get('tf'), c = (h.get('c') || '').toUpperCase(), d = +h.get('d') < 0 ? -1 : 1;
+  if (['trend', 'map', 'sectors', 'macro', 'div', 'liq', 'journal'].includes(t)) setView(t);
+  if (TFS.includes(tf) && tf !== S.tf) $('tfSeg').querySelector(`[data-v="${tf}"]`)?.click();
+  if (/^[A-Z0-9]{3,20}USDT$/.test(c)){
+    try { const u = (await getUniverse()).find(x => x.sym === c); if (u){ DIV.uni.set(c, u); openDrawer(c, {tf: TFS.includes(tf) ? tf : S.tf, dir: d}); } else toast(`${c} was not found in the Binance USDT-M list.`); } catch(e){ toast(e.message); }
+  }
+}
 $('dCopy').onclick = async () => { try { await navigator.clipboard.writeText(planText()); $('dCopied').textContent = 'Copied'; } catch { $('dCopied').textContent = 'Copy failed: select and copy manually'; } setTimeout(() => $('dCopied').textContent = '', 2500); };
 $('csvBtn').onclick = exportCSV;
 $('pageSize').onchange = () => { saveSettings(); render(); };
@@ -3448,6 +3477,7 @@ $('tgDiv').onchange = () => {
 };
 dvSync();
 render(); setAuto();
+applyHash();
 </script>
 </body>
 </html>
