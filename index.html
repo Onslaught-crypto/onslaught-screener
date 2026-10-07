@@ -519,7 +519,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <li><b>Telegram</b>: create a bot with @BotFather, paste its token and your chat ID in Settings, press Send test, then tick Send alerts to Telegram. Each alert lists the pairs with triggers, context and (optionally) entry, stop and targets. The token stays in this browser only. The drawer also has a Send to Telegram button for any plan.</li>
         <li><b>Alerts</b>: turn on with 🔔 (your browser asks permission). After each scan, new triggered setups (or new alignments too, in Settings) raise a desktop notification, an on-page toast and a sound; the tab title shows a count while you're away. Auto-refresh must be on and the tab must stay open; with alerts on, scans keep running in a background tab.</li>
         <li><b>RS 7D</b>: relative strength over the last 7 days in percentage points: ₿ = vs BTC, Ξ = vs ETH (hover for 24h). Green = leading by 2+ points, red = lagging by 2+. Leaders make the best longs in a risk-on market, laggards the best shorts. The regime bar also shows ETH vs BTC: ETH leading often comes before altcoins run. RS is shown, filtered and journaled but not yet part of the grade, so the Journal can show first whether it adds an edge.</li>
-        <li><b>Grade A / B / C</b> rates the aligned side: +1 score 5/5 · +2 all timeframes agree (+1 if only 1D, −2 if 1D is against) · +1 with the regime (−2 against) · +1 within 1.5 ATR of its average (−2 if stretched 3+) · +1 new positions on its side (−1 for short-covering rallies or long-liquidation drops) · +1 when the other side is crowded (−1 when its own side is) · +1 for 2+ triggers. A = 5+, B = 2–4, C = below. New listings, extreme funding and thin liquidity cap it at C (shown as !). Hover any grade for its breakdown.</li>
+        <li><b>Grade A / B / C</b> rates the aligned side: +1 score 5/5 · +2 all timeframes agree (+1 if only 1D, −2 if 1D is against) · +1 with the regime (−2 against) · +1 within 1.5 ATR of its average (−2 if stretched 3+) · +1 new positions on its side (−1 for short-covering rallies or long-liquidation drops) · +1 when the other side is crowded (−1 when its own side is) · +1 for 2+ triggers · +1 when a recent confirmed divergence (RSI + MACD, or Strong) supports the side (−1 when one opposes it). A = 5+, B = 2–4, C = below. New listings, extreme funding and thin liquidity cap it at C (shown as !). Hover any grade for its breakdown.</li>
         <li><b>LONG / SHORT badge</b> = a triggered setup: 4–5/5 aligned plus a trigger in the same direction. These rank first and have their own stat card.</li>
         <li><b>Positioning</b> compares price and OI change over the same N candles: <b>New longs</b> (price ↑ OI ↑), <b>New shorts</b> (price ↓ OI ↑), <b>Short covering</b> (price ↑ OI ↓, a squeeze that often fades once covering ends), <b>Long liquidation</b> (price ↓ OI ↓). Moves under 0.5% count as flat.</li>
         <li><b>Funding</b>: the last funding rate. 🔥 marks extremes: at or above the hot threshold longs are crowded, at or below the cold threshold shorts are crowded. Crowded sides are fuel for squeezes against them.</li>
@@ -551,6 +551,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input id="tgOn" type="checkbox"> Send alerts to Telegram</label>
         <label title="Include entry, stop and targets for each alert"><input id="tgPlan" type="checkbox" checked> with trade plan</label>
         <label title="Also message me when RSI and MACD both diverge from price on a confirmed swing (1H, 4H or 1D, Strong). The Divergences tab scans in the background while this page is open."><input id="tgDiv" type="checkbox"> Divergence alerts</label>
+        <label title="No Telegram messages during these hours (your local time). Alerts that would have fired are skipped, not sent later."><input id="tgQuiet" type="checkbox"> Quiet hours</label>
+        <input id="tgQFrom" type="time" value="23:00" aria-label="Quiet hours start"> to <input id="tgQTo" type="time" value="07:00" aria-label="Quiet hours end">
         <button id="tgTest">Send test</button>
         <span class="mu" id="tgStatus" style="font-size:12px"></span>
         <button id="resetCache">Clear cache</button>
@@ -673,6 +675,10 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
     <p class="mu dvsum" id="dvSum"></p>
     <div class="dvgrid" id="dvGrid"></div>
+    <div class="panel"><details id="dvRecWrap"><summary>Track record: how past divergence signals played out</summary>
+      <p class="mu" style="margin:8px 0">Every confirmed 1H, 4H or 1D divergence of strength 50+ that this scanner sees is logged in this browser (if the Journal is on) and followed for 24 candles with the same simulated trade as the Journal: entry at the confirmation close, stop 1.5 ATR away (1R), target 1.5R. Rows with fewer than 10 completed signals are dimmed: too few to trust.</p>
+      <div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Signals</th><th>Win rate</th><th>Avg R</th><th>Avg +12 candles</th></tr></thead><tbody id="dvRec"></tbody></table></div>
+    </details></div>
     <div class="panel"><details><summary>How to read divergences</summary><ul>
       <li><b>Bullish divergence:</b> price makes a lower low but the indicator makes a higher low, so selling momentum is fading. <b>Bearish:</b> price makes a higher high but the indicator makes a lower high, so buying momentum is fading. Both are early warnings that a move may turn, not entries on their own.</li>
       <li><b>RSI</b> compares the two RSI(14) lows or highs. <b>MACD</b> compares the two swings of the MACD histogram, which must be separate waves (the histogram crosses zero between them). <b>RSI + MACD</b> means both disagree with price on the same two swings, and is the most reliable kind.</li>
@@ -1095,7 +1101,7 @@ function coreScore(d, oi, mtf, fund, c){
  macro regime −2…+1 (see macroBias) · positioning on my side +1, covering/liquidation rally −1 · funding crowded on my side −1, against me +1 · 2+ same-side triggers +1.
  A ≥ 5, B ≥ 2, else C. Risk flags cap the grade at C: listed < 30 days, extreme funding, thin liquidity. */
 function gradeSetup(x, o = {}){
-  const {dir, s, d, mtf, regime, fund, qv, macro} = x, minLiq = o.minLiq ?? 5e6, xf = o.extremeFund ?? 0.5;
+  const {dir, s, d, mtf, regime, fund, qv, macro, dv} = x, minLiq = o.minLiq ?? 5e6, xf = o.extremeFund ?? 0.5;
   if (!dir || !d) return null;
   const R = [], add = (v, t) => { if (v) R.push({v, t}); };
   const sc = dir > 0 ? s.bull : s.bear;
@@ -1106,6 +1112,7 @@ function gradeSetup(x, o = {}){
   }
   if (regime) add(regime === dir ? 1 : -2, regime === dir ? 'with the market regime' : 'against the market regime');
   if (macro) add(macro.v, macro.t);
+  if (dv) add(dv.side === dir ? 1 : -1, dv.side === dir ? `${dv.ind === 'both' ? 'RSI + MACD' : dv.ind.toUpperCase()} divergence supports it` : 'opposing divergence');
   const e = d.ext == null ? null : d.ext * dir;
   if (e != null){ if (e >= 3) add(-2, `stretched ${e.toFixed(1)} ATR`); else if (e < 1.5) add(1, 'near its average (good entry)'); }
   if ((dir > 0 && s.pos === 'longs') || (dir < 0 && s.pos === 'shorts')) add(1, dir > 0 ? 'new longs opening' : 'new shorts opening');
@@ -1309,6 +1316,16 @@ function divergences(cd, o = {}){
     }
   }
   return out.sort((x, y) => (x.bars - y.bars) || (y.score - x.score));
+}
+/* Best recent confirmed divergence of one candle series, for the setup grade: {side, ind, ago, score} or null. */
+function divBrief(cd){
+  let best = null;
+  for (const x of divergences(cd)){
+    if (!x.conf || x.ago > 3 || x.score < 50) continue;
+    if (!(x.ind === 'both' || x.score >= 70)) continue;
+    if (!best || (x.ind === 'both') > (best.ind === 'both') || (((x.ind === 'both') === (best.ind === 'both')) && x.score > best.score)) best = x;
+  }
+  return best ? {side: best.side, ind: best.ind, ago: best.ago, score: best.score} : null;
 }
 // ==ENGINE END==
 
@@ -1528,7 +1545,7 @@ function derive(r, c){
   const {oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, pD, pos, fFlag} = core;
   const against = S.regimeDir && ((S.regimeDir < 0 && bull >= 4) || (S.regimeDir > 0 && bear >= 4));
   const gdir = setup || (bull >= 4 ? 1 : bear >= 4 ? -1 : 0);
-  const G = d && gdir ? gradeSetup({dir: gdir, s: core, d, mtf: r.mtf, regime: S.regimeDir || 0, fund: r.fund, qv: r.qv, macro: S.macro && S.macroOn !== false ? macroBias(S.macro.reg, r.sym, gdir) : null}, {minLiq: c.minLiq, extremeFund: c.extremeFund}) : null;
+  const G = d && gdir ? gradeSetup({dir: gdir, s: core, d, mtf: r.mtf, regime: S.regimeDir || 0, fund: r.fund, qv: r.qv, macro: S.macro && S.macroOn !== false ? macroBias(S.macro.reg, r.sym, gdir) : null, dv: r.dv}, {minLiq: c.minLiq, extremeFund: c.extremeFund}) : null;
   const rs = relStrength(r.chg, r.ret7, S.ref);
   return {...r, d, rs, ext: d ? d.ext : null, pD, pos, fFlag, against, oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, G, inc: !d || r.oi == null,
     score: Math.max(bull, bear) + (bull >= 4 || bear >= 4 ? 10 : 0) + (setup ? 5 : 0) + (G ? {A: 4, B: 2, C: 0}[G.grade] : 0)};
@@ -1799,7 +1816,7 @@ async function scan(){
         let mtf = null;
         if (others.length){ mtf = {}; for (const t of MTF_TFS) mtf[t] = t === tf ? (ev.incomplete ? null : ev.bull >= 3 ? 1 : ev.bear >= 3 ? -1 : 0) : (ok[others.indexOf(t)] ? tfDir(ok[others.indexOf(t)], c) : null); }
         const today = Math.floor(Date.now() / 864e5) * 864e5, dRaw = tf === '1d' ? k : needD ? dExtra : ok[others.indexOf('1d')];
-        out[idx] = {...u, ev, oi, mtf, ret7: ret7d(u.price, dRaw ? dRaw.filter(x => x[0] < today) : null)};
+        out[idx] = {...u, ev, oi, mtf, dv: divBrief(k), ret7: ret7d(u.price, dRaw ? dRaw.filter(x => x[0] < today) : null)};
         S.rows = out.filter(Boolean);
         done++; $('prog').style.width = (2 + 98 * done / list.length) + '%';
         setStatus('run', `Scanning ${done}/${list.length}…`);
@@ -1968,7 +1985,7 @@ function exportSectors(){
 /* ---------- Signal journal ---------- */
 const J = {entries: [], page: 0, busy: false};
 const J_MAX = 3000;
-async function loadJournal(){ const v = await Cache.get('journal'); J.entries = Array.isArray(v) ? v : []; if (S.view === 'journal') renderJournal(); }
+async function loadJournal(){ const v = await Cache.get('journal'); J.entries = Array.isArray(v) ? v : []; if (S.view === 'journal') renderJournal(); if (S.view === 'div') dvRecord(); }
 async function saveJournal(){ if (J.entries.length > J_MAX) J.entries = J.entries.slice(-J_MAX); await Cache.set('journal', J.entries); }
 async function journalLog(tf){
   const c = cfg();
@@ -2012,7 +2029,7 @@ async function updateOutcomes(manual){
     await saveJournal();
     if (manual) st(`Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}${groups.size > cap ? ` · ${groups.size - cap} pairs left, run again` : ''}`);
   } catch(e){ st(e.message); }
-  finally { J.busy = false; if (S.view === 'journal') renderJournal(); }
+  finally { J.busy = false; if (S.view === 'journal') renderJournal(); if (S.view === 'div') dvRecord(); }
 }
 const fR = v => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + 'R';
 const RES = {win: ['Win', 'up'], loss: ['Loss', 'dn'], time: ['Time', 'mu']};
@@ -2034,7 +2051,7 @@ function edgeGroups(es){
   return g;
 }
 function renderJournal(){
-  const es = J.entries, st = jStats(es), pending = es.filter(e => !e.out || !e.out.res).length;
+  const es = J.entries.filter(e => e.kind !== 'div'), st = jStats(es), pending = es.filter(e => !e.out || !e.out.res).length;
   const card = (k, v, sub, c2) => `<div class="stat ${c2 || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
   $('jCards').innerHTML = card('Signals logged', es.length, `${pending} awaiting outcome`) + card('Completed', st.n, 'with a trade result')
     + card('Win rate', st.win == null ? '—' : st.win.toFixed(0) + '%', 'target before stop', st.win >= 50 ? 'bull' : '')
@@ -2143,8 +2160,8 @@ function toast(msg, items){
 /* ---------- Telegram ---------- */
 const TG_KEY = 'onslaught-tg';
 function tgLoad(){ let o = {}; try { o = JSON.parse(localStorage.getItem(TG_KEY) || '{}'); } catch {}
-  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgDiv').checked = !!o.div; }
-function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, div: $('tgDiv').checked})); } catch {} }
+  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgDiv').checked = !!o.div; $('tgQuiet').checked = !!o.quiet; $('tgQFrom').value = o.qFrom || '23:00'; $('tgQTo').value = o.qTo || '07:00'; }
+function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, div: $('tgDiv').checked, quiet: $('tgQuiet').checked, qFrom: $('tgQFrom').value, qTo: $('tgQTo').value})); } catch {} }
 const tgReady = () => /^\d+:[\w-]{20,}$/.test($('tgToken').value.trim()) && $('tgChat').value.trim() !== '';
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 /* Form-encoded POST = a "simple" CORS request (no preflight). If the browser can't read the reply, the message has usually still gone. */
@@ -2196,6 +2213,14 @@ async function tgAlertText(items){
 }
 
 const tgActive = () => $('tgOn').checked && tgReady();
+/* Quiet hours: true while the local time is inside the chosen window (a window like 23:00 to 07:00 crosses midnight). */
+function tgQuiet(){
+  if (!$('tgQuiet').checked) return false;
+  const m = v => { const [h, n] = (v || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (n || 0) : null; };
+  const a = m($('tgQFrom').value), b = m($('tgQTo').value), d = new Date(), t = d.getHours() * 60 + d.getMinutes();
+  if (a == null || b == null || a === b) return false;
+  return a < b ? t >= a && t < b : t >= a || t < b;
+}
 function fireAlerts(entered){
   if (!(ALERT.on || tgActive()) || !entered.length) return;
   let items = entered.filter(e => $('alertWhat').value === 'aligned' || e.kind === 'setup');
@@ -2206,7 +2231,7 @@ function fireAlerts(entered){
   const line = e => `${e.sym.replace('USDT', '')} ${e.dir > 0 ? 'LONG' : 'SHORT'}${e.kind === 'setup' ? ' (triggered)' : ' (aligned)'}`;
   const title = `Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} on ${S.tf.toUpperCase()}`;
   const body = items.slice(0, 6).map(line).join('\n') + (items.length > 6 ? `\n+${items.length - 6} more` : '');
-  if ($('tgOn').checked && tgReady()) tgAlertText(items).then(tgSend).catch(e => toast(e.message));
+  if (tgActive() && !tgQuiet()) tgAlertText(items).then(tgSend).catch(e => toast(e.message));
   if (!ALERT.on) return;                                         // Telegram works on its own; page and desktop alerts need 🔔
   if (!!window.Notification && Notification.permission === 'granted'){
     try { const n = new Notification(title, {body, tag: 'onslaught-' + S.tf, renotify: true}); n.onclick = () => { window.focus(); openDrawer(items[0].sym); n.close(); }; } catch {}
@@ -3064,10 +3089,41 @@ async function divScan(o = {}){
     st(`Done · ${list.length} pairs · ${new Date().toLocaleTimeString()}${fails ? ` · ${fails} skipped` : ''}`);
     renderDiv();
     await divAlert(out);
+    await divJournal(out);
   } catch(e){ st(location.protocol === 'about:' ? SANDBOX_MSG : e.message); }
   finally { DIV.scanning = false; $('dvScan').disabled = false; setTimeout(() => { if (!DIV.scanning) pr(0); }, 800); }
 }
 
+/* ---- Track record: divergence signals are logged to the Journal store (kind 'div') and followed like setups ---- */
+async function divJournal(rows){
+  if (!$('jOn').checked) return;
+  const seen = new Set(J.entries.map(e => e.id)); let added = 0;
+  for (const x of rows){
+    if (!x.conf || x.ago > 2 || x.score < 50 || !DV_ALERT_TFS.includes(x.tf)) continue;
+    const id = `${x.sym}|${x.tf}|div|${x.side}|${x.tB}|${x.ind}`; if (seen.has(id)) continue;
+    const v = x.view, n = v.c.length, i = n - 1 - x.ago, A = atr(v.h, v.l, v.c, 14)[i];
+    if (!(A > 0) || !(v.c[i] > 0)) continue;
+    J.entries.push({id, key: `${x.sym}|${x.tf}|div|${x.side}`, sym: x.sym, tf: x.tf, kind: 'div', dir: x.side, ct: v.t[i], price: v.c[i], atr: A, score: null,
+      ds: x.score, dind: x.ind, dtr: x.trend ? x.side * x.trend : 0, rs7: null, grade: null, trig: [], regime: S.regimeDir || 0, mtf: null, ext: null, pos: null, fFlag: 0, out: null});
+    seen.add(id); added++;
+  }
+  if (added){ await saveJournal(); updateOutcomes(false); }
+}
+function dvRecord(){
+  const es = J.entries.filter(e => e.kind === 'div'), g = [];
+  const add = (group, bucket, list) => { if (list.length) g.push({group, bucket, logged: list.length, ...jStats(list)}); };
+  add('All', 'All divergences', es);
+  add('Indicator', 'RSI + MACD', es.filter(e => e.dind === 'both')); add('Indicator', 'RSI only', es.filter(e => e.dind === 'rsi')); add('Indicator', 'MACD only', es.filter(e => e.dind === 'macd'));
+  add('Strength', 'Strong (70+)', es.filter(e => e.ds >= 70)); add('Strength', 'Medium (50–69)', es.filter(e => e.ds < 70));
+  add('Side', 'Bullish', es.filter(e => e.dir > 0)); add('Side', 'Bearish', es.filter(e => e.dir < 0));
+  add('Trend', 'With trend', es.filter(e => e.dtr > 0)); add('Trend', 'Against trend', es.filter(e => e.dtr < 0));
+  for (const tf of DV_ALERT_TFS) add('Timeframe', DV_LBL[tf], es.filter(e => e.tf === tf));
+  let last = '';
+  $('dvRec').innerHTML = g.length ? g.map(r => { const first = r.group !== last; last = r.group;
+    return `<tr class="${r.n < 10 ? 'low' : ''} ${first ? 'gstart' : ''}"><td class="l">${first ? `<b>${r.group}</b>` : ''}</td><td class="l">${r.bucket}</td><td>${r.n}<span class="mu"> / ${r.logged}</span></td>
+      <td>${r.win == null ? '—' : r.win.toFixed(0) + '%'}</td><td class="${cls(r.avgR)}">${fR(r.avgR)}</td><td class="${cls(r.r12)}">${r.r12 == null ? '—' : fmtPct(r.r12)}</td></tr>`; }).join('')
+    : '<tr><td class="empty" colspan="6">Nothing logged yet. Divergences are recorded after each Divergences scan, and results appear once 24 candles have passed.</td></tr>';
+}
 const dvKey = x => `${x.sym}|${x.tf}|${x.side}|${x.tB}|${x.ind}`;
 function dvFiltered(){
   const f = x => DIV.tfs.has(x.tf) && x.ago <= DIV.age && x.score >= DIV.str && (!DIV.dir || x.side === DIV.dir) && (!DIV.conf || x.conf)
@@ -3133,6 +3189,7 @@ function dvCard(x){
 }
 function renderDiv(){
   if ($('viewDiv').hidden) return;
+  dvRecord();
   const all = dvFiltered(), rows = all.slice(0, DV_MAX);
   const nb = all.filter(x => x.side > 0).length, nboth = all.filter(x => x.ind === 'both').length;
   $('dvSum').innerHTML = DIV.t ? `<b>${all.length}</b> signal${all.length === 1 ? '' : 's'} · <span class="up">▲ ${nb} bullish</span> · <span class="dn">▼ ${all.length - nb} bearish</span> · ${nboth} with RSI + MACD${all.length > DV_MAX ? ` · showing the ${DV_MAX} strongest` : ''}` : '';
@@ -3177,6 +3234,7 @@ async function divAlert(rows){
   if (!sent._base){ for (const x of cand) sent[dvId(x)] = now; sent._base = now; dvSentSave(sent); toast(`Divergence alerts are on. ${cand.length} existing signal${cand.length === 1 ? '' : 's'} noted; you'll be messaged about new ones.`); return; }
   const fresh = cand.filter(x => !sent[dvId(x)]).sort((a, b) => b.score - a.score);
   if (!fresh.length){ dvSentSave(sent); return; }
+  if (tgQuiet()){ for (const x of fresh) sent[dvId(x)] = now; dvSentSave(sent); return; }          // quiet hours: noted, not sent
   try { await tgSend(await divAlertText(fresh)); for (const x of fresh) sent[dvId(x)] = now; dvSentSave(sent); DIV.errShown = false; }
   catch(e){ dvSentSave(sent); if (!DIV.errShown){ DIV.errShown = true; toast('Divergence alert not sent: ' + e.message); } }
 }
@@ -3189,7 +3247,7 @@ async function buildRow(u, tf, c){
   let mtf = null;
   if (others.length){ mtf = {}; for (const t of MTF_TFS) mtf[t] = t === tf ? (ev.incomplete ? null : ev.bull >= 3 ? 1 : ev.bear >= 3 ? -1 : 0) : (ok[others.indexOf(t)] ? tfDir(ok[others.indexOf(t)], c) : null); }
   const today = Math.floor(Date.now() / 864e5) * 864e5, dRaw = tf === '1d' ? k : needD ? dExtra : ok[others.indexOf('1d')];
-  return {...u, ev, oi, mtf, ret7: ret7d(u.price, dRaw ? dRaw.filter(x => x[0] < today) : null)};
+  return {...u, ev, oi, mtf, dv: divBrief(k), ret7: ret7d(u.price, dRaw ? dRaw.filter(x => x[0] < today) : null)};
 }
 function dvBanner(x){
   const bull = x.side > 0, mc = dvMacd(x), ctx = dvCtx(x);
@@ -3343,7 +3401,7 @@ $('pEntryEma').onclick = () => { if (!D.plan) return; D.entry = D.plan.ema20; $(
 $('dTg').onclick = async () => { try { const txt = `<b>Onslaught plan</b>\n<pre>${esc(planText())}</pre>`; const r = await tgSend(txt); $('dCopied').textContent = r === 'sent' ? 'Sent to Telegram' : 'Sent (unconfirmed)'; }
   catch(e){ $('dCopied').textContent = e.message; } setTimeout(() => $('dCopied').textContent = '', 3500); };
 tgLoad();
-for (const id of ['tgToken','tgChat','tgOn','tgPlan']) $(id).onchange = () => { tgSave();
+for (const id of ['tgToken','tgChat','tgOn','tgPlan','tgQuiet','tgQFrom','tgQTo']) $(id).onchange = () => { tgSave();
   if (id === 'tgOn' && $('tgOn').checked){
     const m = [];
     if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); m.push('Auto-refresh set to 2m so new setups are caught.'); }
