@@ -918,12 +918,14 @@ function tradePlan(candles, dir, o){
   let sl, slNote;
   if (dir > 0){
     const sw = loIdx.map(i => l[i]).filter(x => x < entry - 0.2 * A);
-    if (o.slMode === 'swing' && sw.length){ sl = Math.max(...sw) - 0.25 * A; slNote = 'below swing low'; }
-    else { sl = entry - o.atrMult * A; slNote = `${o.atrMult}× ATR`; }
+    const s0 = sw.length ? Math.max(...sw) - 0.25 * A : null;
+    if (o.slMode === 'swing' && s0 != null && entry - s0 <= 4 * A){ sl = s0; slNote = 'below swing low'; }
+    else { sl = entry - o.atrMult * A; slNote = `${o.atrMult}× ATR${o.slMode === 'swing' && s0 != null ? ' (swing low too far)' : ''}`; }
   } else {
     const sw = hiIdx.map(i => h[i]).filter(x => x > entry + 0.2 * A);
-    if (o.slMode === 'swing' && sw.length){ sl = Math.min(...sw) + 0.25 * A; slNote = 'above swing high'; }
-    else { sl = entry + o.atrMult * A; slNote = `${o.atrMult}× ATR`; }
+    const s0 = sw.length ? Math.min(...sw) + 0.25 * A : null;
+    if (o.slMode === 'swing' && s0 != null && s0 - entry <= 4 * A){ sl = s0; slNote = 'above swing high'; }
+    else { sl = entry + o.atrMult * A; slNote = `${o.atrMult}× ATR${o.slMode === 'swing' && s0 != null ? ' (swing high too far)' : ''}`; }
   }
   const R = Math.abs(entry - sl);
   // impulse for fib extensions
@@ -942,14 +944,14 @@ function tradePlan(candles, dir, o){
   }
   const struct = (dir > 0 ? hiIdx.map(i => [h[i], 'Swing high']) : loIdx.map(i => [l[i], 'Swing low']));
   const dist = p => (p - entry) * dir;
-  const cands = struct.concat(fibs).filter(([p]) => p > 0 && dist(p) > 0).sort((a, b) => dist(a[0]) - dist(b[0]));
+  const cands = struct.concat(fibs).filter(([p]) => p > 0 && dist(p) > 0 && dist(p) <= 6 * R && (dir > 0 || p >= entry * 0.3)).sort((a, b) => dist(a[0]) - dist(b[0]));
   const tps = []; let floor = 0.8 * R;
   const fallbackR = [1.5, 2.5, 4];
   for (let n = 0; n < 3; n++){
     const hit = cands.find(([p]) => dist(p) >= floor);
     let price, label;
     if (hit){ [price, label] = hit; }
-    else { const m = Math.max(fallbackR[n], (tps.length ? tps.at(-1).r : 0) + 1); price = entry + dir * m * R; label = `${m}R`; }
+    else { const m = Math.max(fallbackR[n], (tps.length ? tps.at(-1).r : 0) + 1); price = entry + dir * m * R; label = `${+m.toFixed(1)}R`; }
     if (dir < 0 && price <= 0) break;
     const r = dist(price) / R;
     tps.push({price, label, r});
@@ -1662,7 +1664,7 @@ async function scan(){
 
 function setAuto(){
   clearInterval(S.timer); const s = +$('auto').value;
-  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on) scan(); }, s * 1000);
+  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on || tgActive()) scan(); }, s * 1000);
 }
 
 function exportCSV(){
@@ -1948,7 +1950,7 @@ function renderChanges(){
     <span class="grp"><b class="mu">Exited ${ch.exited.length}</b> ${ch.exited.slice(0, 12).map(e => `<span class="chg out">${e.sym.replace('USDT', '')}</span>`).join('')}${ch.exited.length > 12 ? `<span class="mu"> +${ch.exited.length - 12}</span>` : ''}</span>`;
 }
 const ALERT = {on: false, ctx: null};
-try { ALERT.on = JSON.parse(localStorage.getItem(ALERT_KEY) || 'false') && !!window.Notification && Notification.permission === 'granted'; } catch {}
+try { ALERT.on = JSON.parse(localStorage.getItem(ALERT_KEY) || 'false'); } catch {}   // stays on after reload even without desktop-notification permission
 function paintAlertBtn(){ $('alertBtn').textContent = ALERT.on ? '🔔 Alerts on' : '🔕 Alerts off'; $('alertBtn').classList.toggle('on', ALERT.on); }
 async function toggleAlerts(){
   if (ALERT.on){ ALERT.on = false; }
@@ -2022,7 +2024,8 @@ async function tgAlertText(items){
     if ($('tgPlan').checked){
       const P = await planFor(e.sym, e.dir);
       if (P){ const dec = decFor(P.entry), pc = v => fmtPct((v / P.entry - 1) * 100);
-        lines.push(`Entry ${fp(P.entry, dec)} · SL ${fp(P.sl, dec)} (${pc(P.sl)})`, P.tps.map((t, i) => `TP${i + 1} ${fp(t.price, dec)} (${t.r.toFixed(1)}R)`).join(' · ')); }
+        lines.push(`Entry ${fp(P.entry, dec)} · SL ${fp(P.sl, dec)} (${pc(P.sl)})`, P.tps.map((t, i) => `TP${i + 1} ${fp(t.price, dec)} (${t.r.toFixed(1)}R)`).join(' · '));
+        const w = Math.abs(P.sl / P.entry - 1) * 100; if (w >= 12) lines.push(`⚠️ wide stop (${w.toFixed(1)}%): size down`); }
     }
     lines.push(`<a href="https://www.tradingview.com/chart/?symbol=BINANCE:${e.sym}.P">Chart</a>`);
   }
@@ -2030,8 +2033,9 @@ async function tgAlertText(items){
   return lines.join('\n');
 }
 
+const tgActive = () => $('tgOn').checked && tgReady();
 function fireAlerts(entered){
-  if (!ALERT.on || !entered.length) return;
+  if (!(ALERT.on || tgActive()) || !entered.length) return;
   let items = entered.filter(e => $('alertWhat').value === 'aligned' || e.kind === 'setup');
   if ($('alertStar').checked) items = items.filter(e => WATCH.has(e.sym));
   const minG = GRADE_RANK[$('alertGrade').value] || 0;
@@ -2040,12 +2044,13 @@ function fireAlerts(entered){
   const line = e => `${e.sym.replace('USDT', '')} ${e.dir > 0 ? 'LONG' : 'SHORT'}${e.kind === 'setup' ? ' (triggered)' : ' (aligned)'}`;
   const title = `Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} on ${S.tf.toUpperCase()}`;
   const body = items.slice(0, 6).map(line).join('\n') + (items.length > 6 ? `\n+${items.length - 6} more` : '');
+  if ($('tgOn').checked && tgReady()) tgAlertText(items).then(tgSend).catch(e => toast(e.message));
+  if (!ALERT.on) return;                                         // Telegram works on its own; page and desktop alerts need 🔔
   if (!!window.Notification && Notification.permission === 'granted'){
     try { const n = new Notification(title, {body, tag: 'onslaught-' + S.tf, renotify: true}); n.onclick = () => { window.focus(); openDrawer(items[0].sym); n.close(); }; } catch {}
   }
   toast(title, items.slice(0, 8).map(e => `<button class="chg ${e.dir > 0 ? 'b' : 's'}" data-open="${e.sym}">${line(e)}</button>`).join(''));
   beep();
-  if ($('tgOn').checked && tgReady()) tgAlertText(items).then(tgSend).catch(e => toast(e.message));
   if (document.hidden){ S.unseen = (S.unseen || 0) + items.length; document.title = `(${S.unseen}) Onslaught Screener`; }
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden){ S.unseen = 0; document.title = 'Onslaught Screener'; } });
@@ -2939,7 +2944,13 @@ $('pEntryEma').onclick = () => { if (!D.plan) return; D.entry = D.plan.ema20; $(
 $('dTg').onclick = async () => { try { const txt = `<b>Onslaught plan</b>\n<pre>${esc(planText())}</pre>`; const r = await tgSend(txt); $('dCopied').textContent = r === 'sent' ? 'Sent to Telegram' : 'Sent (unconfirmed)'; }
   catch(e){ $('dCopied').textContent = e.message; } setTimeout(() => $('dCopied').textContent = '', 3500); };
 tgLoad();
-for (const id of ['tgToken','tgChat','tgOn','tgPlan']) $(id).onchange = () => { tgSave(); if (id === 'tgOn' && $('tgOn').checked && !ALERT.on) toast('Telegram is on. Turn on 🔔 Alerts too: Telegram messages go out when an alert fires.'); };
+for (const id of ['tgToken','tgChat','tgOn','tgPlan']) $(id).onchange = () => { tgSave();
+  if (id === 'tgOn' && $('tgOn').checked){
+    const m = [];
+    if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); m.push('Auto-refresh set to 2m so new setups are caught.'); }
+    if (!$('closed').checked) m.push('Tip: tick "Closed candles only" so alerts don\'t fire on candles that are still forming.');
+    toast(['Telegram alerts on for ' + S.tf.toUpperCase() + '. Keep this page open (it can be in the background).'].concat(m).join(' '));
+  } };
 $('tgTest').onclick = async () => { tgSave(); $('tgStatus').textContent = 'Sending…';
   try { const r = await tgSend('✅ <b>Onslaught Screener</b> is connected. Alerts will arrive here.'); $('tgStatus').textContent = r === 'sent' ? 'Sent. Check Telegram.' : 'Sent, but the browser could not confirm. Check Telegram.'; }
   catch(e){ $('tgStatus').textContent = e.message; } };
