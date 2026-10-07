@@ -144,6 +144,7 @@ td.trigs{white-space:nowrap}
 .tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:8px 14px;color:var(--muted);font-weight:600}
 .tabs button.on{color:var(--text);border-bottom-color:var(--accent-lt)}
 .tabs button:hover{color:var(--text)}
+.tabs button[hidden]{display:none} @media (max-width:700px){.tabpop{right:auto;left:0}} .tabpop{width:220px} .tabpop label{display:flex;gap:8px;align-items:center;padding:5px 2px;cursor:pointer}
 .newb[hidden]{display:none} .newb{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;letter-spacing:.04em;vertical-align:middle;line-height:1.5}
 .rot-head{font-size:12.5px;margin-bottom:10px}
 .rot-head b{font-size:13px;margin-right:6px}
@@ -406,6 +407,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <select id="auto"><option value="0">Manual</option><option value="60">60s</option><option value="120">2m</option><option value="300">5m</option></select>
       </label>
       <button id="alertBtn" title="Desktop alerts for new setups">🔔 Alerts off</button>
+      <div class="popwrap"><button id="tabsBtn" aria-haspopup="true" aria-expanded="false" title="Choose which tabs to show">Tabs ▾</button>
+        <div class="pop tabpop" id="tabsPop" hidden><div class="pophead">Show tabs</div><div id="tabsList"></div></div></div>
       <button id="scanBtn" class="primary">Scan</button>
     </div>
   </header>
@@ -3285,6 +3288,28 @@ $('secColor').onchange = renderSecHeat;
 $('secHeatBox').addEventListener('click', e => { const t = e.target.closest('.tile'); if (!t) return; SEC.open.add(t.dataset.sec); $('secMode').querySelector('[data-v=table]').click(); renderSectors();
   document.querySelector(`#secBody tr[data-sec="${t.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); });
 loadView();
+/* ---------- Tab picker: each visitor chooses which tabs show (kept in this browser) ---------- */
+const TAB_KEY = 'onslaught-tabs-hidden';
+const tabsHidden = () => { try { return new Set(JSON.parse(localStorage.getItem(TAB_KEY) || '[]')); } catch { return new Set(); } };
+function applyTabs(){
+  const hid = tabsHidden(), all = [...$('tabs').children];
+  all.forEach(b => b.hidden = hid.has(b.dataset.view));
+  if (all.every(b => b.hidden)){ all[0].hidden = false; }
+  const first = all.find(b => !b.hidden);
+  if (all.find(b => b.dataset.view === S.view)?.hidden) setView(first.dataset.view);
+  if (!$('tabsList').children.length) $('tabsList').innerHTML = all.map(b => `<label><input type="checkbox" data-tab="${b.dataset.view}"> ${b.firstChild.textContent}</label>`).join('');
+  $('tabsList').querySelectorAll('input').forEach(i => i.checked = !all.find(b => b.dataset.view === i.dataset.tab).hidden);   // update in place so the menu stays open
+}
+$('tabsBtn').onclick = e => { e.stopPropagation(); const p = $('tabsPop'); p.hidden = !p.hidden; $('tabsBtn').setAttribute('aria-expanded', !p.hidden); };
+document.addEventListener('click', e => { if (!$('tabsPop').hidden && !e.target.closest('#tabsPop') && e.target !== $('tabsBtn')) $('tabsPop').hidden = true; });
+$('tabsList').onchange = e => {
+  const k = e.target.dataset.tab; if (!k) return;
+  const hid = tabsHidden(); e.target.checked ? hid.delete(k) : hid.add(k);
+  if (hid.size >= $('tabs').children.length){ hid.delete(k); }          // at least one tab stays
+  try { localStorage.setItem(TAB_KEY, JSON.stringify([...hid])); } catch {}
+  applyTabs();
+};
+applyTabs();
 $('viewBtn').onclick = e => { e.stopPropagation(); const p = $('viewPop'); p.hidden = !p.hidden; $('viewBtn').setAttribute('aria-expanded', !p.hidden); };
 document.addEventListener('click', e => { if (!$('viewPop').hidden && !e.target.closest('.popwrap')) $('viewPop').hidden = true; });
 $('colList').onchange = e => { const k = e.target.dataset.col; if (!k) return; e.target.checked ? UI.hidden.delete(k) : UI.hidden.add(k); saveView(); applyCols(); };
