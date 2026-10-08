@@ -176,6 +176,12 @@ td.trigs{white-space:nowrap}
 .jdel{background:none;border:0;color:var(--dim);padding:2px 6px} .jdel:hover{color:var(--bear)}
 .filebtn{border:1px solid var(--line);border-radius:6px;padding:6px 12px;background:var(--panel2);color:var(--text);font-size:13px;cursor:pointer}
 .toolbar{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fbar{display:flex;flex-direction:column;gap:10px}
+.fpanel{display:flex;flex-wrap:wrap;gap:10px 40px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}.fpanel[hidden]{display:none}
+.fgrp h4{margin:0 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.fbadge{background:var(--accent);color:#fff;border-radius:9px;padding:0 6px;font-size:11px;font-weight:600}
+.fchip{background:rgba(138,82,156,.25);border:1px solid var(--accent);border-radius:12px;padding:3px 9px;font-size:12px;display:inline-flex;gap:6px;align-items:center;cursor:pointer}.fchip u{text-decoration:none;color:var(--muted)}.fchip:hover u{color:var(--text)}
+.pagerow .pager{flex:1}.pagerow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.rowsel{color:var(--muted);font-size:12px;display:flex;gap:6px;align-items:center}
 .searchbox{position:relative;display:flex;align-items:center}
 .searchbox .sicon{position:absolute;left:10px;color:var(--bull);font-size:15px;pointer-events:none;line-height:1}
 #search{width:240px;padding:7px 10px 7px 30px;background:#0b1206;color:var(--bull);border:1px solid var(--bull);border-radius:8px;
@@ -426,7 +432,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <div id="viewTrend">
 
-  <div class="panel">
+  <div class="panel fbar">
     <div class="row">
       <div class="seg" id="tfSeg"></div>
       <span class="sep"></span>
@@ -437,14 +443,10 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <select id="mcap"><option value="0">Any</option><option value="5e7">≥ $50M</option><option value="1e8">≥ $100M</option><option value="5e8">≥ $500M</option><option value="1e9">≥ $1B</option></select>
       </label>
       <label>Sector <select id="sector"><option value="">All sectors</option></select></label>
-      <label>OI ≥ <input id="oiThr" type="number" step="0.5" min="0" value="1">% over
-        <select id="oiN"><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles
-      </label>
       <label><input id="closed" type="checkbox" checked> Closed candles only</label>
-      <label title="Also fetch 1D, 4H and 1H candles for the multi-timeframe column (more requests, cached)"><input id="mtfOn" type="checkbox" checked> MTF</label>
+      <label title="Also fetch 1D, 4H and 1H candles for the multi-timeframe column (more requests, cached). Turn off for faster scans."><input id="mtfOn" type="checkbox" checked> Load MTF data</label>
       <div class="toolbar">
         <div class="searchbox"><span class="sicon" aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search pair…" aria-label="Search pair"></div>
-        <label>Rows <select id="pageSize"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="0">All</option></select></label>
         <div class="popwrap"><button id="viewBtn" aria-haspopup="true" aria-expanded="false" title="Columns, row density and presets">View ▾</button>
           <div class="pop" id="viewPop" hidden>
             <div class="pophead">Presets</div><div id="presetList" class="presetlist"></div>
@@ -453,7 +455,6 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
             <div class="seg" id="densSeg"><button data-v="comfortable">Comfortable</button><button data-v="compact">Compact</button></div>
             <div class="pophead" style="margin-top:10px">Columns</div><div id="colList" class="collist"></div>
           </div></div>
-        <button id="clearBtn">Clear filters</button>
         <button id="csvBtn">Export CSV</button>
       </div>
     </div>
@@ -462,20 +463,36 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <button data-v="all" class="on">All</button><button data-v="bull">Bullish momentum</button><button data-v="bear">Bearish momentum</button>
       </div>
       <span class="sep"></span>
-      <label>DMI <select class="mf" data-k="dmi"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
-      <label>RSI&gt;EMA <select class="mf" data-k="rsiEma"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
-      <label>RSI&gt;50 <select class="mf" data-k="rsi50"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
-      <label>OBV&gt;EMA50 <select class="mf" data-k="obv"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
-      <label>OI rising <select class="mf" data-k="oi"><option value="">Any</option><option value="1">Yes</option><option value="0">No</option></select></label>
+      <label title="Setup grade filter. A = high quality (timeframes, regime and positioning agree, not stretched); C = weak or risky">Grade <select id="gradeF"><option value="">Any</option><option value="A">A only</option><option value="AB">A–B</option></select></label>
+      <label title="Filter by trigger direction: Bull = at least one bullish trigger, Bear = at least one bearish, None = no fresh trigger">Trigger <select id="trigF"><option value="">Any</option><option value="b">Bull</option><option value="s">Bear</option><option value="none">None</option></select></label>
+      <label title="How recent a trigger must be to count, in candles of the selected timeframe. Also sets what counts as a LONG/SHORT setup and the Triggered setups card.">within <select id="trigN"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles</label>
       <label title="Only pairs that became aligned on the latest candle"><input id="newOnly" type="checkbox"> New only</label>
       <label title="Show only the pairs you starred"><input id="starOnly" type="checkbox"> ★ only</label>
       <label title="Keep starred pairs at the top of the table, whatever the sort"><input id="pinStar" type="checkbox" checked> Pin ★</label>
-      <label title="Filter by trigger direction: Bull = at least one bullish trigger, Bear = at least one bearish, None = no fresh trigger">Trigger <select id="trigF"><option value="">Any</option><option value="b">Bull</option><option value="s">Bear</option><option value="none">None</option></select></label>
-      <label title="How recent a trigger must be to count, in candles of the selected timeframe. Also sets what counts as a LONG/SHORT setup and the Triggered setups card.">within <select id="trigN"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles</label>
-      <label title="Relative strength filter over 7 days">RS <select id="rsF"><option value="">Any</option><option value="lb">Leaders vs BTC</option><option value="lbe">Leaders vs BTC + ETH</option><option value="gb">Laggards vs BTC</option></select></label>
-      <label title="Setup grade filter. A = high quality (timeframes, regime and positioning agree, not stretched); C = weak or risky">Grade <select id="gradeF"><option value="">Any</option><option value="A">A only</option><option value="AB">A–B</option></select></label>
-      <label title="Multi-timeframe filter: All bull / All bear = 1D, 4H and 1H all agree">MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
+      <div class="toolbar">
+        <button id="fBtn" aria-expanded="true" title="Show or hide the indicator, positioning and strength filters">Filters <span class="fbadge" id="fCount" hidden>0</span> <span id="fArrow">▴</span></button>
+        <button id="clearBtn">Clear filters</button>
+      </div>
     </div>
+    <div class="fpanel" id="fPanel">
+      <div class="fgrp"><h4>Trend checks</h4><div class="row">
+        <label>DMI <select class="mf" data-k="dmi"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
+        <label>RSI&gt;EMA <select class="mf" data-k="rsiEma"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
+        <label>RSI&gt;50 <select class="mf" data-k="rsi50"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
+        <label>OBV&gt;EMA50 <select class="mf" data-k="obv"><option value="">Any</option><option value="1">▲</option><option value="-1">▼</option></select></label>
+      </div></div>
+      <div class="fgrp"><h4>Positioning</h4><div class="row">
+        <label>OI rising <select class="mf" data-k="oi"><option value="">Any</option><option value="1">Yes</option><option value="0">No</option></select></label>
+        <label title="What counts as open interest rising: at least this % change over N candles">OI ≥ <input id="oiThr" type="number" step="0.5" min="0" value="1">% over
+          <select id="oiN"><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles
+        </label>
+      </div></div>
+      <div class="fgrp"><h4>Strength</h4><div class="row">
+        <label title="Relative strength filter over 7 days">RS <select id="rsF"><option value="">Any</option><option value="lb">Leaders vs BTC</option><option value="lbe">Leaders vs BTC + ETH</option><option value="gb">Laggards vs BTC</option></select></label>
+        <label title="Multi-timeframe filter: All bull / All bear = 1D, 4H and 1H all agree">MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
+      </div></div>
+    </div>
+    <div class="row" id="fChips" hidden></div>
   </div>
 
   <div class="progress"><div id="prog"></div></div>
@@ -501,7 +518,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <tbody id="tbody"><tr><td class="empty" colspan="24">Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.</td></tr></tbody>
     </table>
   </div>
-  <div class="pager" id="pager"></div>
+  <div class="pagerow"><div class="pager" id="pager"></div><label class="rowsel">Rows per page <select id="pageSize"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="0">All</option></select></label></div>
 
   <div class="panel" style="margin-top:12px">
     <details>
@@ -1773,7 +1790,7 @@ function render(){
   S.page = Math.min(S.page, pages - 1);
   const start = S.page * size, pageRows = rows.slice(start, start + size);
   renderPager(rows.length, size, pages, start, pageRows.length);
-  syncCards();
+  syncCards(); renderChips();
   if (!rows.length){
     if (S.scanning && !S.rows.length){ $('tbody').innerHTML = skeletonRows(10); return; }
     $('tbody').innerHTML = `<tr><td class="empty" colspan="${COLS.length}">${S.rows.length ? 'No pairs match the current filters.' : 'Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.'}</td></tr>`;
@@ -3396,6 +3413,35 @@ $('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.
   S.show = 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === 'all')); render(); };
 for (const id of ['oiThr','oiN','sector','mcap','newOnly']) $(id).onchange = () => { saveSettings(); render(); };
 $('search').oninput = render;
+/* ---------- Filter bar: collapsible filter panel + removable chips for every active filter ---------- */
+const FP_KEY = 'onslaught-fpanel';
+function fpanelSet(open){ $('fPanel').hidden = !open; $('fBtn').setAttribute('aria-expanded', open); $('fArrow').textContent = open ? '▴' : '▾'; }
+let fpOpen = innerWidth > 900; try { const v = localStorage.getItem(FP_KEY); if (v != null) fpOpen = v === '1'; } catch {}
+fpanelSet(fpOpen);
+$('fBtn').onclick = () => { const open = $('fPanel').hidden; fpanelSet(open); try { localStorage.setItem(FP_KEY, open ? '1' : '0'); } catch {} };
+let FCHIPS = [];
+function renderChips(){
+  const L = [], el = (id, ev) => () => { const e = $(id); if (e.type === 'checkbox') e.checked = false; else e.value = ''; e.dispatchEvent(new Event(ev || 'change', {bubbles: true})); };
+  const selTxt = e => e.options[e.selectedIndex].text;
+  if (S.show !== 'all') L.push([S.show === 'bull' ? 'Bullish momentum' : 'Bearish momentum', () => { setShow('all'); render(); }]);
+  if ($('gradeF').value) L.push(['Grade: ' + selTxt($('gradeF')), el('gradeF')]);
+  if ($('trigF').value) L.push(['Trigger: ' + selTxt($('trigF')) + ' within ' + $('trigN').value, el('trigF')]);
+  if ($('newOnly').checked) L.push(['New only', el('newOnly')]);
+  if ($('starOnly').checked) L.push(['★ only', el('starOnly')]);
+  if ($('sector').value) L.push(['Sector: ' + selTxt($('sector')), el('sector')]);
+  if ($('search').value.trim()) L.push(['Search: ' + $('search').value.trim(), el('search', 'input')]);
+  document.querySelectorAll('.mf').forEach(m => { if (m.value !== '') L.push([m.parentNode.firstChild.textContent.trim() + ': ' + selTxt(m), () => { m.value = ''; m.dispatchEvent(new Event('change', {bubbles: true})); }]); });
+  if ($('rsF').value) L.push(['RS: ' + selTxt($('rsF')), el('rsF')]);
+  if ($('mtfF').value) L.push(['MTF: ' + selTxt($('mtfF')), el('mtfF')]);
+  if (S.incOnly) L.push(['Incomplete data', () => { S.incOnly = false; render(); }]);
+  if (S.setupOnly) L.push(['Triggered setups', () => { S.setupOnly = false; render(); }]);
+  FCHIPS = L;
+  $('fChips').hidden = !L.length;
+  $('fChips').innerHTML = L.length ? '<span class="mu">Active:</span>' + L.map((c, i) => `<span class="fchip" data-i="${i}" title="Remove this filter">${c[0].replace(/[<&]/g, ch => ch === '<' ? '&lt;' : '&amp;')}<u>×</u></span>`).join('') : '';
+  $('fCount').hidden = !L.length; $('fCount').textContent = L.length;
+}
+$('fChips').onclick = e => { const c = e.target.closest('.fchip'); if (c) FCHIPS[+c.dataset.i][1](); };
+
 $('universe').onchange = saveSettings; $('closed').onchange = saveSettings; $('mtfOn').onchange = saveSettings;
 for (const id of ['trigF','mtfF']) $(id).onchange = render;
 $('trigN').onchange = () => { saveSettings(); render(); };
