@@ -3563,7 +3563,7 @@ function dvBanner(x){
 /* ---------- Analysis tab: one coin, its structure and key levels, a rule-based summary, token facts ---------- */
 const ANA_KEY = 'onslaught-ana', ANA_TFS = ['15m', '1h', '4h', '1d'];
 const ANA = {sym: null, tf: '4h', cd: null, L: null, row: null, info: null, facts: null, err: '', busy: false, tok: 0, uni: null, vis: null,
-  show: {sr: true, fvg: true, ob: true, pd: true, liq: true, fib: false}, recent: []};
+  show: {sr: true, fvg: true, ob: true, pd: true, liq: true}, recent: []};
 (function(){ try { const o = JSON.parse(localStorage.getItem(ANA_KEY) || '{}'); if (o.show) Object.assign(ANA.show, o.show); if (Array.isArray(o.recent)) ANA.recent = o.recent.slice(0, 6); if (ANA_TFS.includes(o.tf)) ANA.tf = o.tf; } catch {} })();
 const anaSave = () => { try { localStorage.setItem(ANA_KEY, JSON.stringify({show: ANA.show, recent: ANA.recent, tf: ANA.tf})); } catch {} };
 const ANA_NAMES = {EQH: 'Equal highs', EQL: 'Equal lows', PDH: 'Prev day high', PDL: 'Prev day low', PWH: 'Prev week high', PWL: 'Prev week low'};
@@ -3652,7 +3652,6 @@ function anaChart(L, cd, w, h){
     o.push(`<rect x="${xr.toFixed(1)}" y="${Y(r.hi).toFixed(1)}" width="${(w - pad.r - xr).toFixed(1)}" height="${(Y(r.eq) - Y(r.hi)).toFixed(1)}" fill="${bear}" opacity=".07"/><rect x="${xr.toFixed(1)}" y="${Y(r.eq).toFixed(1)}" width="${(w - pad.r - xr).toFixed(1)}" height="${(Y(r.lo) - Y(r.eq)).toFixed(1)}" fill="${bull}" opacity=".06"/>`);
     o.push(`<line x1="${xr.toFixed(1)}" x2="${w - pad.r}" y1="${Y(r.eq).toFixed(1)}" y2="${Y(r.eq).toFixed(1)}" stroke="${mu}" stroke-dasharray="2 4"/>${txt(xr + 6, Y(r.eq) - 4, 'Equilibrium 50%', mu)}${txt(xr + 6, Math.max(Y(r.hi), pad.t) + 13, 'PREMIUM', bear)}${txt(xr + 6, Math.min(Y(r.lo), pad.t + ph) - 6, 'DISCOUNT', bull)}`);
   }
-  if (show.fib && L.fib) for (const f of L.fib.levels) o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(f.p).toFixed(1)}" y2="${Y(f.p).toFixed(1)}" stroke="#d4b86a" stroke-opacity=".55" stroke-dasharray="1 3"/>${txt(w - pad.r - 4, Y(f.p) - 3, 'fib ' + f.f, '#d4b86a', 'end')}`);
   const zone = (it, x0, col, label, op, dash) => { const y1 = Y(it.hi), y2 = Y(it.lo), hh = Math.max(y2 - y1, 3);
     o.push(`<rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="${col}" opacity="${op}"/><rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="none" stroke="${col}" stroke-opacity=".75"${dash ? ' stroke-dasharray="4 3"' : ''}/>${txt(x0 + 4, y1 + 11, label, col)}`); };
   for (const it of anaPick(L, show)){
@@ -3728,7 +3727,7 @@ function anaRender(){
   body.innerHTML = `<div class="panel anaverdict"><b>Short analysis.</b> ${anaSummary(L, row, ANA.tf)}<span class="mu">Rule-based summary of the screener's own data and the levels below, not a prediction.</span></div>
   <div class="anagrid">
     <div class="panel"><div class="row anatog" id="anaTog">
-      ${[['sr', 'S/R'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity'], ['fib', 'Fib']].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
+      ${[['sr', 'S/R'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity']].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
       <span class="mu anahov" id="anaHov"></span></div><div id="anaChartBox"></div></div>
     <div class="anaside">
       <div class="card2"><h4>Key levels (nearest first)</h4>${above.map(x => lrow(x, '▲')).join('')}${at.map(x => lrow(x, '●')).join('')}<div class="lv anapr"><b>● Price</b><b class="mono">${L.price.toFixed(dec > 4 ? 4 : dec)}</b></div>${below.map(x => lrow(x, '▼')).join('')}${above.length + below.length + at.length ? '' : '<p class="mu">No clear levels near price.</p>'}</div>
@@ -3760,8 +3759,9 @@ $('anaTf').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('anaBody').onclick = e => { const t = e.target.closest('.tachip'); if (t){ ANA.show[t.dataset.k] = !ANA.show[t.dataset.k]; anaSave(); anaRender(); } };
 $('anaBody').onmousemove = anaHover;
 $('anaBody').onmouseleave = () => { const c = $('anaCross'); if (c) c.setAttribute('visibility', 'hidden'); };
-$('anaQuick').onclick = e => { const x = e.target.closest('[data-rm]'); if (x){ ANA.recent = ANA.recent.filter(s => s !== x.dataset.rm); anaSave(); anaQuick(); return; } const b = e.target.closest('[data-sym]'); if (b) anaOpen(b.dataset.sym); };
-$('anaClose').onclick = () => { ANA.tok++; Object.assign(ANA, {sym: null, L: null, cd: null, row: null, info: null, facts: null, err: '', busy: false, loadedSym: null}); $('anaIn').value = ''; anaQuick(); anaRender(); };
+$('anaQuick').onclick = e => { const x = e.target.closest('[data-rm]'); if (x){ ANA.recent = ANA.recent.filter(s => s !== x.dataset.rm); anaSave(); if (x.dataset.rm === ANA.sym || !ANA.recent.length) anaCloseCoin(); else anaQuick(); return; } const b = e.target.closest('[data-sym]'); if (b) anaOpen(b.dataset.sym); };
+const anaCloseCoin = () => { ANA.tok++; Object.assign(ANA, {sym: null, L: null, cd: null, row: null, info: null, facts: null, err: '', busy: false, loadedSym: null}); $('anaIn').value = ''; anaQuick(); anaRender(); };
+$('anaClose').onclick = anaCloseCoin;
 $('anaIn').oninput = anaSuggest; $('anaIn').onfocus = anaSuggest;
 const anaPickSym = s => { $('anaSug').hidden = true; $('anaIn').value = ''; $('anaIn').blur(); anaOpen(s); };
 $('anaIn').onkeydown = e => {
