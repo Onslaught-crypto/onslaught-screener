@@ -1181,8 +1181,8 @@ function macroBuild(inp){
   return out.length >= 30 ? out : null;
 }
 /* Trend of one series: 7d and 30d % change, EMA20/50 structure. th = 7d % move that counts as a trend. */
-function macroTrend(vals, th){
-  const n = vals.length; if (n < 30) return null;
+function macroTrend(vals, th, minN = 30){
+  const n = vals.length; if (n < minN) return null;
   const ema = p => { const k = 2 / (p + 1); let e = vals[0]; for (const v of vals) e = v * k + e * (1 - k); return e; };
   const v = vals[n - 1], e20 = ema(20), e50 = ema(Math.min(50, n)), r7 = (v / vals[n - 8] - 1) * 100, r30 = (v / vals[Math.max(0, n - 31)] - 1) * 100;
   const mo = r7 >= th ? 1 : r7 <= -th ? -1 : 0, st = v > e20 && e20 > e50 ? 1 : v < e20 && e20 < e50 ? -1 : 0;
@@ -1198,9 +1198,9 @@ const MACRO_REGIMES = {
   riskon: ['Broad risk-on', 'Cash is leaving stablecoins and alts are gaining value. Trend-following longs have the macro wind behind them.', {alt: [1, -1], btc: [1, -1]}],
   altseason: ['Alt season', 'BTC dominance falling while alts gain: money is rotating into alts. Favour alt longs with good relative strength.', {alt: [1, -1], btc: [0, 0]}],
   mixed: ['Mixed', 'The macro indices disagree. No macro edge: trade the chart and size normally.', {alt: [0, 0], btc: [0, 0]}]};
-function macroRegime(series, k = 1){   // k scales the 7-period thresholds (2 for weekly bars)
+function macroRegime(series, k = 1, minN = 30){   // k scales the 7-period thresholds (2 for weekly bars); minN lowers the history needed (used by the regime history)
   if (!series) return null;
-  const tr = {btcD: macroTrend(series.map(x => x.btcD), 1.5 * k), stD: macroTrend(series.map(x => x.stD), 3 * k), t3es: macroTrend(series.map(x => x.t3es), 4 * k), othD: macroTrend(series.map(x => x.othD), 4 * k)};
+  const tr = {btcD: macroTrend(series.map(x => x.btcD), 1.5 * k, minN), stD: macroTrend(series.map(x => x.stD), 3 * k, minN), t3es: macroTrend(series.map(x => x.t3es), 4 * k, minN), othD: macroTrend(series.map(x => x.othD), 4 * k, minN)};
   if (Object.values(tr).some(x => !x)) return null;
   const bd = tr.btcD.dir, st = tr.stD.dir, t3 = tr.t3es.dir;
   const key = st > 0 && t3 < 0 ? 'riskoff' : bd > 0 && t3 < 0 ? 'flight' : st > 0 ? 'caution' : bd < 0 && t3 > 0 ? 'altseason'
@@ -2694,23 +2694,25 @@ function renderMacro(){
 /* Regime on each past day (or week): the same read as the verdict, re-run on the history up to that point. */
 function macHist(SER, W){
   $('macHistPanel').hidden = false;
-  const n = SER.length, win = Math.min(MAC.win, n), k = W ? 2 : 1, uL = W ? 'week' : 'day', days = [];
-  for (let i = Math.max(29, n - win); i < n; i++){ const r = macroRegime(SER.slice(0, i + 1), k); if (r) days.push({t: SER[i].t, key: r.key, name: r.name}); }
+  const n = SER.length, win = Math.min(MAC.win, n), k = W ? 2 : 1, uL = W ? 'week' : 'day', FULL = 30, days = [];
+  /* Readings with fewer than 30 bars behind them use the history that exists (a rougher read) so the strip covers the whole window; they are drawn faded. */
+  for (let i = Math.max(11, n - win); i < n; i++){ const r = macroRegime(SER.slice(0, i + 1), k, 12); if (r) days.push({t: SER[i].t, key: r.key, name: r.name, warm: i + 1 < FULL}); }
   if (days.length < 3){ $('macHist').innerHTML = '<div class="mu" style="padding:8px 0">Not enough history for this window. Pick a longer window or press Refresh.</div>'; return; }
   /* Short flickers inside the history are merged into their neighbour (shorter than HOLD readings); the latest run always stays as read, so the strip ends on today's regime. */
-  const HOLD = W ? 2 : 3, raw = []; for (const d of days){ const l = raw.at(-1); if (l && l.key === d.key){ l.n++; l.end = d.t; } else raw.push({key: d.key, name: d.name, n: 1, start: d.t, end: d.t}); }
+  const HOLD = W ? 2 : 3, raw = [];
+  for (const d of days){ const l = raw.at(-1); if (l && l.key === d.key && l.warm === d.warm){ l.n++; l.end = d.t; } else raw.push({key: d.key, name: d.name, warm: d.warm, n: 1, start: d.t, end: d.t}); }
   const runs = [];
   raw.forEach((x, i) => {
     const last = i === raw.length - 1, p = runs.at(-1);
     if (!last && x.n < HOLD){ if (p){ p.n += x.n; p.end = x.end; } else { raw[i + 1].n += x.n; raw[i + 1].start = x.start; } }
-    else if (p && p.key === x.key){ p.n += x.n; p.end = x.end; }
+    else if (p && p.key === x.key && p.warm === x.warm){ p.n += x.n; p.end = x.end; }
     else runs.push({...x});
   });
   let rawN = 0; for (let i = days.length - 1; i >= 0 && days[i].key === days.at(-1).key; i--) rawN++;
-  const f = t => new Date(t).toLocaleDateString([], {day: 'numeric', month: 'short', year: '2-digit'}), cur = {name: days.at(-1).name, n: rawN}, tot = {};
+  const f = t => new Date(t).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC'}), cur = {name: days.at(-1).name, n: rawN}, tot = {}, nWarm = days.filter(d => d.warm).length;
   for (const r of runs) (tot[r.key] ||= {name: r.name, n: 0}).n += r.n;
-  $('macHist').innerHTML = `<div class="rhist">${runs.map(r => `<span class="rseg" style="flex:${r.n};background:${MAC_HUE[r.key]}" title="${r.name} · ${f(r.start)} to ${f(r.end)} · ${r.n} ${uL}${r.n > 1 ? 's' : ''}"></span>`).join('')}</div>
-    <div class="mu" style="font-size:12px;margin-bottom:6px">${f(days[0].t)} → ${f(days.at(-1).t)} · now <b>${cur.name}</b> for ${cur.n} ${uL}${cur.n > 1 ? 's' : ''} · ${runs.length - 1} change${runs.length === 2 ? '' : 's'} in this window (flickers under ${HOLD} ${uL}s are merged)${days.length < MAC.win ? ` · shows ${days.length} of ${MAC.win} ${uL}s: the read needs 30 ${uL}s of history first` : ''}</div>
+  $('macHist').innerHTML = `<div class="rhist">${runs.map(r => `<span class="rseg" style="flex:${r.n};background:${MAC_HUE[r.key]};${r.warm ? 'opacity:.4' : ''}" title="${r.name} · ${f(r.start)} to ${f(r.end)} · ${r.n} ${uL}${r.n > 1 ? 's' : ''}${r.warm ? ' · rougher read (under 30 ' + uL + 's of history)' : ''}"></span>`).join('')}</div>
+    <div class="mu" style="font-size:12px;margin-bottom:6px">${f(days[0].t)} → ${f(days.at(-1).t)}${W ? ' (week-ending dates)' : ''} · now <b>${cur.name}</b> for ${cur.n} ${uL}${cur.n > 1 ? 's' : ''} · ${runs.length - 1} change${runs.length === 2 ? '' : 's'} in this window (flickers under ${HOLD} ${uL}s are merged)${nWarm ? ` · the faded part (first ${nWarm} ${uL}s) has under 30 ${uL}s of history behind it, so it is a rougher read` : ''}${days.length + 12 < win ? ` · shows ${days.length} of ${win} ${uL}s` : ''}</div>
     <div class="rhl">${Object.entries(tot).sort((a, b) => b[1].n - a[1].n).map(([key, v]) => `<span><i style="background:${MAC_HUE[key]}"></i>${v.name} ${Math.round(100 * v.n / days.length)}%</span>`).join('')}</div>`;
 }
 function macMatrix(R){
