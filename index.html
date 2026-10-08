@@ -176,6 +176,20 @@ td.trigs{white-space:nowrap}
 .jdel{background:none;border:0;color:var(--dim);padding:2px 6px} .jdel:hover{color:var(--bear)}
 .filebtn{border:1px solid var(--line);border-radius:6px;padding:6px 12px;background:var(--panel2);color:var(--text);font-size:13px;cursor:pointer}
 .toolbar{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.anahead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.anapick{position:relative}.anapick input{width:210px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font:inherit}.anapick input:focus{outline:none;border-color:var(--accent)}
+.anasug{position:absolute;left:0;top:100%;margin:4px 0 0;padding:4px;list-style:none;background:var(--panel2);border:1px solid var(--accent);border-radius:8px;min-width:210px;z-index:20;box-shadow:0 10px 30px #000a}.anasug li{padding:6px 10px;border-radius:5px;cursor:pointer}.anasug li.on,.anasug li:hover{background:rgba(138,82,156,.3)}.anasug[hidden]{display:none}
+.anatitle{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.anasym{font-size:20px}.anapx{font:600 15px var(--mono)}
+.anapill{border-radius:10px;padding:2px 9px;font-size:12px;font-weight:600;background:rgba(138,82,156,.3);color:var(--accent-lt)}.anapill.g{background:rgba(158,255,0,.15);color:var(--bull)}
+.anaquick{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.anagl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin:0 2px 0 8px}.anagl:first-child{margin-left:0}
+.anachip,.tachip{border:1px solid var(--line);border-radius:12px;padding:3px 10px;font-size:12px;color:var(--muted);background:none}.anachip:hover{color:var(--text);border-color:var(--accent)}.tachip.on{background:rgba(138,82,156,.25);border-color:var(--accent);color:var(--text)}
+.anaverdict{border-left:3px solid var(--accent-lt);line-height:1.6;margin-bottom:12px}
+.anagrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;margin-bottom:12px;align-items:start}.anagrid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;align-items:start}
+.anaside{display:grid;gap:12px}.card2{background:var(--panel);border-radius:10px;padding:12px 14px}.card2 h4{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.card2 .lv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:12.5px}.card2 h4+.lv{border-top:0}.card2 .anapr{border-top:2px solid var(--accent)}
+.mono{font-family:var(--mono)}.wr{color:var(--warn)}.anatog{margin-bottom:8px;gap:6px}.anahov{margin-left:auto;font:11px var(--mono)}
+.anaf{display:flex;gap:18px;flex-wrap:wrap}.anaf .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}.anaf .v{font:600 15px var(--mono)}
+a.abtn{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 11px;color:var(--text);text-decoration:none}a.abtn:hover{border-color:var(--accent)}
+@media (max-width:900px){.anagrid,.anagrid2{grid-template-columns:minmax(0,1fr)}.anapick input{width:100%}.anapick{flex:1;min-width:150px}}
 .fbar{display:flex;flex-direction:column;gap:10px}
 .fpanel{display:flex;flex-wrap:wrap;gap:10px 40px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}.fpanel[hidden]{display:none}
 .fgrp h4{margin:0 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
@@ -424,6 +438,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <button role="tab" data-view="sectors">Sector Flow</button>
     <button role="tab" data-view="macro">Macro</button>
     <button role="tab" data-view="div">Divergences<span class="newb" id="divNew" hidden>NEW</span></button>
+    <button role="tab" data-view="ta">Analysis</button>
     <button role="tab" data-view="liq">Liquidations</button>
     <button role="tab" data-view="journal">Journal</button>
   </nav>
@@ -711,6 +726,20 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </ul></details></div>
   </div><!-- /viewDiv -->
 
+  <div id="viewTa" hidden>
+    <div class="panel anahead">
+      <div class="anapick"><input id="anaIn" type="text" placeholder="Pick a coin, e.g. SOL" autocomplete="off" spellcheck="false" aria-label="Pick a coin"><ul class="anasug" id="anaSug" hidden></ul></div>
+      <div class="anatitle" id="anaTitle"></div>
+      <span style="flex:1"></span>
+      <div class="seg" id="anaTf"><button data-v="15m">15M</button><button data-v="1h">1H</button><button data-v="4h">4H</button><button data-v="1d">1D</button></div>
+      <a id="anaTv" class="abtn" target="_blank" rel="noopener" hidden>↗ TradingView</a>
+      <button id="anaLink" hidden title="Copy a link that opens this coin in the Analysis tab">Copy link</button>
+      <button id="anaPlan" class="primary" hidden title="Open the trade plan for this coin">Trade plan</button>
+    </div>
+    <div class="anaquick" id="anaQuick"></div>
+    <div id="anaBody"><div class="panel mu">Pick a coin above, or press <b>⌖</b> next to any pair in the Crypto Scanner, to see its structure, key levels and a short summary.</div></div>
+  </div>
+
   <div id="viewLiq" hidden>
     <div class="panel">
       <div class="row">
@@ -778,7 +807,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
 <div class="palette" id="palette" hidden role="dialog" aria-label="Quick search">
   <div class="palbox"><input id="palIn" type="text" placeholder="Search a pair and press Enter…" autocomplete="off" aria-label="Pair"><ul id="palList"></ul>
-  <div class="palhint mu">↑ ↓ to move · Enter to open the trade plan · Esc to close · <b>Ctrl+K</b> anywhere</div></div></div>
+  <div class="palhint mu">↑ ↓ to move · Enter to open the trade plan · Shift+Enter for the Analysis tab · Esc to close · <b>Ctrl+K</b> anywhere</div></div></div>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-label="Trade plan" aria-hidden="true">
   <div class="dhead">
@@ -811,7 +840,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="dsize" id="dSize"></div>
   </div>
   <div class="dsec"><ul class="dwarn" id="dWarn"></ul></div>
-  <div class="dsec row"><button id="dCopy" class="primary">Copy plan</button><button id="dTg" title="Send this plan to your Telegram">Send to Telegram</button><button id="dLink" title="Copy a link that opens this coin and timeframe">Copy link</button><span class="mu" id="dCopied" style="font-size:12px"></span></div>
+  <div class="dsec row"><button id="dCopy" class="primary">Copy plan</button><button id="dTg" title="Send this plan to your Telegram">Send to Telegram</button><button id="dAna" title="Open this coin in the Analysis tab: structure, key levels and a short summary">Analysis →</button><button id="dLink" title="Copy a link that opens this coin and timeframe">Copy link</button><span class="mu" id="dCopied" style="font-size:12px"></span></div>
   <p class="dnote">Levels come from closed candles on the selected timeframe. Swing stop = nearest swing low/high beyond entry ± 0.25 ATR. Targets = nearest swing levels and 1.272 / 1.618 extensions of the last impulse, with R-multiples as fallback. A starting point for your own chart read, not advice.</p>
 </aside>
 
@@ -1375,6 +1404,122 @@ function divBrief(cd){
   }
   return best ? {side: best.side, ind: best.ind, ago: best.ago, score: best.score} : null;
 }
+/* ---------- Technical analysis map (Analysis tab): levels computed from closed candles ----------
+   Rule-based and deliberately simple. SMC terms (order block, breaker, FVG) have no single official definition; these are ours. */
+function taLevels(cd, o = {}){
+  const n = cd.length; if (n < 60) return null;
+  const k = o.k || 3, op = cd.map(x => x[1]), h = cd.map(x => x[2]), l = cd.map(x => x[3]), c = cd.map(x => x[4]), t = cd.map(x => x[0]);
+  const A = atr(h, l, c, 14), a = A[n - 1]; if (!(a > 0)) return null;
+  const price = o.price > 0 ? o.price : c[n - 1], from = Math.max(0, n - 250);
+  // swing points (fractals): confirmed once k candles follow
+  const sh = [], sl = [];
+  for (let i = k; i < n - k; i++){
+    let isH = true, isL = true;
+    for (let j = 1; j <= k; j++){ if (h[i] < h[i - j] || h[i] < h[i + j]) isH = false; if (l[i] > l[i - j] || l[i] > l[i + j]) isL = false; }
+    if (isH) sh.push(i); if (isL) sl.push(i);
+  }
+  // market structure: close beyond the last confirmed swing = break of structure (with the trend) or change of character (against it)
+  let trendS = 0, ev = null, lastH = null, lastL = null;
+  for (let i = k; i < n; i++){
+    const pi = i - k;
+    if (sh.includes(pi)) lastH = {idx: pi, p: h[pi], broken: false};
+    if (sl.includes(pi)) lastL = {idx: pi, p: l[pi], broken: false};
+    if (lastH && !lastH.broken && c[i] > lastH.p){ lastH.broken = true; ev = {type: trendS >= 0 ? 'BOS' : 'CHoCH', dir: 1, idx: i, level: lastH.p}; trendS = 1; }
+    if (lastL && !lastL.broken && c[i] < lastL.p){ lastL.broken = true; ev = {type: trendS <= 0 ? 'BOS' : 'CHoCH', dir: -1, idx: i, level: lastL.p}; trendS = -1; }
+  }
+  const event = ev && n - 1 - ev.idx <= 40 ? {type: ev.type, dir: ev.dir, ago: n - 1 - ev.idx, level: ev.level} : null;
+  // dealing range, premium / discount, fib
+  const R = Math.min(n, o.range || 80); let hi = -Infinity, lo = Infinity;
+  for (let i = n - R; i < n; i++){ if (h[i] > hi) hi = h[i]; if (l[i] < lo) lo = l[i]; }
+  const eq = (hi + lo) / 2, pct = (price - lo) / (hi - lo || 1);
+  const range = {hi, lo, eq, pct, zone: pct < 0.5 ? 'discount' : 'premium', R};
+  let fib = null;
+  { const ih = sh.at(-1), il = sl.at(-1);
+    if (ih != null && il != null && Math.abs(h[ih] - l[il]) >= 2 * a){
+      const up = ih > il, top = h[ih], bot = l[il];
+      fib = {dir: up ? 1 : -1, top, bot, levels: [0.382, 0.5, 0.618, 0.786].map(f => ({f, p: up ? top - f * (top - bot) : bot + f * (top - bot)}))}; } }
+  // support / resistance zones: clusters of swing highs and lows
+  const pts = []; for (const i of sh) if (i >= from) pts.push({p: h[i], i}); for (const i of sl) if (i >= from) pts.push({p: l[i], i});
+  pts.sort((x, y) => x.p - y.p);
+  const tol = 0.6 * a, cl = []; let cur = null;
+  for (const q of pts){ if (cur && q.p - cur.pts.at(-1).p <= tol && q.p - cur.pts[0].p <= 1.8 * tol) cur.pts.push(q); else { cur = {pts: [q]}; cl.push(cur); } }
+  const sr = [];
+  for (const z of cl){
+    const lo2 = z.pts[0].p, hi2 = z.pts.at(-1).p, mid = (lo2 + hi2) / 2, touches = z.pts.length;
+    if (touches < 2) continue;
+    const zl = Math.min(lo2, mid - 0.12 * a), zh = Math.max(hi2, mid + 0.12 * a), last = Math.max(...z.pts.map(q => q.i));
+    sr.push({lo: zl, hi: zh, mid, touches, last, side: zh < price ? 'below' : zl > price ? 'above' : 'at'});
+  }
+  // fair value gaps (still open)
+  const fvg = [];
+  for (let i = Math.max(2, n - 150); i < n; i++){
+    let dir = 0, glo, ghi;
+    if (l[i] > h[i - 2] && l[i] - h[i - 2] >= 0.25 * a){ dir = 1; glo = h[i - 2]; ghi = l[i]; }
+    else if (h[i] < l[i - 2] && l[i - 2] - h[i] >= 0.25 * a){ dir = -1; glo = h[i]; ghi = l[i - 2]; }
+    if (!dir) continue;
+    let rlo = glo, rhi = ghi, dead = false;
+    for (let j = i + 1; j < n; j++){
+      if (dir > 0){ if (l[j] <= glo){ dead = true; break; } if (l[j] < rhi) rhi = l[j]; }
+      else { if (h[j] >= ghi){ dead = true; break; } if (h[j] > rlo) rlo = h[j]; }
+    }
+    if (dead) continue;
+    fvg.push({dir, lo: rlo, hi: rhi, i: i - 1, fill: 1 - (rhi - rlo) / (ghi - glo)});
+  }
+  // order blocks: the last opposite candle before an impulsive break; breakers: order blocks that failed and flipped
+  const ob = [], used = new Set();
+  for (let j = Math.max(6, n - 150); j < n; j++){
+    const body = Math.abs(c[j] - op[j]); if (!(body >= 1.3 * A[j])) continue;
+    const bull = c[j] > op[j]; let brk = true;
+    for (let q = j - 5; q < j; q++) if (bull ? c[j] <= h[q] : c[j] >= l[q]) brk = false;
+    if (!brk) continue;
+    let oi = -1; for (let q = j - 1; q >= j - 6; q--) if (bull ? c[q] < op[q] : c[q] > op[q]){ oi = q; break; }
+    if (oi < 0 || used.has(oi)) continue; used.add(oi);
+    const zl = l[oi], zh = h[oi]; let touches = 0, broken = -1;
+    for (let m = j + 1; m < n; m++){
+      if (bull ? c[m] < zl : c[m] > zh){ broken = m; break; }
+      if (bull ? l[m] <= zh : h[m] >= zl) touches++;
+    }
+    if (broken < 0) ob.push({dir: bull ? 1 : -1, lo: zl, hi: zh, i: oi, touches, kind: 'ob'});
+    else if (n - broken <= 120){                                  // failed block: now a breaker on the other side, until price closes back through it
+      let back = false; for (let m = broken + 1; m < n; m++) if (bull ? c[m] > zh : c[m] < zl){ back = true; break; }
+      if (!back) ob.push({dir: bull ? -1 : 1, lo: zl, hi: zh, i: oi, touches: 0, kind: 'breaker'});
+    }
+  }
+  // liquidity: equal highs / lows still untouched, previous day and week extremes
+  const liq = [], tolL = 0.2 * a;
+  const pool = (idx, arr, hiSide) => {
+    const ids = idx.filter(i => i >= n - 150), used2 = new Set();
+    for (let x = 0; x < ids.length; x++){
+      if (used2.has(x)) continue; const grp = [ids[x]];
+      for (let y = x + 1; y < ids.length; y++) if (!used2.has(y) && Math.abs(arr[ids[y]] - arr[ids[x]]) <= tolL){ grp.push(ids[y]); used2.add(y); }
+      if (grp.length < 2) continue;
+      const p = hiSide ? Math.max(...grp.map(i => arr[i])) : Math.min(...grp.map(i => arr[i])), last = Math.max(...grp);
+      let swept = false; for (let m = last + 1; m < n; m++) if (hiSide ? h[m] > p : l[m] < p){ swept = true; break; }
+      if (!swept && (hiSide ? p > price : p < price)) liq.push({kind: hiSide ? 'EQH' : 'EQL', price: p, n: grp.length});
+    }
+  };
+  pool(sh, h, true); pool(sl, l, false);
+  const bucket = (ms, off) => { const m = new Map(); for (let i = 0; i < n; i++){ const b = Math.floor((t[i] - off) / ms); const e = m.get(b); if (e){ e.h = Math.max(e.h, h[i]); e.l = Math.min(e.l, l[i]); e.last = i; } else m.set(b, {h: h[i], l: l[i], first: i, last: i}); } return [...m.entries()].sort((x, y) => x[0] - y[0]).map(x => x[1]); };
+  for (const [ms, off, nm] of [[864e5, 0, 'D'], [6048e5, 3456e5, 'W']]){
+    const bs = bucket(ms, off); if (bs.length < 2) continue; const prev = bs[bs.length - 2], curB = bs[bs.length - 1];
+    const dup = p => liq.some(q => Math.abs(q.price - p) <= 0.15 * a);               // already marked as equal highs / lows
+    if (prev.h > price && curB.h < prev.h && !dup(prev.h)) liq.push({kind: 'P' + nm + 'H', price: prev.h});
+    if (prev.l < price && curB.l > prev.l && !dup(prev.l)) liq.push({kind: 'P' + nm + 'L', price: prev.l});
+  }
+  // one merged list of everything near price, for the "key levels" panel
+  const NM = {EQH: 'Equal highs (liquidity)', EQL: 'Equal lows (liquidity)', PDH: 'Previous day high', PDL: 'Previous day low', PWH: 'Previous week high', PWL: 'Previous week low'};
+  const list = [], add = (name, kind, lo2, hi2, extra = {}) => {
+    const side = hi2 < price ? 'below' : lo2 > price ? 'above' : 'at', edge = side === 'below' ? hi2 : side === 'above' ? lo2 : price;
+    list.push({name, kind, lo: lo2, hi: hi2, mid: (lo2 + hi2) / 2, side, dist: (edge / price - 1) * 100, distAtr: Math.abs(edge - price) / a, ...extra});
+  };
+  for (const z of sr) add(z.side === 'above' ? 'Resistance zone' : z.side === 'below' ? 'Support zone' : 'At S/R zone', 'sr', z.lo, z.hi, {touches: z.touches});
+  for (const f of fvg) add(f.dir > 0 ? 'Bull FVG (unfilled)' : 'Bear FVG (unfilled)', 'fvg', f.lo, f.hi, {dir: f.dir, i: f.i});
+  for (const b of ob) add(b.kind === 'breaker' ? (b.dir > 0 ? 'Bull breaker' : 'Bear breaker') : (b.dir > 0 ? 'Bull order block' : 'Bear order block'), b.kind, b.lo, b.hi, {dir: b.dir, i: b.i, touches: b.touches});
+  for (const q of liq) add(NM[q.kind], 'liq', q.price, q.price, {pool: q.kind});
+  add('Equilibrium (50% of range)', 'eq', eq, eq);
+  list.sort((x, y) => x.distAtr - y.distAtr);
+  return {n, price, atr: a, trend: trendS, event, range, fib, sr, fvg, ob, liq, list, swings: {h: sh, l: sl}, t0: t[0], tN: t[n - 1]};
+}
 // ==ENGINE END==
 
 /* ---------- Config & constants ---------- */
@@ -1800,7 +1945,7 @@ function render(){
   S.page = Math.min(S.page, pages - 1);
   const start = S.page * size, pageRows = rows.slice(start, start + size);
   renderPager(rows.length, size, pages, start, pageRows.length);
-  syncCards(); renderChips();
+  syncCards(); renderFChips();
   if (!rows.length){
     if (S.scanning && !S.rows.length){ $('tbody').innerHTML = skeletonRows(10); return; }
     $('tbody').innerHTML = `<tr><td class="empty" colspan="${COLS.length}">${S.rows.length ? 'No pairs match the current filters.' : 'Press <b>Scan</b> to load Binance USDT perpetuals and evaluate the confirmation checks.'}</td></tr>`;
@@ -1813,7 +1958,7 @@ function render(){
     const ent = S.changes && S.changes.inMap[r.sym];
     const cells = {
       star: `<td class="c"><button class="starb ${WATCH.has(r.sym) ? 'on' : ''}" data-star="${r.sym}" aria-label="${WATCH.has(r.sym) ? 'Remove from' : 'Add to'} watchlist" title="${WATCH.has(r.sym) ? 'Remove from' : 'Add to'} watchlist">${WATCH.has(r.sym) ? '★' : '☆'}</button></td>`,
-      sym: `<td class="l pair">${r.sym.replace('USDT','')}${r.isNew ? '<span class="new">NEW</span>' : ''}${ent ? `<span class="inpill ${ent.dir > 0 ? 'b' : 's'}" title="Entered since the last scan: ${ent.kind === 'setup' ? 'triggered setup' : 'aligned'}">IN</span>` : ''}<a class="tvl" href="${tv}" target="_blank" rel="noopener" title="Open on TradingView">↗</a></td>`,
+      sym: `<td class="l pair">${r.sym.replace('USDT','')}${r.isNew ? '<span class="new">NEW</span>' : ''}${ent ? `<span class="inpill ${ent.dir > 0 ? 'b' : 's'}" title="Entered since the last scan: ${ent.kind === 'setup' ? 'triggered setup' : 'aligned'}">IN</span>` : ''}<a class="tvl" href="${tv}" target="_blank" rel="noopener" title="Open on TradingView">↗</a><a class="tvl" href="#" data-an="${r.sym}" title="Analyze: structure, key levels and a short summary">⌖</a></td>`,
       sector: `<td class="l">${(tg => `<span class="tag">${tg[0]}</span>${tg.length > 1 ? `<span class="tag" title="${tg.slice(1).join(', ')}">+${tg.length - 1}</span>` : ''}`)(tagsOf(r.base))}</td>`,
       price: `<td class="px">${fmtPrice(r.price)}</td>`,
       chg: `<td class="pc ${cls(r.chg)}">${fmtPct(r.chg)}</td>`,
@@ -1925,9 +2070,9 @@ try { if (!localStorage.getItem('onslaught-newseen')) $('divNew').hidden = false
 function setView(v){
   S.view = v;
   if (v === 'div'){ try { localStorage.setItem('onslaught-newseen', '1'); } catch {} $('divNew').hidden = true; }
-  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div';
+  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div'; $('viewTa').hidden = v !== 'ta';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', liq: 'Liquidation Map', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
+  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Analysis', liq: 'Liquidation Map', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   if (v === 'journal') renderJournal();
@@ -1935,6 +2080,7 @@ function setView(v){
   if (v === 'macro'){ renderMacro(); if (!S.macro || Date.now() - S.macro.t > 36e5) loadMacro(false); }
   if (v === 'div'){ dvSync(); renderDiv(); if (!DIV.t || Date.now() - DIV.t > 3e5) divScan(); }
   if (v === 'liq') liqEnter();
+  if (v === 'ta') anaEnter();
 }
 
 /* ---------- Sector Flow ---------- */
@@ -3407,6 +3553,217 @@ function dvBanner(x){
   return `<b class="${bull ? 'up' : 'dn'}">${bull ? 'Bullish' : 'Bearish'} divergence</b> · ${dvIndLbl(x)} · ${DV_LBL[x.tf]} · ${dvAge(x).toLowerCase()}<br><span class="mu">Price ${fmtPrice(x.pA)} → ${fmtPrice(x.pB)} · RSI ${x.rsiA.toFixed(0)} → ${x.rsiB.toFixed(0)}${mc != null ? ` · MACD hist −${mc}%` : ''} · ${x.level} (${x.score})${ctx ? ' · ' + ctx[0].toLowerCase() : ''}</span>`;
 }
 
+/* ---------- Analysis tab: one coin, its structure and key levels, a rule-based summary, token facts ---------- */
+const ANA_KEY = 'onslaught-ana', ANA_TFS = ['15m', '1h', '4h', '1d'];
+const ANA = {sym: null, tf: '4h', cd: null, L: null, row: null, info: null, facts: null, err: '', busy: false, tok: 0, uni: null, vis: null,
+  show: {sr: true, fvg: true, ob: true, pd: true, liq: true, fib: false}, recent: []};
+(function(){ try { const o = JSON.parse(localStorage.getItem(ANA_KEY) || '{}'); if (o.show) Object.assign(ANA.show, o.show); if (Array.isArray(o.recent)) ANA.recent = o.recent.slice(0, 6); if (ANA_TFS.includes(o.tf)) ANA.tf = o.tf; } catch {} })();
+const anaSave = () => { try { localStorage.setItem(ANA_KEY, JSON.stringify({show: ANA.show, recent: ANA.recent, tf: ANA.tf})); } catch {} };
+const ANA_NAMES = {EQH: 'Equal highs', EQL: 'Equal lows', PDH: 'Prev day high', PDL: 'Prev day low', PWH: 'Prev week high', PWL: 'Prev week low'};
+async function anaUniverse(){
+  if (ANA.uni && Date.now() - ANA.uni.t < 6e4) return ANA.uni.list;
+  const list = await getUniverse(); ANA.uni = {t: Date.now(), list}; return list;
+}
+function anaOpen(sym, tf){
+  if (tf && ANA_TFS.includes(tf)){ ANA.tf = tf; anaSave(); }
+  ANA.sym = sym; if (S.view !== 'ta') setView('ta'); else anaLoad(sym);
+}
+function anaEnter(){
+  anaUniverse().then(() => anaQuick()).catch(() => {});
+  anaTfSync(); anaQuick();
+  if (ANA.sym && (!ANA.L || ANA.L.tf !== ANA.tf || ANA.loadedSym !== ANA.sym)) anaLoad(ANA.sym); else anaRender();
+}
+function anaTfSync(){ [...$('anaTf').children].forEach(b => b.classList.toggle('on', b.dataset.v === ANA.tf)); }
+async function anaLoad(sym){
+  const tok = ++ANA.tok, tf = ANA.tf, c = cfg();
+  Object.assign(ANA, {sym, cd: null, L: null, row: null, facts: null, err: '', busy: true, loadedSym: sym});
+  anaTfSync(); anaRender();
+  try {
+    const info = (await anaUniverse()).find(u => u.sym === sym);
+    if (!info) throw new Error(`${sym} was not found in the Binance USDT-M list.`);
+    ANA.info = info; anaRender();
+    const cd = await getKlines(sym, tf, true);
+    if (tok !== ANA.tok) return;
+    const live = LIVE.q.get(sym);
+    ANA.cd = cd; ANA.L = taLevels(cd, {price: live ? live[0] : info.price}); if (ANA.L) ANA.L.tf = tf;
+    ANA.busy = false; if (!ANA.L) ANA.err = `Not enough ${tf.toUpperCase()} candle history for ${sym.replace('USDT', '')}.`;
+    ANA.recent = [sym, ...ANA.recent.filter(x => x !== sym)].slice(0, 6); anaSave(); anaQuick(); anaRender();
+    let base = tf === S.tf ? S.rows.find(r => r.sym === sym) : null;               // screener context: grade, trend checks, funding, positioning
+    if (!base){ try { base = await buildRow(info, tf, c); } catch { base = null; } }
+    if (tok !== ANA.tok) return;
+    ANA.row = base ? derive(base, c) : null; anaRender();
+    anaFacts(sym, info.base, tok);
+  } catch(e){ if (tok !== ANA.tok) return; ANA.busy = false; ANA.err = e.message || String(e); anaRender(); }
+}
+async function anaFacts(sym, base, tok){
+  const key = 'cgf:' + base, hit = await Cache.get(key);
+  if (hit && Date.now() - hit.t < 6 * 36e5){ if (tok === ANA.tok){ ANA.facts = hit.v; anaRender(); } return; }
+  const s = base.replace(/^(1000000|1000|1M)/, '').toLowerCase();
+  try {
+    const j = await cgJSON(`/coins/markets?vs_currency=usd&symbols=${encodeURIComponent(s)}&per_page=20`, 2);
+    const m = (Array.isArray(j) ? j : []).filter(x => String(x.symbol).toLowerCase() === s).sort((x, y) => (y.market_cap || 0) - (x.market_cap || 0))[0];
+    const v = m ? {id: m.id, rank: m.market_cap_rank, mc: m.market_cap, fdv: m.fully_diluted_valuation, circ: m.circulating_supply, tot: m.total_supply, max: m.max_supply, ath: m.ath_change_percentage} : {none: true};
+    await Cache.set(key, {t: Date.now(), v});
+    if (tok === ANA.tok){ ANA.facts = v; anaRender(); }
+  } catch(e){ if (tok === ANA.tok){ ANA.facts = {err: true}; anaRender(); } }
+}
+function anaQuick(){
+  const chip = (s, t) => `<button class="anachip" data-sym="${s}">${t || s.replace('USDT', '')}</button>`, g = (l, a) => a.length ? `<span class="mu anagl">${l}</span>${a.join('')}` : '';
+  const c = cfg(), star = [...WATCH].slice(0, 8).map(s => chip(s)), rec = ANA.recent.filter(s => s !== ANA.sym).map(s => chip(s));
+  const gA = S.rows.map(r => derive(r, c)).filter(r => r.setup && r.G && r.G.grade === 'A').sort((a, b) => b.score - a.score).slice(0, 6).map(r => chip(r.sym, r.sym.replace('USDT', '') + (r.setup > 0 ? ' ▲' : ' ▼')));
+  $('anaQuick').innerHTML = g('★ Watchlist', star) + g('Recent', rec) + g('A-grade setups', gA);
+}
+function anaSuggest(){
+  const q = $('anaIn').value.trim().toUpperCase().replace(/USDT$/, ''), box = $('anaSug');
+  const syms = infoCache ? infoCache.syms : [];
+  if (!q || !syms.length){ box.hidden = true; return; }
+  const m = syms.filter(s => s.replace('USDT', '').includes(q)).sort((a, b) => (b.startsWith(q) - a.startsWith(q)) || a.length - b.length).slice(0, 8);
+  ANA.sug = m; ANA.sugI = 0;
+  box.innerHTML = m.length ? m.map((s, i) => `<li data-sym="${s}" class="${i === 0 ? 'on' : ''}">${s.replace('USDT', '')}<span class="mu">/USDT</span></li>`).join('') : '<li class="mu">No Binance perpetual matches.</li>';
+  box.hidden = false;
+}
+function anaPick(L, show){
+  const by = (k, n) => L.list.filter(x => x.kind === k).slice(0, n), out = [];
+  if (show.sr) out.push(...L.list.filter(x => x.kind === 'sr' && x.side === 'above').slice(0, 2), ...L.list.filter(x => x.kind === 'sr' && x.side !== 'above').slice(0, 2));
+  if (show.fvg) out.push(...by('fvg', 3));
+  if (show.ob) out.push(...by('ob', 2), ...by('breaker', 1));
+  if (show.liq) out.push(...by('liq', 4));
+  return out;
+}
+function anaChart(L, cd, w, h){
+  const show = ANA.show, N = Math.min(cd.length, w < 600 ? 70 : 120), s0 = cd.length - N, vis = cd.slice(s0), pad = {l: 8, r: 70, t: 8, b: 22}, pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  let lo = Math.min(...vis.map(k => k[3]), L.price), hi = Math.max(...vis.map(k => k[2]), L.price); const m = (hi - lo) * 0.04; lo -= m; hi += m;
+  const X = i => pad.l + pw * (i - s0 + 0.5) / N, Y = p => pad.t + ph * (1 - (p - lo) / (hi - lo)), dec = decFor(L.price);
+  const bull = cssv('--bull'), bear = cssv('--bear'), acc = cssv('--accent-lt'), info = cssv('--info'), warn = cssv('--warn'), mu = cssv('--muted'), dim = cssv('--dim');
+  const o = [`<svg id="anaSvg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Candlestick chart with key levels"><defs><clipPath id="anaClip"><rect x="${pad.l}" y="${pad.t}" width="${pw}" height="${ph}"/></clipPath></defs><rect width="${w}" height="${h}" fill="#0e0f14" rx="8"/>`];
+  for (let k = 0; k <= 4; k++){ const p = lo + (hi - lo) * k / 4; o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(p).toFixed(1)}" y2="${Y(p).toFixed(1)}" stroke="rgba(255,255,255,.05)"/><text x="${w - pad.r + 6}" y="${(Y(p) + 3).toFixed(1)}" fill="${dim}" font-size="10">${p.toFixed(dec > 4 ? 4 : dec)}</text>`); }
+  const txt = (x, y, t, col, anchor) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${col}" font-size="10"${anchor ? ` text-anchor="${anchor}"` : ''}>${esc(t)}</text>`;
+  o.push('<g clip-path="url(#anaClip)">');
+  const rx0 = Math.max(s0, cd.length - L.range.R), xr = X(rx0) - pw / N / 2;
+  if (show.pd){
+    const r = L.range;
+    o.push(`<rect x="${xr.toFixed(1)}" y="${Y(r.hi).toFixed(1)}" width="${(w - pad.r - xr).toFixed(1)}" height="${(Y(r.eq) - Y(r.hi)).toFixed(1)}" fill="${bear}" opacity=".07"/><rect x="${xr.toFixed(1)}" y="${Y(r.eq).toFixed(1)}" width="${(w - pad.r - xr).toFixed(1)}" height="${(Y(r.lo) - Y(r.eq)).toFixed(1)}" fill="${bull}" opacity=".06"/>`);
+    o.push(`<line x1="${xr.toFixed(1)}" x2="${w - pad.r}" y1="${Y(r.eq).toFixed(1)}" y2="${Y(r.eq).toFixed(1)}" stroke="${mu}" stroke-dasharray="2 4"/>${txt(xr + 6, Y(r.eq) - 4, 'Equilibrium 50%', mu)}${txt(xr + 6, Math.max(Y(r.hi), pad.t) + 13, 'PREMIUM', bear)}${txt(xr + 6, Math.min(Y(r.lo), pad.t + ph) - 6, 'DISCOUNT', bull)}`);
+  }
+  if (show.fib && L.fib) for (const f of L.fib.levels) o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(f.p).toFixed(1)}" y2="${Y(f.p).toFixed(1)}" stroke="#d4b86a" stroke-opacity=".55" stroke-dasharray="1 3"/>${txt(w - pad.r - 4, Y(f.p) - 3, 'fib ' + f.f, '#d4b86a', 'end')}`);
+  const zone = (it, x0, col, label, op, dash) => { const y1 = Y(it.hi), y2 = Y(it.lo), hh = Math.max(y2 - y1, 3);
+    o.push(`<rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="${col}" opacity="${op}"/><rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="none" stroke="${col}" stroke-opacity=".75"${dash ? ' stroke-dasharray="4 3"' : ''}/>${txt(x0 + 4, y1 + 11, label, col)}`); };
+  for (const it of anaPick(L, show)){
+    if (it.kind === 'liq'){ const y = Y(it.mid); o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${warn}" stroke-dasharray="5 4"/>${txt(w - pad.r - 4, y - 4, ANA_NAMES[it.pool], warn, 'end')}`); continue; }
+    const x0 = it.i != null ? Math.max(pad.l, X(Math.max(it.i, s0)) - pw / N / 2) : pad.l;
+    if (it.kind === 'sr') zone(it, pad.l, it.side === 'above' ? bear : it.side === 'below' ? bull : mu, it.side === 'above' ? 'Resistance' : it.side === 'below' ? 'Support' : 'S/R', .14);
+    else if (it.kind === 'fvg') zone(it, x0, acc, (it.dir > 0 ? 'Bull' : 'Bear') + ' FVG', .22);
+    else zone(it, x0, it.kind === 'breaker' ? warn : info, it.kind === 'breaker' ? (it.dir > 0 ? 'Bull breaker' : 'Bear breaker') : (it.dir > 0 ? 'Bull OB' : 'Bear OB'), .2, it.kind === 'breaker');
+  }
+  const bw = Math.max(2, pw / N * 0.62);
+  vis.forEach((k, j) => { const i = s0 + j, col = k[4] >= k[1] ? bull : bear;
+    o.push(`<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="${Y(k[2]).toFixed(1)}" y2="${Y(k[3]).toFixed(1)}" stroke="${col}"/><rect x="${(X(i) - bw / 2).toFixed(1)}" y="${Y(Math.max(k[1], k[4])).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(Math.abs(Y(k[1]) - Y(k[4])), 1).toFixed(1)}" fill="${col}"/>`); });
+  o.push(`<line id="anaCross" x1="0" x2="0" y1="${pad.t}" y2="${pad.t + ph}" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 3" visibility="hidden"/></g>`);
+  const yl = Y(L.price);
+  o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${yl.toFixed(1)}" y2="${yl.toFixed(1)}" stroke="${acc}" stroke-dasharray="3 3"/><rect x="${w - pad.r}" y="${(yl - 9).toFixed(1)}" width="${pad.r - 4}" height="18" rx="3" fill="${cssv('--accent')}"/><text x="${w - pad.r + 6}" y="${(yl + 4).toFixed(1)}" fill="#fff" font-size="11" font-weight="600">${L.price.toFixed(dec > 4 ? 4 : dec)}</text>`);
+  const fmtT = t => { const d = new Date(t); return ANA.tf === '1d' ? d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) : d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) + ' ' + d.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'}); };
+  for (let q = 0; q < 5; q++){ const i = s0 + Math.round((N - 1) * q / 4); o.push(txt(Math.min(Math.max(X(i), pad.l + 24), w - pad.r - 30), h - 6, fmtT(cd[i][0]), dim, 'middle')); }
+  o.push('</svg>'); ANA.vis = {s0, N, pad, pw, w}; return o.join('');
+}
+function anaSummary(L, row, tf){
+  const T = tf.toUpperCase(), st = L.trend > 0 ? 'bullish' : L.trend < 0 ? 'bearish' : 'ranging', cl = L.trend > 0 ? 'up' : L.trend < 0 ? 'dn' : 'mu';
+  let s = `Structure on ${T} is <b class="${cl}">${st}</b>`;
+  if (L.event) s += ` (${L.event.type} ${L.event.dir > 0 ? 'up' : 'down'}, ${L.event.ago === 0 ? 'on the last candle' : L.event.ago + ' candle' + (L.event.ago > 1 ? 's' : '') + ' ago'})`;
+  s += '. ';
+  if (row && row.mtf) s += `Trend checks: ${MTF_TFS.map(t => `${MTF_LBL[t]} ${row.mtf[t] > 0 ? 'bullish' : row.mtf[t] < 0 ? 'bearish' : 'mixed'}`).join(', ')}. `;
+  const z = L.range; s += z.pct < 0 || z.pct > 1 ? `Price is <b class="${z.pct < 0 ? 'up' : 'dn'}">${z.pct < 0 ? 'below' : 'above'}</b> the last ${z.R}-candle range (${fmtPrice(z.lo)} to ${fmtPrice(z.hi)}). ` : `Price is in <b class="${z.zone === 'discount' ? 'up' : 'dn'}">${z.zone}</b>, ${Math.round(z.pct * 100)}% of the way up the last ${z.R}-candle range (${fmtPrice(z.lo)} to ${fmtPrice(z.hi)}). `;
+  const near = side => L.list.find(x => x.side === side && x.kind !== 'eq'), a = near('above'), b = near('below');
+  const d = x => `${x.name.toLowerCase()} ${Math.abs(x.dist).toFixed(1)}% away (${x.distAtr.toFixed(1)} ATR)`;
+  if (a || b) s += `Nearest ${a ? 'level above: ' + d(a) : ''}${a && b ? '; ' : ''}${b ? (a ? 'below: ' : 'level below: ') + d(b) : ''}. `;
+  if (row){
+    const bits = [];
+    if (row.fund != null) bits.push(`funding ${row.fund > 0 ? '+' : ''}${row.fund.toFixed(4)}%${row.fFlag ? ' (crowded)' : ''}`);
+    if (row.pos) bits.push(POS[row.pos][0].toLowerCase());
+    if (row.rs && row.rs.b7 != null) bits.push(`${ppf(row.rs.b7)} pp vs BTC over 7 days`);
+    if (bits.length) s += `Derivatives and strength: ${bits.join(', ')}. `;
+    if (row.G) s += `Screener grade <b>${row.G.grade}</b>${row.setup ? `, <b class="${row.setup > 0 ? 'up' : 'dn'}">${row.setup > 0 ? 'LONG' : 'SHORT'}</b> setup` : ''}. `;
+  }
+  return s;
+}
+function anaRender(){
+  const body = $('anaBody'), sym = ANA.sym, info = ANA.info, L = ANA.L, row = ANA.row;
+  const empty = t => body.innerHTML = `<div class="panel mu" style="margin-top:12px">${t}</div>`;
+  $('anaTv').hidden = $('anaPlan').hidden = $('anaLink').hidden = !sym;
+  if (sym){ $('anaTv').href = `https://www.tradingview.com/chart/?symbol=BINANCE:${sym}.P`; }
+  const tags = info ? tagsOf(info.base).slice(0, 3).map(t => `<span class="tag">${esc(t)}</span>`).join('') : '';
+  const lp = sym && LIVE.q.get(sym), price = lp ? lp[0] : info ? info.price : null, chg = lp && lp[1] != null ? lp[1] : info ? info.chg : null;
+  $('anaTitle').innerHTML = sym ? `<b class="anasym">${sym.replace('USDT', '')}</b><span class="mu"> /USDT perp</span> <span class="anapx">${fmtPrice(price)}</span> <span class="${cls(chg)}">${fmtPct(chg)}</span>
+    ${row && row.G ? `<span class="anapill ${row.G.grade === 'A' ? 'g' : ''}">Grade ${row.G.grade}${row.setup ? ' · ' + (row.setup > 0 ? 'LONG' : 'SHORT') + ' setup' : ''}</span>` : ''}${tags}` : '';
+  if (!sym){ empty('Pick a coin above, or press <b>⌖</b> next to any pair in the Crypto Scanner, to see its structure, key levels and a short summary.'); return; }
+  if (ANA.err){ empty(esc(ANA.err)); return; }
+  if (!L){ empty('Loading candles…'); return; }
+  const lv = L.list, above = lv.filter(x => x.side === 'above').slice(0, 3).reverse(), below = lv.filter(x => x.side === 'below').slice(0, 3), at = lv.filter(x => x.side === 'at').slice(0, 2);
+  const ccls = x => x.kind === 'sr' ? (x.side === 'above' ? 'dn' : x.side === 'below' ? 'up' : 'mu') : x.kind === 'liq' ? 'wr' : x.kind === 'eq' ? 'mu' : x.dir > 0 ? 'up' : 'dn';
+  const lrow = (x, arrow) => `<div class="lv"><span class="${ccls(x)}">${arrow} ${esc(x.name)}</span><span class="mono">${x.side === 'at' ? 'price is inside' : (x.dist > 0 ? '+' : '') + x.dist.toFixed(1) + '% · ' + x.distAtr.toFixed(1) + ' ATR'}</span></div>`;
+  const dec = decFor(L.price), ck = (k, v) => `<div class="lv"><span>${k}</span><span class="mono">${v}</span></div>`;
+  const arrowF = v => v > 0 ? '<b class="up">▲</b>' : v < 0 ? '<b class="dn">▼</b>' : '<b class="mu">◆</b>';
+  const check = [
+    ck('Structure ' + ANA.tf.toUpperCase(), `<b class="${L.trend > 0 ? 'up' : L.trend < 0 ? 'dn' : 'mu'}">${L.trend > 0 ? 'Bullish' : L.trend < 0 ? 'Bearish' : 'Ranging'}</b>`),
+    ck('Zone', `<b class="${L.range.zone === 'discount' ? 'up' : 'dn'}">${L.range.zone === 'discount' ? 'Discount' : 'Premium'}</b> ${L.range.pct < 0 ? '(below range)' : L.range.pct > 1 ? '(above range)' : Math.round(L.range.pct * 100) + '%'}`),
+    row && row.mtf ? ck('Trend 1D / 4H / 1H', MTF_TFS.map(t => arrowF(row.mtf[t])).join(' ')) : '',
+    row ? ck('Divergence', row.dv ? `<b class="${row.dv.side > 0 ? 'up' : 'dn'}">${row.dv.side > 0 ? 'Bull' : 'Bear'}</b> ${row.dv.ago === 0 ? 'now' : row.dv.ago + ' ago'}` : 'none') : '',
+    row && row.fund != null ? ck('Funding / positioning', `${row.fund > 0 ? '+' : ''}${row.fund.toFixed(4)}%${row.fFlag ? ' 🔥' : ''} · ${row.pos ? POS[row.pos][0] : '—'}`) : '',
+    row && row.rs && row.rs.b7 != null ? ck('RS 7D vs BTC', `<b class="${cls(row.rs.b7)}">${ppf(row.rs.b7)} pp</b>`) : '',
+    !row ? '<div class="lv"><span class="mu">Loading screener context…</span></div>' : ''].join('');
+  const f = ANA.facts, rowf = (k, v) => `<div><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  let facts;
+  if (!f) facts = '<p class="mu">Loading from CoinGecko…</p>';
+  else if (f.err) facts = '<p class="mu">CoinGecko is not answering right now (its free rate limit). Reopen the coin in a minute.</p>';
+  else if (f.none) facts = '<p class="mu">No CoinGecko match for this ticker.</p>';
+  else { const sup = f.max || f.tot;
+    facts = `<div class="anaf">${rowf('Mkt cap', fmtBig(f.mc))}${f.rank ? rowf('Rank', '#' + f.rank) : ''}${f.fdv && f.mc ? rowf('FDV / MCap', (f.fdv / f.mc).toFixed(2) + '×') : ''}${sup && f.circ ? rowf('Circulating', Math.min(100, f.circ / sup * 100).toFixed(0) + '%') : ''}${f.ath != null ? rowf('From ATH', `<span class="${cls(f.ath)}">${f.ath.toFixed(0)}%</span>`) : ''}${info ? rowf('Vol 24h', fmtBig(info.qv)) : ''}</div>`; }
+  const b = info ? info.base.replace(/^(1000000|1000|1M)/, '') : '', cg = f && f.id ? `https://www.coingecko.com/en/coins/${f.id}` : `https://www.coingecko.com/en/search?query=${encodeURIComponent(b)}`;
+  body.innerHTML = `<div class="panel anaverdict"><b>Short analysis.</b> ${anaSummary(L, row, ANA.tf)}<span class="mu">Rule-based summary of the screener's own data and the levels below, not a prediction.</span></div>
+  <div class="anagrid">
+    <div class="panel"><div class="row anatog" id="anaTog">
+      ${[['sr', 'S/R'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity'], ['fib', 'Fib']].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
+      <span class="mu anahov" id="anaHov"></span></div><div id="anaChartBox"></div></div>
+    <div class="anaside">
+      <div class="card2"><h4>Key levels (nearest first)</h4>${above.map(x => lrow(x, '▲')).join('')}${at.map(x => lrow(x, '●')).join('')}<div class="lv anapr"><b>● Price</b><b class="mono">${L.price.toFixed(dec > 4 ? 4 : dec)}</b></div>${below.map(x => lrow(x, '▼')).join('')}${above.length + below.length + at.length ? '' : '<p class="mu">No clear levels near price.</p>'}</div>
+      <div class="card2"><h4>Checklist</h4>${check}</div>
+    </div>
+  </div>
+  <div class="anagrid2">
+    <div class="card2"><h4>Token and fundamentals</h4>${facts}<div class="note">Source: CoinGecko and Binance. ${tags ? 'Sector: ' + tags : ''}</div></div>
+    <div class="card2"><h4>News and research (opens in a new tab)</h4><div class="row"><a class="abtn" href="${cg}" target="_blank" rel="noopener">CoinGecko page</a><a class="abtn" href="https://cryptopanic.com/news/${encodeURIComponent(b.toLowerCase())}/" target="_blank" rel="noopener">CryptoPanic news</a><a class="abtn" href="https://x.com/search?q=%24${encodeURIComponent(b)}&f=live" target="_blank" rel="noopener">X search $${esc(b)}</a><a class="abtn" href="https://www.tradingview.com/symbols/${sym}/ideas/" target="_blank" rel="noopener">TradingView ideas</a></div><div class="note">A live news feed needs a paid key, so the page links out instead.</div></div>
+  </div>`;
+  const box = $('anaChartBox'); box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), window.innerWidth < 700 ? 320 : 430);
+}
+function anaHover(e){
+  const svg = $('anaSvg'), V = ANA.vis; if (!svg || !V || !ANA.cd) return;
+  const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) * (V.w / r.width), i = V.s0 + Math.floor((x - V.pad.l) / V.pw * V.N);
+  const cr = $('anaCross'), hv = $('anaHov');
+  if (i < V.s0 || i >= ANA.cd.length){ if (cr) cr.setAttribute('visibility', 'hidden'); if (hv) hv.textContent = ''; return; }
+  const k = ANA.cd[i], xx = V.pad.l + V.pw * (i - V.s0 + 0.5) / V.N, d = decFor(k[4]), t = new Date(k[0]);
+  cr.setAttribute('x1', xx); cr.setAttribute('x2', xx); cr.setAttribute('visibility', 'visible');
+  hv.textContent = `${t.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'})}${ANA.tf === '1d' ? '' : ' ' + t.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})} · O ${k[1].toFixed(d > 4 ? 4 : d)} H ${k[2].toFixed(d > 4 ? 4 : d)} L ${k[3].toFixed(d > 4 ? 4 : d)} C ${k[4].toFixed(d > 4 ? 4 : d)}`;
+}
+
+$('anaTf').onclick = e => { const b = e.target.closest('button'); if (!b) return; ANA.tf = b.dataset.v; anaSave(); anaTfSync(); if (ANA.sym) anaLoad(ANA.sym); };
+$('anaBody').onclick = e => { const t = e.target.closest('.tachip'); if (t){ ANA.show[t.dataset.k] = !ANA.show[t.dataset.k]; anaSave(); anaRender(); } };
+$('anaBody').onmousemove = anaHover;
+$('anaBody').onmouseleave = () => { const c = $('anaCross'); if (c) c.setAttribute('visibility', 'hidden'); };
+$('anaQuick').onclick = e => { const b = e.target.closest('[data-sym]'); if (b) anaOpen(b.dataset.sym); };
+$('anaIn').oninput = anaSuggest; $('anaIn').onfocus = anaSuggest;
+const anaPickSym = s => { $('anaSug').hidden = true; $('anaIn').value = ''; $('anaIn').blur(); anaOpen(s); };
+$('anaIn').onkeydown = e => {
+  const box = $('anaSug'), n = (ANA.sug || []).length;
+  if (e.key === 'Escape'){ box.hidden = true; return; }
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !box.hidden && n){ e.preventDefault(); ANA.sugI = (ANA.sugI + (e.key === 'ArrowDown' ? 1 : n - 1)) % n; [...box.children].forEach((li, i) => li.classList.toggle('on', i === ANA.sugI)); }
+  if (e.key === 'Enter'){ const s = n && !box.hidden ? ANA.sug[ANA.sugI] : (() => { const q = $('anaIn').value.trim().toUpperCase().replace(/USDT$/, ''); return infoCache && infoCache.syms.includes(q + 'USDT') ? q + 'USDT' : null; })(); if (s) anaPickSym(s); }
+};
+$('anaSug').onmousedown = e => { const li = e.target.closest('[data-sym]'); if (li){ e.preventDefault(); anaPickSym(li.dataset.sym); } };
+document.addEventListener('click', e => { if (!e.target.closest('.anapick')) $('anaSug').hidden = true; });
+$('anaPlan').onclick = () => { if (!ANA.sym || !ANA.info) return; DIV.uni.set(ANA.sym, ANA.info); openDrawer(ANA.sym, {tf: ANA.tf}); };
+$('anaLink').onclick = async () => { const u = `${location.origin}${location.pathname}#t=ta&c=${ANA.sym}&tf=${ANA.tf}`; try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch { toast('Copy failed'); } };
+{ let rt = 0; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.view === 'ta' && ANA.L) anaRender(); }, 150); }); }
+$('dAna').onclick = () => { const s = D.sym, tf = D.tf; if (!s) return; closeDrawer(); anaOpen(s, tf); };
+
 /* ---------- Wire up ---------- */
 const SANDBOX_MSG = 'This page is running inside a sandboxed preview that blocks network requests. Download the file and open it in a normal browser tab (or host it on GitHub Pages) to scan.';
 document.addEventListener('securitypolicyviolation', e => {
@@ -3433,7 +3790,7 @@ let fpOpen = innerWidth > 900; try { const v = localStorage.getItem(FP_KEY); if 
 fpanelSet(fpOpen);
 $('fBtn').onclick = () => { const open = $('fPanel').hidden; fpanelSet(open); try { localStorage.setItem(FP_KEY, open ? '1' : '0'); } catch {} };
 let FCHIPS = [];
-function renderChips(){
+function renderFChips(){
   const L = [], el = (id, ev) => () => { const e = $(id); if (e.type === 'checkbox') e.checked = false; else e.value = ''; e.dispatchEvent(new Event(ev || 'change', {bubbles: true})); };
   const selTxt = e => e.options[e.selectedIndex].text;
   if (S.show !== 'all') L.push([S.show === 'bull' ? 'Bullish momentum' : 'Bearish momentum', () => { setShow('all'); render(); }]);
@@ -3485,14 +3842,14 @@ $('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.
   if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Crypto Scanner scan that includes this coin to open its trade plan.'); return; }
   const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
 $('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
-try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'macro' || v === 'div') setView(v); } catch {}
+try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'macro' || v === 'div' || v === 'ta') setView(v); } catch {}
 $('alertBtn').onclick = toggleAlerts; paintAlertBtn();
 for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
 for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
 document.addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (b){ openDrawer(b.dataset.open); $('toast').classList.remove('show'); return; }
   if (e.target.closest('#toast .tx')) $('toast').classList.remove('show'); });
 loadAcct();
-$('tbody').onclick = e => { const sb = e.target.closest('[data-star]'); if (sb){ toggleStar(sb.dataset.star); return; } if (e.target.closest('a')) return; const tr = e.target.closest('tr[data-sym]'); if (tr) openDrawer(tr.dataset.sym); };
+$('tbody').onclick = e => { const sb = e.target.closest('[data-star]'); if (sb){ toggleStar(sb.dataset.star); return; } const an = e.target.closest('[data-an]'); if (an){ e.preventDefault(); anaOpen(an.dataset.an, S.tf); return; } if (e.target.closest('a')) return; const tr = e.target.closest('tr[data-sym]'); if (tr) openDrawer(tr.dataset.sym); };
 $('scrim').onclick = closeDrawer; $('dClose').onclick = closeDrawer;
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && D.sym) closeDrawer(); });
 $('mapVs').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAP.vs = b.dataset.v; MAP.zoom = null; MAP.anim = true; [...$('mapVs').children].forEach(x => x.classList.toggle('on', x === b)); renderMap(); };
@@ -3576,6 +3933,23 @@ tabsOrder();
 applyTabs();
 $('viewBtn').onclick = e => { e.stopPropagation(); const p = $('viewPop'); p.hidden = !p.hidden; $('viewBtn').setAttribute('aria-expanded', !p.hidden); };
 document.addEventListener('click', e => { if (!$('viewPop').hidden && !e.target.closest('.popwrap')) $('viewPop').hidden = true; });
+/* Drag a stat card left or right to reorder; order kept in this browser */
+(function(){
+  const box = $('stats'), KEY = 'onslaught-statorder'; let drag = null;
+  let o = []; try { o = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch {}
+  const by = {}; [...box.children].forEach(c => by[c.dataset.f] = c);
+  o.forEach(k => { if (by[k]){ box.appendChild(by[k]); delete by[k]; } }); Object.values(by).forEach(c => box.appendChild(c));
+  [...box.children].forEach(c => c.draggable = true);
+  box.addEventListener('dragstart', e => { drag = e.target.closest('.stat'); if (!drag) return; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', drag.dataset.f); } catch {} drag.style.opacity = '.5'; });
+  box.addEventListener('dragover', e => {
+    if (!drag) return; e.preventDefault();
+    const t = e.target.closest('.stat'); if (!t || t === drag) return;
+    const r = t.getBoundingClientRect(), sameRow = e.clientY >= r.top && e.clientY <= r.bottom;
+    box.insertBefore(drag, sameRow && e.clientX > r.left + r.width / 2 ? t.nextSibling : t);
+  });
+  box.addEventListener('dragend', () => { if (!drag) return; drag.style.opacity = ''; drag = null;
+    try { localStorage.setItem(KEY, JSON.stringify([...box.children].map(c => c.dataset.f))); } catch {} });
+})();
 /* Drag a column header left or right to reorder; Pair and star stay first. Order kept in this browser. */
 (function(){
   const head = $('thead'); let drag = null;
@@ -3609,7 +3983,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape'){ closePalette(); return; }
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); const n = UI.pal.length; if (!n) return; UI.palI = (UI.palI + (e.key === 'ArrowDown' ? 1 : n - 1)) % n;
     [...$('palList').children].forEach((li, i) => li.classList.toggle('on', i === UI.palI)); }
-  if (e.key === 'Enter' && UI.pal[UI.palI]){ const s2 = UI.pal[UI.palI]; closePalette(); if (S.view !== 'trend') setView('trend'); openDrawer(s2); }
+  if (e.key === 'Enter' && UI.pal[UI.palI]){ const s2 = UI.pal[UI.palI]; closePalette(); if (e.shiftKey){ anaOpen(s2, S.tf); return; } if (S.view !== 'trend') setView('trend'); openDrawer(s2); }
 });
 $('palIn').oninput = renderPalette;
 $('palList').onclick = e => { const li = e.target.closest('[data-ps]'); if (li){ closePalette(); if (S.view !== 'trend') setView('trend'); openDrawer(li.dataset.ps); } };
@@ -3641,7 +4015,8 @@ async function applyHash(){
   const h = new URLSearchParams(location.hash.replace(/^#/, '')); if (!h.has('t') && !h.has('c')) return;
   history.replaceState(null, '', location.pathname + location.search);
   const t = h.get('t'), tf = h.get('tf'), c = (h.get('c') || '').toUpperCase(), d = +h.get('d') < 0 ? -1 : 1;
-  if (['trend', 'map', 'sectors', 'macro', 'div', 'liq', 'journal'].includes(t)) setView(t);
+  if (['trend', 'map', 'sectors', 'macro', 'div', 'ta', 'liq', 'journal'].includes(t) && !(t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c))) setView(t);
+  if (t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c)){ anaOpen(c, tf); return; }
   if (TFS.includes(tf) && tf !== S.tf) $('tfSeg').querySelector(`[data-v="${tf}"]`)?.click();
   if (/^[A-Z0-9]{3,20}USDT$/.test(c)){
     try { const u = (await getUniverse()).find(x => x.sym === c); if (u){ DIV.uni.set(c, u); openDrawer(c, {tf: TFS.includes(tf) ? tf : S.tf, dir: d}); } else toast(`${c} was not found in the Binance USDT-M list.`); } catch(e){ toast(e.message); }
