@@ -386,7 +386,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 .dvc:hover,.dvc:focus-visible{background:#262935;outline:none;border-color:var(--accent-lt)}
 .dvh{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px} .dvh b{font-size:15px}
 .dvside{font:700 11px var(--mono)}
-.dvind{font:700 10.5px var(--mono);border-radius:4px;padding:1px 6px;background:var(--panel2);color:var(--text)} .dvind.both{background:var(--accent-dk);color:#fff}
+.dvind{font:700 10.5px var(--mono);border-radius:4px;padding:1px 6px;background:var(--panel2);color:var(--text)} .dvearly{font-size:11px;font-weight:700;padding:1px 6px;border-radius:5px;background:rgba(255,196,0,.16);color:#ffc400;border:1px solid rgba(255,196,0,.4);white-space:nowrap}
+.dvind.both{background:var(--accent-dk);color:#fff}
 .dvsvg{display:block;width:100%;height:auto;margin:2px 0 6px}
 .dvf{display:flex;flex-wrap:wrap;gap:3px 12px;font:12px var(--mono);color:var(--muted);margin-top:3px} .dvf b{color:var(--text);font-weight:600} .dvf .warn{color:var(--warn)}
 .dvs{border-radius:4px;padding:1px 6px;font:700 11px var(--mono);cursor:help} .dvs.strong{background:var(--accent-dk);color:#fff} .dvs.medium{background:var(--panel2);color:var(--text)} .dvs.weak{background:transparent;color:var(--muted);border:1px solid var(--line)}
@@ -554,6 +555,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label title="Message me when BTC or ETH trades within 0.5% of one of the largest estimated liquidation clusters (15m model, same as the Liquidations tab). Checked every 5 minutes while this page is open."><input id="tgLiq" type="checkbox"> Liquidation alerts</label>
         <label title="Include entry, stop and targets for each alert"><input id="tgPlan" type="checkbox" checked> with trade plan</label>
         <label title="Also message me when RSI and MACD both diverge from price on a confirmed swing (1H, 4H or 1D, Strong). The Divergences tab scans in the background while this page is open."><input id="tgDiv" type="checkbox"> Divergence alerts</label>
+        <label title="Also message me about early divergences: the swing has 2 closed candles after it (instead of 5) and the last candle already turns against it. About 3 candles sooner, strength 60+, RSI + MACD, 1H / 4H / 1D. They fail more often than the confirmed ones. Needs this page open."><input id="tgDivE" type="checkbox"> Early divergence alerts ⚡</label>
         <label title="No Telegram messages during these hours (your local time). Alerts that would have fired are skipped, not sent later."><input id="tgQuiet" type="checkbox"> Quiet hours</label>
         <input id="tgQFrom" type="time" value="23:00" aria-label="Quiet hours start"> to <input id="tgQTo" type="time" value="07:00" aria-label="Quiet hours end">
         <button id="tgTest">Send test</button>
@@ -670,6 +672,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       </div>
       <div class="row">
         <label title="A swing is confirmed once 5 candles have closed after it. Unconfirmed (forming) swings can still change with the next candle."><input id="dvConf" type="checkbox" checked> Confirmed only</label>
+        <label title="Early ⚡: the swing has only 2 closed candles after it (not 5) and the last candle already turns against it, so you see it about 3 candles sooner. It needs strength 60+ and fails more often than a confirmed signal."><input id="dvEarly" type="checkbox" checked> Early ⚡ signals</label>
         <label>Age <select id="dvAge"><option value="3">last 3 candles</option><option value="5" selected>last 5 candles</option><option value="10">last 10 candles</option></select></label>
         <label>Strength <select id="dvStr"><option value="0">Any</option><option value="50">Medium or better</option><option value="70">Strong only</option></select></label>
         <button id="dvScan" class="primary">Scan</button>
@@ -1322,6 +1325,30 @@ function divergences(cd, o = {}){
   }
   return out.sort((x, y) => (x.bars - y.bars) || (y.score - x.score));
 }
+/*
+ * Early divergences: the same swing logic with only 2 closed candles after the swing instead of 5, so the signal arrives
+ * 3 candles sooner. To keep false alarms down it also needs: the swing is still the extreme of its neighbourhood, the last
+ * closed candle already turns against it (closes below the previous low for a bearish one / above the previous high for a
+ * bullish one), price has not run more than 2 ATR from the swing, and a strength of 60+.
+ * Returns signals like divergences() plus {early: true, mv}. Once the swing has 5 candles after it, the normal (confirmed) signal takes over.
+ */
+function divEarly(cd){
+  const n = cd.length; if (n < 80) return [];
+  const h = cd.map(x => x[2]), l = cd.map(x => x[3]), c = cd.map(x => x[4]), L = n - 1, A = atr(h, l, c, 14)[L];
+  if (!(A > 0)) return [];
+  const out = [];
+  for (const x of divergences(cd, {k: 2, maxAgo: 2, back: 4})){
+    if (!x.conf || x.bars < 2 || x.bars > 4 || x.score < 60) continue;
+    const b = x.b, bull = x.side > 0; let top = true;
+    for (let j = Math.max(0, b - 10); j <= L; j++) if (j !== b && (bull ? l[j] < l[b] : h[j] > h[b])){ top = false; break; }
+    if (!top) continue;
+    if (!(bull ? c[L] > h[L - 1] : c[L] < l[L - 1])) continue;
+    const mv = bull ? (c[L] - l[b]) / A : (h[b] - c[L]) / A;
+    if (mv > 2) continue;
+    out.push({...x, early: true, ago: 0, mv});
+  }
+  return out;
+}
 /* Best recent confirmed divergence of one candle series, for the setup grade: {side, ind, ago, score} or null. */
 function divBrief(cd){
   let best = null;
@@ -1845,7 +1872,7 @@ async function scan(){
 
 function setAuto(){
   clearInterval(S.timer); const s = +$('auto').value;
-  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on || tgActive()) scan(); if (tgActive() && $('tgDiv').checked) divScan(); if (tgActive() && $('tgLiq').checked) liqAlertScan(); }, s * 1000);
+  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on || tgActive()) scan(); if (tgActive() && ($('tgDiv').checked || $('tgDivE').checked)) divScan(); if (tgActive() && $('tgLiq').checked) liqAlertScan(); }, s * 1000);
 }
 
 function exportCSV(){
@@ -2180,8 +2207,8 @@ function toast(msg, items){
 /* ---------- Telegram ---------- */
 const TG_KEY = 'onslaught-tg';
 function tgLoad(){ let o = {}; try { o = JSON.parse(localStorage.getItem(TG_KEY) || '{}'); } catch {}
-  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgDiv').checked = !!o.div; $('tgLiq').checked = !!o.liq; $('tgQuiet').checked = !!o.quiet; $('tgQFrom').value = o.qFrom || '23:00'; $('tgQTo').value = o.qTo || '07:00'; }
-function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, div: $('tgDiv').checked, liq: $('tgLiq').checked, quiet: $('tgQuiet').checked, qFrom: $('tgQFrom').value, qTo: $('tgQTo').value})); } catch {} }
+  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgDiv').checked = !!o.div; $('tgDivE').checked = !!o.divE; $('tgLiq').checked = !!o.liq; $('tgQuiet').checked = !!o.quiet; $('tgQFrom').value = o.qFrom || '23:00'; $('tgQTo').value = o.qTo || '07:00'; }
+function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, div: $('tgDiv').checked, divE: $('tgDivE').checked, liq: $('tgLiq').checked, quiet: $('tgQuiet').checked, qFrom: $('tgQFrom').value, qTo: $('tgQTo').value})); } catch {} }
 const tgReady = () => /^\d+:[\w-]{20,}$/.test($('tgToken').value.trim()) && $('tgChat').value.trim() !== '';
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 /* Form-encoded POST = a "simple" CORS request (no preflight). If the browser can't read the reply, the message has usually still gone. */
@@ -3140,24 +3167,25 @@ function liveToggle(){ LIVE.on = !LIVE.on; try { localStorage.setItem('onslaught
 
 /* ---------- Divergences tab ---------- */
 const DV_TFS = ['15m', '1h', '4h', '1d'], DV_LBL = {'15m': '15m', '1h': '1H', '4h': '4H', '1d': '1D'};
-const DV_KEY = 'onslaught-div', DVSENT_KEY = 'onslaught-divsent', DV_ALERT_TFS = ['1h', '4h', '1d'], DV_ALERT_MIN = 70, DV_MAX = 60, DV_TOP = 100;
-const DIV = {rows: [], t: 0, scanning: false, uni: new Map(), tfs: new Set(DV_TFS), ind: 'all', dir: 0, conf: true, age: 5, str: 0, errShown: false};
+const DV_KEY = 'onslaught-div', DVSENT_KEY = 'onslaught-divsent', DV_ALERT_TFS = ['1h', '4h', '1d'], DV_ALERT_MIN = 70, DV_EARLY_MIN = 60, DV_EARLY_TFS = ['15m', '1h', '4h', '1d'], DV_MAX = 60, DV_TOP = 100;
+const DIV = {rows: [], t: 0, scanning: false, uni: new Map(), tfs: new Set(DV_TFS), ind: 'all', dir: 0, conf: true, early: true, age: 5, str: 0, errShown: false};
 (function dvLoad(){
   try { const o = JSON.parse(localStorage.getItem(DV_KEY) || '{}');
     if (Array.isArray(o.tfs) && o.tfs.some(t => DV_TFS.includes(t))) DIV.tfs = new Set(o.tfs.filter(t => DV_TFS.includes(t)));
     if (['all', 'rsi', 'macd', 'both'].includes(o.ind)) DIV.ind = o.ind;
     if (o.dir === 1 || o.dir === -1) DIV.dir = o.dir;
     if (o.conf === false) DIV.conf = false;
+    if (o.early === false) DIV.early = false;
     if ([3, 5, 10].includes(+o.age)) DIV.age = +o.age;
     if ([0, 50, 70].includes(+o.str)) DIV.str = +o.str;
   } catch {}
 })();
-function dvSave(){ try { localStorage.setItem(DV_KEY, JSON.stringify({tfs: [...DIV.tfs], ind: DIV.ind, dir: DIV.dir, conf: DIV.conf, age: DIV.age, str: DIV.str})); } catch {} }
+function dvSave(){ try { localStorage.setItem(DV_KEY, JSON.stringify({tfs: [...DIV.tfs], ind: DIV.ind, dir: DIV.dir, conf: DIV.conf, early: DIV.early, age: DIV.age, str: DIV.str})); } catch {} }
 function dvSync(){
   for (const b of $('dvTf').children) b.classList.toggle('on', DIV.tfs.has(b.dataset.v));
   for (const b of $('dvInd').children) b.classList.toggle('on', b.dataset.v === DIV.ind);
   for (const b of $('dvDir').children) b.classList.toggle('on', +b.dataset.v === DIV.dir);
-  $('dvConf').checked = DIV.conf; $('dvAge').value = DIV.age; $('dvStr').value = DIV.str;
+  $('dvConf').checked = DIV.conf; $('dvEarly').checked = DIV.early; $('dvAge').value = DIV.age; $('dvStr').value = DIV.str;
 }
 
 async function divScan(o = {}){
@@ -3174,7 +3202,9 @@ async function divScan(o = {}){
     async function worker(){
       while (i < jobs.length){
         const [u, tf] = jobs[i++];
-        try { const k = await getKlines(u.sym, tf, true); for (const s of divergences(k)) out.push({...s, sym: u.sym, tf}); }
+        try { const k = await getKlines(u.sym, tf, true); const ds = divergences(k), es = DV_EARLY_TFS.includes(tf) ? divEarly(k) : [], ek = new Set(es.map(e => `${e.side}|${e.tB}`));
+          for (const s of ds) if (s.conf || !ek.has(`${s.side}|${s.tB}`)) out.push({...s, sym: u.sym, tf});
+          for (const s of es) out.push({...s, sym: u.sym, tf}); }
         catch (e){ if (/418|banned|refused/.test(e.message)) throw e; fails++; lastErr = e; }
         done++;
         if (done % 20 === 0 || done === jobs.length){ pr(2 + 98 * done / jobs.length); st(`Scanning ${done}/${jobs.length}…`); }
@@ -3198,19 +3228,20 @@ async function divJournal(rows){
   const seen = new Set(J.entries.map(e => e.id)); let added = 0;
   for (const x of rows){
     if (!x.conf || x.ago > 2 || x.score < 50 || !DV_ALERT_TFS.includes(x.tf)) continue;
-    const id = `${x.sym}|${x.tf}|div|${x.side}|${x.tB}|${x.ind}`; if (seen.has(id)) continue;
+    const id = `${x.sym}|${x.tf}|div|${x.side}|${x.tB}|${x.ind}${x.early ? '|E' : ''}`; if (seen.has(id)) continue;
     const v = x.view, n = v.c.length, i = n - 1 - x.ago, A = atr(v.h, v.l, v.c, 14)[i];
     if (!(A > 0) || !(v.c[i] > 0)) continue;
     J.entries.push({id, key: `${x.sym}|${x.tf}|div|${x.side}`, sym: x.sym, tf: x.tf, kind: 'div', dir: x.side, ct: v.t[i], price: v.c[i], atr: A, score: null,
-      ds: x.score, dind: x.ind, dtr: x.trend ? x.side * x.trend : 0, rs7: null, grade: null, trig: [], regime: S.regimeDir || 0, mtf: null, ext: null, pos: null, fFlag: 0, out: null});
+      ds: x.score, dind: x.ind, early: !!x.early, dtr: x.trend ? x.side * x.trend : 0, rs7: null, grade: null, trig: [], regime: S.regimeDir || 0, mtf: null, ext: null, pos: null, fFlag: 0, out: null});
     seen.add(id); added++;
   }
   if (added){ await saveJournal(); updateOutcomes(false); }
 }
 function dvRecord(){
-  const es = J.entries.filter(e => e.kind === 'div'), g = [];
+  const all = J.entries.filter(e => e.kind === 'div'), es = all.filter(e => !e.early), ea = all.filter(e => e.early), g = [];
   const add = (group, bucket, list) => { if (list.length) g.push({group, bucket, logged: list.length, ...jStats(list)}); };
-  add('All', 'All divergences', es);
+  add('Entry', 'Confirmed (5 candles)', es); add('Entry', 'Early ⚡ (2 candles)', ea);
+  add('All', 'All confirmed divergences', es);
   add('Indicator', 'RSI + MACD', es.filter(e => e.dind === 'both')); add('Indicator', 'RSI only', es.filter(e => e.dind === 'rsi')); add('Indicator', 'MACD only', es.filter(e => e.dind === 'macd'));
   add('Strength', 'Strong (70+)', es.filter(e => e.ds >= 70)); add('Strength', 'Medium (50–69)', es.filter(e => e.ds < 70));
   add('Side', 'Bullish', es.filter(e => e.dir > 0)); add('Side', 'Bearish', es.filter(e => e.dir < 0));
@@ -3224,11 +3255,11 @@ function dvRecord(){
 }
 const dvKey = x => `${x.sym}|${x.tf}|${x.side}|${x.tB}|${x.ind}`;
 function dvFiltered(){
-  const f = x => DIV.tfs.has(x.tf) && x.ago <= DIV.age && x.score >= DIV.str && (!DIV.dir || x.side === DIV.dir) && (!DIV.conf || x.conf)
+  const f = x => (!x.early || DIV.early) && DIV.tfs.has(x.tf) && x.ago <= DIV.age && x.score >= DIV.str && (!DIV.dir || x.side === DIV.dir) && (!DIV.conf || x.conf)
     && (DIV.ind === 'all' || (DIV.ind === 'both' ? x.ind === 'both' : x.ind === DIV.ind || x.ind === 'both'));
   return DIV.rows.filter(f).sort((a, b) => b.score - a.score || a.bars - b.bars);
 }
-const dvAge = x => x.conf ? (x.ago === 0 ? 'Confirmed on the last candle' : `Confirmed ${x.ago} candle${x.ago > 1 ? 's' : ''} ago`) : `Forming · swing ${x.bars ? x.bars + ' candle' + (x.bars > 1 ? 's' : '') + ' ago' : 'on the last candle'}`;
+const dvAge = x => x.early ? `⚡ Early · swing ${x.bars} candles ago, last candle turned ${x.side > 0 ? 'up' : 'down'}` : x.conf ? (x.ago === 0 ? 'Confirmed on the last candle' : `Confirmed ${x.ago} candle${x.ago > 1 ? 's' : ''} ago`) : `Forming · swing ${x.bars ? x.bars + ' candle' + (x.bars > 1 ? 's' : '') + ' ago' : 'on the last candle'}`;
 const dvIndLbl = x => x.ind === 'both' ? 'RSI + MACD' : x.ind === 'rsi' ? 'RSI' : 'MACD';
 const dvMacd = x => x.mhA != null && x.mhA !== 0 ? Math.round((1 - Math.abs(x.mhB) / Math.abs(x.mhA)) * 100) : null;   // how much weaker the histogram swing is
 const dvCtx = x => !x.trend ? null : x.side * x.trend > 0
@@ -3279,7 +3310,7 @@ function dvChart(x){
 function dvCard(x){
   const bull = x.side > 0, ctx = dvCtx(x), mc = dvMacd(x), base = x.sym.replace('USDT', '');
   return `<article class="dvc ${bull ? 'bull' : 'bear'}" data-k="${esc(dvKey(x))}" tabindex="0" role="button" aria-label="${esc(base + ' ' + DV_LBL[x.tf] + ' ' + (bull ? 'bullish' : 'bearish') + ' divergence. Open trade plan')}">
-    <div class="dvh"><b>${esc(base)}</b><span class="tag">${DV_LBL[x.tf]}</span><span class="dvside ${bull ? 'up' : 'dn'}">${bull ? '▲ Bullish' : '▼ Bearish'}</span><span class="dvind ${x.ind}">${dvIndLbl(x)}</span></div>
+    <div class="dvh"><b>${esc(base)}</b><span class="tag">${DV_LBL[x.tf]}</span><span class="dvside ${bull ? 'up' : 'dn'}">${bull ? '▲ Bullish' : '▼ Bearish'}</span><span class="dvind ${x.ind}">${dvIndLbl(x)}</span>${x.early ? '<span class="dvearly" title="Early signal: 2 candles after the swing, fails more often than a confirmed one">⚡ Early</span>' : ''}</div>
     ${dvChart(x)}
     <div class="dvf"><span class="${x.conf ? '' : 'warn'}">${dvAge(x)}</span><span>Price <b>${fmtPrice(x.pA)} → ${fmtPrice(x.pB)}</b></span><span>RSI <b>${x.rsiA.toFixed(0)} → ${x.rsiB.toFixed(0)}</b></span>${mc != null ? `<span title="MACD histogram ${x.mhA.toPrecision(3)} → ${x.mhB.toPrecision(3)}">MACD hist <b>−${mc}%</b></span>` : ''}</div>
     <div class="dvf"><span class="dvs ${x.level}" title="Strength 0–100: indicators that agree, RSI zone, size of the disagreement, how far price pushed, confirmation and freshness">${x.level[0].toUpperCase() + x.level.slice(1)} · ${x.score}</span>${ctx ? `<span title="${ctx[1]}">${ctx[0]}</span>` : ''}</div>
@@ -3305,8 +3336,8 @@ async function divPlan(sym, tf, dir){
   let slMode = 'swing', atrMult = 1.5; try { const o = JSON.parse(localStorage.getItem(PLAN_KEY) || '{}'); slMode = o.slMode || slMode; atrMult = parseFloat(o.atrMult) || atrMult; } catch {}
   return tradePlan(cd, dir, {slMode, atrMult, entry: null});
 }
-async function divAlertText(items){
-  const lines = [`🔀 <b>Onslaught · ${items.length} new divergence${items.length > 1 ? 's' : ''}</b>`];
+async function divAlertText(items, early){
+  const lines = [early ? `⚡ <b>Onslaught · ${items.length} early divergence${items.length > 1 ? 's' : ''}</b>` : `🔀 <b>Onslaught · ${items.length} new divergence${items.length > 1 ? 's' : ''}</b>`];
   if (S.macro && S.macro.reg) lines.push(`🌐 Macro: ${esc(S.macro.reg.name)}${S.macro.reg.froth ? ' 🔥' : ''}`);
   for (const x of items.slice(0, 6)){
     const bull = x.side > 0, dec = decFor(x.pB), mc = dvMacd(x), ctx = dvCtx(x);
@@ -3319,21 +3350,29 @@ async function divAlertText(items){
         lines.push(`Entry ${fp(P.entry, dec)} · SL ${fp(P.sl, dec)} (${pc(P.sl)})`, P.tps.map((t, i) => `TP${i + 1} ${fp(t.price, dec)} (${t.r.toFixed(1)}R)`).join(' · '));
         const w = Math.abs(P.sl / P.entry - 1) * 100; if (w >= 12) lines.push(`⚠️ wide stop (${w.toFixed(1)}%): size down`); }
     }
+    if (early) lines.push('⚠️ Early: only 2 candles after the swing, can still fail. Confirm on the chart.');
     lines.push(`<a href="https://www.tradingview.com/chart/?symbol=BINANCE:${x.sym}.P">Chart</a>`);
   }
   if (items.length > 6) lines.push('', `+${items.length - 6} more in the Divergences tab`);
   return lines.join('\n');
 }
-/* Alerts: RSI + MACD on the same swings, confirmed, strong, on 1H / 4H / 1D. The first run only records what already exists. */
+/* Alerts: RSI + MACD on the same swings, confirmed, strong, on 1H / 4H / 1D. The first run only records what already exists.
+   Early alerts (⚡): the same, but 2 candles after the swing, strength 60+, with the last candle already turning. They have their own switch and baseline. */
 async function divAlert(rows){
-  if (!tgActive() || !$('tgDiv').checked) return;
-  const cand = rows.filter(x => DV_ALERT_TFS.includes(x.tf) && x.ind === 'both' && x.conf && x.ago <= 2 && x.score >= DV_ALERT_MIN), sent = dvSentLoad(), now = Date.now();
-  for (const k of Object.keys(sent)) if (k !== '_base' && now - sent[k] > 14 * 864e5) delete sent[k];
-  if (!sent._base){ for (const x of cand) sent[dvId(x)] = now; sent._base = now; dvSentSave(sent); toast(`Divergence alerts are on. ${cand.length} existing signal${cand.length === 1 ? '' : 's'} noted; you'll be messaged about new ones.`); return; }
-  const fresh = cand.filter(x => !sent[dvId(x)]).sort((a, b) => b.score - a.score);
+  if (!tgActive()) return;
+  if ($('tgDiv').checked) await divAlertRun(rows.filter(x => !x.early), false);
+  if ($('tgDivE').checked) await divAlertRun(rows.filter(x => x.early), true);
+}
+async function divAlertRun(rows, early){
+  const cand = rows.filter(x => DV_ALERT_TFS.includes(x.tf) && x.ind === 'both' && x.conf && x.ago <= 2 && x.score >= (early ? DV_EARLY_MIN : DV_ALERT_MIN)), sent = dvSentLoad(), now = Date.now();
+  const id = x => (early ? 'E|' : '') + dvId(x), base = early ? '_baseE' : '_base';
+  for (const k of Object.keys(sent)) if (k[0] !== '_' && now - sent[k] > 14 * 864e5) delete sent[k];
+  const mark = x => { sent[id(x)] = now; sent[dvId(x)] = now; };        // an early alert also covers the later confirmed one
+  if (!sent[base]){ for (const x of cand) mark(x); sent[base] = now; dvSentSave(sent); toast(`${early ? 'Early divergence' : 'Divergence'} alerts are on. ${cand.length} existing signal${cand.length === 1 ? '' : 's'} noted; you'll be messaged about new ones.`); return; }
+  const fresh = cand.filter(x => !sent[id(x)] && !sent[dvId(x)]).sort((a, b) => b.score - a.score);
   if (!fresh.length){ dvSentSave(sent); return; }
-  if (tgQuiet()){ for (const x of fresh) sent[dvId(x)] = now; dvSentSave(sent); return; }          // quiet hours: noted, not sent
-  try { await tgSend(await divAlertText(fresh)); for (const x of fresh) sent[dvId(x)] = now; dvSentSave(sent); DIV.errShown = false; }
+  if (tgQuiet()){ for (const x of fresh) mark(x); dvSentSave(sent); return; }          // quiet hours: noted, not sent
+  try { await tgSend(await divAlertText(fresh, early)); for (const x of fresh) mark(x); dvSentSave(sent); DIV.errShown = false; }
   catch(e){ dvSentSave(sent); if (!DIV.errShown){ DIV.errShown = true; toast('Divergence alert not sent: ' + e.message); } }
 }
 
@@ -3544,6 +3583,7 @@ $('dvTf').onclick = e => { const b = e.target.closest('button'); if (!b) return;
 $('dvInd').onclick = e => { const b = e.target.closest('button'); if (!b) return; DIV.ind = b.dataset.v; dvSave(); dvSync(); renderDiv(); };
 $('dvDir').onclick = e => { const b = e.target.closest('button'); if (!b) return; DIV.dir = +b.dataset.v; dvSave(); dvSync(); renderDiv(); };
 $('dvConf').onchange = () => { DIV.conf = $('dvConf').checked; dvSave(); renderDiv(); };
+$('dvEarly').onchange = () => { DIV.early = $('dvEarly').checked; dvSave(); renderDiv(); };
 $('dvAge').onchange = () => { DIV.age = +$('dvAge').value; dvSave(); renderDiv(); };
 $('dvStr').onchange = () => { DIV.str = +$('dvStr').value; dvSave(); renderDiv(); };
 $('dvScan').onclick = () => divScan();
@@ -3557,10 +3597,10 @@ $('tgLiq').onchange = () => {
     if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); }
     LQA.errShown = false; liqAlertScan(true); }
 };
-$('tgDiv').onchange = () => {
-  if ($('tgDiv').checked && !$('tgOn').checked){ $('tgOn').checked = true; $('tgOn').dispatchEvent(new Event('change')); }
+for (const id of ['tgDiv', 'tgDivE']) $(id).onchange = () => {
+  if ($(id).checked && !$('tgOn').checked){ $('tgOn').checked = true; $('tgOn').dispatchEvent(new Event('change')); }
   tgSave();
-  if ($('tgDiv').checked){ if (!tgReady()){ toast('Add the bot token and chat ID first, then tick this again.'); $('tgDiv').checked = false; tgSave(); return; }
+  if ($(id).checked){ if (!tgReady()){ toast('Add the bot token and chat ID first, then tick this again.'); $(id).checked = false; tgSave(); return; }
     if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); }
     divScan(); }
 };
