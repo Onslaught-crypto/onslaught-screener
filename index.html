@@ -383,6 +383,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 .dvside{font:700 11px var(--mono)}
 .dvind{font:700 10.5px var(--mono);border-radius:4px;padding:1px 6px;background:var(--panel2);color:var(--text)} .dvearly{font-size:11px;font-weight:700;padding:1px 6px;border-radius:5px;background:rgba(255,196,0,.16);color:#ffc400;border:1px solid rgba(255,196,0,.4);white-space:nowrap}
 .dvind.both{background:var(--accent-dk);color:#fff}
+#dvInd{flex-wrap:wrap;max-width:100%} #dvInd button{white-space:nowrap}
 .dvsvg{display:block;width:100%;height:auto;margin:2px 0 6px}
 .dvf{display:flex;flex-wrap:wrap;gap:3px 12px;font:12px var(--mono);color:var(--muted);margin-top:3px} .dvf b{color:var(--text);font-weight:600} .dvf .warn{color:var(--warn)}
 .dvs{border-radius:4px;padding:1px 6px;font:700 11px var(--mono);cursor:help} .dvs.strong{background:var(--accent-dk);color:#fff} .dvs.medium{background:var(--panel2);color:var(--text)} .dvs.weak{background:transparent;color:var(--muted);border:1px solid var(--line)}
@@ -662,7 +663,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="panel">
       <div class="row">
         <span class="mu">Timeframes</span><div class="seg" id="dvTf"><button data-v="15m" class="on">15m</button><button data-v="1h" class="on">1H</button><button data-v="4h" class="on">4H</button><button data-v="1d" class="on">1D</button></div>
-        <span class="mu">Indicator</span><div class="seg" id="dvInd"><button data-v="all" class="on" title="Show RSI, MACD and both">All</button><button data-v="rsi" title="Pairs where RSI diverges from price (includes the ones where MACD agrees too)">RSI</button><button data-v="macd" title="Pairs where the MACD histogram diverges from price (includes the ones where RSI agrees too)">MACD</button><button data-v="obv" title="Pairs where OBV (volume) also diverges from price, or only OBV does">OBV</button><button data-v="both" title="RSI and MACD diverge on the same two swings">Both</button><button data-v="all3" title="RSI, MACD and OBV all diverge on the same two swings: the strongest kind">3/3</button></div>
+        <span class="mu">Indicator</span><div class="seg" id="dvInd"><button data-v="all" class="on" title="Every divergence, whichever indicators agree">All</button><button data-v="rsi" title="Only RSI diverges (MACD and OBV do not)">RSI</button><button data-v="macd" title="Only the MACD histogram diverges (RSI and OBV do not)">MACD</button><button data-v="obv" title="Only OBV (volume) diverges (RSI and MACD do not)">OBV</button><button data-v="rsi+macd" title="RSI and MACD diverge together, OBV does not">RSI + MACD</button><button data-v="rsi+obv" title="RSI and OBV diverge together, MACD does not">RSI + OBV</button><button data-v="macd+obv" title="MACD and OBV diverge together, RSI does not">MACD + OBV</button><button data-v="rsi+macd+obv" title="RSI, MACD and OBV all diverge on the same two swings: the strongest kind">RSI + MACD + OBV</button></div>
         <span class="mu">Direction</span><div class="seg" id="dvDir"><button data-v="0" class="on">All</button><button data-v="1">Bullish</button><button data-v="-1">Bearish</button></div>
       </div>
       <div class="row">
@@ -3134,7 +3135,8 @@ const DIV = {rows: [], t: 0, scanning: false, uni: new Map(), tfs: new Set(DV_TF
 (function dvLoad(){
   try { const o = JSON.parse(localStorage.getItem(DV_KEY) || '{}');
     if (Array.isArray(o.tfs) && o.tfs.some(t => DV_TFS.includes(t))) DIV.tfs = new Set(o.tfs.filter(t => DV_TFS.includes(t)));
-    if (['all', 'rsi', 'macd', 'obv', 'both', 'all3'].includes(o.ind)) DIV.ind = o.ind;
+    const mig = {both: 'rsi+macd', all3: 'rsi+macd+obv'}, iv = mig[o.ind] || o.ind;
+    if (['all', 'rsi', 'macd', 'obv', 'rsi+macd', 'rsi+obv', 'macd+obv', 'rsi+macd+obv'].includes(iv)) DIV.ind = iv;
     if (o.dir === 1 || o.dir === -1) DIV.dir = o.dir;
     if (o.conf === false) DIV.conf = false;
     if (o.early === false) DIV.early = false;
@@ -3204,7 +3206,10 @@ function dvRecord(){
   const add = (group, bucket, list) => { if (list.length) g.push({group, bucket, logged: list.length, ...jStats(list)}); };
   add('Entry', 'Confirmed (5 candles)', es); add('Entry', 'Early ⚡ (2 candles)', ea);
   add('All', 'All confirmed divergences', es);
-  add('Indicator', 'RSI + MACD', es.filter(e => e.dind === 'both')); add('Indicator', 'RSI only', es.filter(e => e.dind === 'rsi')); add('Indicator', 'MACD only', es.filter(e => e.dind === 'macd'));
+  const dv = (ind, ov) => es.filter(e => e.dind === ind && !!e.dov === ov);
+  add('Indicators', 'RSI + MACD + OBV', dv('both', true)); add('Indicators', 'RSI + MACD', dv('both', false));
+  add('Indicators', 'RSI + OBV', dv('rsi', true)); add('Indicators', 'MACD + OBV', dv('macd', true));
+  add('Indicators', 'RSI only', dv('rsi', false)); add('Indicators', 'MACD only', dv('macd', false));
   add('OBV', 'OBV agrees too', es.filter(e => e.dov)); add('OBV', 'OBV does not agree', es.filter(e => !e.dov));
   add('Strength', 'Strong (70+)', es.filter(e => e.ds >= 70)); add('Strength', 'Medium (50–69)', es.filter(e => e.ds < 70));
   add('Side', 'Bullish', es.filter(e => e.dir > 0)); add('Side', 'Bearish', es.filter(e => e.dir < 0));
@@ -3216,10 +3221,12 @@ function dvRecord(){
       <td>${r.win == null ? '—' : r.win.toFixed(0) + '%'}</td><td class="${cls(r.avgR)}">${fR(r.avgR)}</td><td class="${cls(r.r12)}">${r.r12 == null ? '—' : fmtPct(r.r12)}</td></tr>`; }).join('')
     : '<tr><td class="empty" colspan="6">Nothing logged yet. Divergences are recorded after each Divergences scan, and results appear once 24 candles have passed.</td></tr>';
 }
+/* exactly which indicators diverge on this signal, e.g. 'rsi+macd' */
+const dvCombo = x => x.ind === 'obv' ? 'obv' : (x.ind === 'both' ? 'rsi+macd' : x.ind) + (x.ov ? '+obv' : '');
 const dvKey = x => `${x.sym}|${x.tf}|${x.side}|${x.tB}|${x.ind}`;
 function dvFiltered(){
   const f = x => (!x.early || DIV.early) && DIV.tfs.has(x.tf) && x.ago <= DIV.age && x.score >= DIV.str && (!DIV.dir || x.side === DIV.dir) && (!DIV.conf || x.conf)
-    && (DIV.ind === 'all' || (DIV.ind === 'both' ? x.ind === 'both' : DIV.ind === 'obv' ? (x.ov || x.ind === 'obv') : DIV.ind === 'all3' ? (x.ind === 'both' && x.ov) : x.ind === DIV.ind || x.ind === 'both'));
+    && (DIV.ind === 'all' || dvCombo(x) === DIV.ind);
   return DIV.rows.filter(f).sort((a, b) => b.score - a.score || a.bars - b.bars);
 }
 const dvAge = x => x.early ? `⚡ Early · swing ${x.bars} candles ago, last candle turned ${x.side > 0 ? 'up' : 'down'}` : x.conf ? (x.ago === 0 ? 'Confirmed on the last candle' : `Confirmed ${x.ago} candle${x.ago > 1 ? 's' : ''} ago`) : `Forming · swing ${x.bars ? x.bars + ' candle' + (x.bars > 1 ? 's' : '') + ' ago' : 'on the last candle'}`;
@@ -3294,7 +3301,7 @@ function renderDiv(){
   dvRecord();
   const all = dvFiltered(), rows = all.slice(0, DV_MAX);
   const nb = all.filter(x => x.side > 0).length, nboth = all.filter(x => x.ind === 'both').length;
-  $('dvSum').innerHTML = DIV.t ? `<b>${all.length}</b> signal${all.length === 1 ? '' : 's'} · <span class="up">▲ ${nb} bullish</span> · <span class="dn">▼ ${all.length - nb} bearish</span> · ${nboth} with RSI + MACD${all.filter(x => x.ov).length ? ` · ${all.filter(x => x.ov).length} with OBV` : ''}${all.length > DV_MAX ? ` · showing the ${DV_MAX} strongest` : ''}` : '';
+  $('dvSum').innerHTML = DIV.t ? `<b>${all.length}</b> signal${all.length === 1 ? '' : 's'} · <span class="up">▲ ${nb} bullish</span> · <span class="dn">▼ ${all.length - nb} bearish</span> · ${all.filter(x => dvCombo(x).includes('+')).length} with 2+ indicators · ${all.filter(x => dvCombo(x) === 'rsi+macd+obv').length} with all 3${all.length > DV_MAX ? ` · showing the ${DV_MAX} strongest` : ''}` : '';
   $('dvGrid').innerHTML = rows.length ? rows.map(dvCard).join('') : `<div class="panel mu" style="grid-column:1/-1">${DIV.scanning ? 'Scanning…' : DIV.t ? 'No divergences match these filters right now. Try a longer age, "Any" strength, or more timeframes.' : 'Press Scan to look for divergences in the top 100 pairs.'}</div>`;
 }
 
