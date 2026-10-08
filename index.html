@@ -1434,10 +1434,17 @@ function taLevels(cd, o = {}){
   const eq = (hi + lo) / 2, pct = (price - lo) / (hi - lo || 1);
   const range = {hi, lo, eq, pct, zone: pct < 0.5 ? 'discount' : 'premium', R};
   let fib = null;
-  { const ih = sh.at(-1), il = sl.at(-1);
-    if (ih != null && il != null && Math.abs(h[ih] - l[il]) >= 2 * a){
-      const up = ih > il, top = h[ih], bot = l[il];
-      fib = {dir: up ? 1 : -1, top, bot, levels: [0.382, 0.5, 0.618, 0.786].map(f => ({f, p: up ? top - f * (top - bot) : bot + f * (top - bot)}))}; } }
+  { const mkFib = (top, bot, up) => ({dir: up ? 1 : -1, top, bot, levels: [0.382, 0.5, 0.618, 0.786].map(f => ({f, p: up ? top - f * (top - bot) : bot + f * (top - bot)}))});
+    const lh = sh.at(-1), ll = sl.at(-1);
+    if (lh != null && ll != null){                                  // latest swing ends the leg; start it at the nearest opposite swing that makes a leg of 2+ ATR
+      const up = lh > ll, end = up ? lh : ll, pool = (up ? sl : sh).filter(i => i < end).reverse();
+      const st = pool.find(i => up ? h[end] - l[i] >= 2 * a : h[i] - l[end] >= 2 * a);
+      if (st != null) fib = up ? mkFib(h[end], l[st], true) : mkFib(h[st], l[end], false);
+    }
+    if (!fib && hi - lo >= 2 * a){                                  // fallback: the dealing range itself
+      let iH = n - R, iL = n - R; for (let i = n - R; i < n; i++){ if (h[i] >= h[iH]) iH = i; if (l[i] <= l[iL]) iL = i; }
+      fib = mkFib(hi, lo, iH > iL); fib.range = true;
+    } }
   // support / resistance zones: clusters of swing highs and lows
   const pts = []; for (const i of sh) if (i >= from) pts.push({p: h[i], i}); for (const i of sl) if (i >= from) pts.push({p: l[i], i});
   pts.sort((x, y) => x.p - y.p);
