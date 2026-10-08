@@ -176,7 +176,13 @@ td.trigs{white-space:nowrap}
 .jdel{background:none;border:0;color:var(--dim);padding:2px 6px} .jdel:hover{color:var(--bear)}
 .filebtn{border:1px solid var(--line);border-radius:6px;padding:6px 12px;background:var(--panel2);color:var(--text);font-size:13px;cursor:pointer}
 .toolbar{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.anahead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.anapick{position:relative}#anaIn{width:230px;padding:7px 10px 7px 30px;background:#0b1206;color:var(--bull);border:1px solid var(--bull);border-radius:8px;font-size:13px;box-shadow:0 0 6px rgba(158,255,0,.45),inset 0 0 6px rgba(158,255,0,.10);font-family:var(--mono);caret-color:var(--bull);transition:box-shadow .15s}#anaIn::placeholder{color:rgba(158,255,0,.55)}#anaIn:focus{outline:none;box-shadow:0 0 12px rgba(158,255,0,.75),0 0 2px rgba(158,255,0,.9),inset 0 0 8px rgba(158,255,0,.15)}
+.anahead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.anamtf h4,.anaexp b{margin:0}.anamtf{margin-bottom:12px}.anamtf h4{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px}
+.anamtfrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.anacell{display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px}.anacell:hover{border-color:var(--accent)}.anacell.on{border-color:var(--accent);background:rgba(138,82,156,.18)}.anacell .anaat{font-size:11px;color:var(--accent-lt)}
+.anamtfsum{margin-top:8px;font-size:12.5px}.card2 .anal{cursor:pointer}.card2 .anal:hover{background:rgba(255,255,255,.04)}.card2 .anal.sel{background:rgba(138,82,156,.22)}
+.anaexp{margin-top:10px;padding:9px 11px;border-radius:8px;background:rgba(255,255,255,.04);border-left:3px solid var(--accent-lt);font-size:12.5px;line-height:1.55}.anarel{margin-top:8px}
+@media (max-width:600px){.anamtfrow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.loc{border-radius:10px;padding:2px 8px;font-size:11.5px;font-weight:600;white-space:nowrap}.loc.b{background:rgba(158,255,0,.14);color:var(--bull)}.loc.s{background:rgba(255,77,77,.15);color:var(--bear)}
+.anapick{position:relative}#anaIn{width:230px;padding:7px 10px 7px 30px;background:#0b1206;color:var(--bull);border:1px solid var(--bull);border-radius:8px;font-size:13px;box-shadow:0 0 6px rgba(158,255,0,.45),inset 0 0 6px rgba(158,255,0,.10);font-family:var(--mono);caret-color:var(--bull);transition:box-shadow .15s}#anaIn::placeholder{color:rgba(158,255,0,.55)}#anaIn:focus{outline:none;box-shadow:0 0 12px rgba(158,255,0,.75),0 0 2px rgba(158,255,0,.9),inset 0 0 8px rgba(158,255,0,.15)}
 .anasug{position:absolute;left:0;top:100%;margin:4px 0 0;padding:4px;list-style:none;background:var(--panel2);border:1px solid var(--accent);border-radius:8px;min-width:210px;z-index:20;box-shadow:0 10px 30px #000a}.anasug li{padding:6px 10px;border-radius:5px;cursor:pointer}.anasug li.on,.anasug li:hover{background:rgba(138,82,156,.3)}.anasug[hidden]{display:none}
 .anatitle{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.anasym{font-size:20px}.anapx{font:600 15px var(--mono)}
 .anapill{border-radius:10px;padding:2px 9px;font-size:12px;font-weight:600;background:rgba(138,82,156,.3);color:var(--accent-lt)}.anapill.g{background:rgba(158,255,0,.15);color:var(--bull)}
@@ -304,7 +310,7 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
   #tbody td:nth-child(1){grid-column:3;grid-row:1;text-align:right} #tbody td:nth-child(1)::before,#tbody td:nth-child(2)::before{display:none}
   #tbody td:nth-child(2){grid-column:1 / 3;grid-row:1;font-size:16px}
   #tbody td.empty{grid-column:1 / -1}
-  #tbody td[data-c=sector],#tbody td[data-c=qv],#tbody td[data-c=mcap],#tbody td[data-c=dmi],#tbody td[data-c=rsiEma],#tbody td[data-c=rsi50],#tbody td[data-c=obv],#tbody td[data-c=oiUp],#tbody td[data-c=oiD],#tbody td[data-c=bull],#tbody td[data-c=bear],#tbody td[data-c=mtfNet]{display:none}
+  #tbody td[data-c=sector],#tbody td[data-c=qv],#tbody td[data-c=mcap],#tbody td[data-c=dmi],#tbody td[data-c=rsiEma],#tbody td[data-c=rsi50],#tbody td[data-c=obv],#tbody td[data-c=oiUp],#tbody td[data-c=oiD],#tbody td[data-c=bull],#tbody td[data-c=bear],#tbody td[data-c=mtfNet],#tbody td[data-c=loc],th[data-k=loc]{display:none}
   #tbody td[data-c=trig]{grid-column:1 / -1}
   tr.skel{display:block!important}
 }
@@ -505,6 +511,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="fgrp"><h4>Strength</h4><div class="row">
         <label title="Relative strength filter over 7 days">RS <select id="rsF"><option value="">Any</option><option value="lb">Leaders vs BTC</option><option value="lbe">Leaders vs BTC + ETH</option><option value="gb">Laggards vs BTC</option></select></label>
         <label title="Multi-timeframe filter: All bull / All bear = 1D, 4H and 1H all agree">MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
+        <label title="Where price sits now: at a support or resistance zone, inside an order block or a fair value gap (this timeframe)">Location <select id="locF"><option value="">Any</option><option value="bull">Bullish spots</option><option value="bear">Bearish spots</option><option value="bull-sr">At support</option><option value="bear-sr">At resistance</option><option value="bull-ob">In bull OB</option><option value="bear-ob">In bear OB</option><option value="bull-fvg">In bull FVG</option><option value="bear-fvg">In bear FVG</option></select></label>
       </div></div>
     </div>
     <div class="row" id="fChips" hidden></div>
@@ -1520,12 +1527,49 @@ function taLevels(cd, o = {}){
     list.push({name, kind, lo: lo2, hi: hi2, mid: (lo2 + hi2) / 2, side, dist: (edge / price - 1) * 100, distAtr: Math.abs(edge - price) / a, ...extra});
   };
   for (const z of sr) add(z.side === 'above' ? 'Resistance zone' : z.side === 'below' ? 'Support zone' : 'At S/R zone', 'sr', z.lo, z.hi, {touches: z.touches});
-  for (const f of fvg) add(f.dir > 0 ? 'Bull FVG (unfilled)' : 'Bear FVG (unfilled)', 'fvg', f.lo, f.hi, {dir: f.dir, i: f.i});
+  for (const f of fvg) add(f.dir > 0 ? 'Bull FVG (unfilled)' : 'Bear FVG (unfilled)', 'fvg', f.lo, f.hi, {dir: f.dir, i: f.i, fill: f.fill});
   for (const b of ob) add(b.kind === 'breaker' ? (b.dir > 0 ? 'Bull breaker' : 'Bear breaker') : (b.dir > 0 ? 'Bull order block' : 'Bear order block'), b.kind, b.lo, b.hi, {dir: b.dir, i: b.i, touches: b.touches});
-  for (const q of liq) add(NM[q.kind], 'liq', q.price, q.price, {pool: q.kind});
+  for (const q of liq) add(NM[q.kind], 'liq', q.price, q.price, {pool: q.kind, n: q.n});
   add('Equilibrium (50% of range)', 'eq', eq, eq);
+  // volume profile (last 250 candles): volume spread over each candle's range, point of control and 70% value area
+  const vp = taProfile(cd.slice(from), 48);
+  if (vp){ add('Point of control (POC)', 'vp', vp.poc, vp.poc, {pool: 'POC'}); add('Value area high (VAH)', 'vp', vp.vah, vp.vah, {pool: 'VAH'}); add('Value area low (VAL)', 'vp', vp.val, vp.val, {pool: 'VAL'}); }
   list.sort((x, y) => x.distAtr - y.distAtr);
-  return {n, price, atr: a, trend: trendS, event, range, fib, sr, fvg, ob, liq, list, swings: {h: sh, l: sl}, t0: t[0], tN: t[n - 1]};
+  // anchored VWAP: from the last structure break, else the last swing in the trend's direction
+  let ai = ev ? ev.idx : (sl.at(-1) ?? sh.at(-1) ?? n - 60);
+  if (!ev){ const lw = sl.at(-1), hg = sh.at(-1); ai = trendS < 0 ? (hg ?? lw ?? n - 60) : (lw ?? hg ?? n - 60); }
+  const avwap = {i: ai, v: taAvwap(cd, ai), auto: ev ? 'structure break' : trendS < 0 ? 'last swing high' : 'last swing low'};
+  // where price sits right now: inside or within half an ATR of a block, gap or zone (used by the scanner)
+  let loc = null;
+  { const near = list.filter(x => (x.side === 'at' || x.distAtr <= (x.kind === 'sr' ? 0.3 : 0.5)) && ['ob', 'breaker', 'fvg', 'sr'].includes(x.kind));
+    const rank = x => x.kind === 'ob' || x.kind === 'breaker' ? 0 : x.kind === 'fvg' ? 1 : 2;
+    near.sort((x, y) => rank(x) - rank(y) || x.distAtr - y.distAtr);
+    const q = near[0];
+    if (q){ const dirv = q.kind === 'sr' ? (q.side === 'below' ? 1 : q.side === 'above' ? -1 : (price >= q.mid ? 1 : -1)) : q.dir;
+      loc = {k: (dirv > 0 ? 'bull' : 'bear') + '-' + (q.kind === 'sr' ? 'sr' : q.kind === 'fvg' ? 'fvg' : 'ob'), name: q.name, atr: q.distAtr, inside: q.side === 'at'}; } }
+  return {n, price, atr: a, trend: trendS, event, range, fib, sr, fvg, ob, liq, vp, avwap, loc, list, swings: {h: sh, l: sl}, t0: t[0], tN: t[n - 1]};
+}
+function taProfile(cd, nb){
+  if (!cd || cd.length < 30) return null;
+  let lo = Infinity, hi = -Infinity; for (const k of cd){ if (k[3] < lo) lo = k[3]; if (k[2] > hi) hi = k[2]; }
+  if (!(hi > lo)) return null;
+  const step = (hi - lo) / nb, v = new Array(nb).fill(0);
+  for (const k of cd){
+    const vol = k[5] || 0, b0 = Math.min(nb - 1, Math.floor((k[3] - lo) / step)), b1 = Math.min(nb - 1, Math.floor((k[2] - lo) / step));
+    for (let b = b0; b <= b1; b++) v[b] += vol / (b1 - b0 + 1);
+  }
+  let pi = 0; for (let b = 1; b < nb; b++) if (v[b] > v[pi]) pi = b;
+  const tot = v.reduce((x, y) => x + y, 0); let acc = v[pi], u = pi, d = pi;
+  while (acc < 0.7 * tot && (u < nb - 1 || d > 0)){
+    const up = u < nb - 1 ? v[u + 1] : -1, dn = d > 0 ? v[d - 1] : -1;
+    if (up >= dn){ u++; acc += v[u]; } else { d--; acc += v[d]; }
+  }
+  return {lo, hi, step, bins: v, max: v[pi], poc: lo + (pi + 0.5) * step, vah: lo + (u + 1) * step, val: lo + d * step};
+}
+function taAvwap(cd, i0){
+  const out = []; let pv = 0, vv = 0;
+  for (let i = i0; i < cd.length; i++){ const k = cd[i], tp = (k[2] + k[3] + k[4]) / 3, vol = k[5] || 0; pv += tp * vol; vv += vol; out.push(vv > 0 ? pv / vv : tp); }
+  return out;
 }
 // ==ENGINE END==
 
@@ -1782,11 +1826,11 @@ function trigCell(r){
   const shown = r.trig.slice(0, 3).map(t => `<span class="tg ${t.dir > 0 ? 'b' : t.dir < 0 ? 's' : 'n'}" title="${t.name}${t.t === 'coil' ? '' : ', ' + (t.ago === 0 ? 'last candle' : t.ago + ' candle' + (t.ago > 1 ? 's' : '') + ' ago')}">${TRIG_SHORT[t.t]}${t.ago && t.t !== 'coil' ? '<sub>' + t.ago + '</sub>' : ''}</span>`).join('');
   return shown + (r.trig.length > 3 ? `<span class="tg n" title="${r.trig.slice(3).map(t => t.name).join(', ')}">+${r.trig.length - 3}</span>` : '');
 }
-const COL_HELP = {"star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "spark": "Price over the last 30 candles of the selected timeframe (green = up over that span, red = down). Sort to rank by that move.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
+const COL_HELP = {"loc": "Where price sits right now on this timeframe: inside or within a fraction of an ATR of a support or resistance zone, order block or fair value gap. Click the \u2316 icon for the full Technical Analysis.", "star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "spark": "Price over the last 30 candles of the selected timeframe (green = up over that span, red = down). Sort to rank by that move.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
 const COLS_BASE = [
   {k:'star', t:'★', c:'c'}, {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'spark', t:'Trend', c:'c'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA', c:'c'},
-  {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'rs', t:'RS 7D', c:'c'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'grade', t:'Grade', c:'c'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
+  {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'loc', t:'Location', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'rs', t:'RS 7D', c:'c'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'grade', t:'Grade', c:'c'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
 ];
 const COLS = COLS_BASE.slice(), COLORD_KEY = 'onslaught-colorder', COL_FIXED = new Set(['star', 'sym']);
 function applyColOrder(){
@@ -1808,6 +1852,7 @@ function sortVal(r, k){
   if (k === 'rs') return r.rs?.b7 ?? -1e9;
   if (k === 'grade') return r.G ? GRADE_RANK[r.G.grade] * 100 + r.G.pts : -1;
   if (k === 'trig') return r.setup ? 100 + r.trig.length : r.trig.length;
+  if (k === 'loc') return r.loc ? (r.loc.k.startsWith('bull') ? 1 : -1) * (r.loc.inside ? 2 : 1) : 0;
   if (k === 'pos') return {longs: 4, cover: 3, flat: 2, liq: 1, shorts: 0}[r.pos] ?? -1;
   const v = r[k]; return v == null || !Number.isFinite(v) ? -Infinity : v;
 }
@@ -1846,6 +1891,9 @@ function filtered(){
     if (rf === 'lb' && !(x && x.b7 > 0)) return false;
     if (rf === 'lbe' && !(x && x.b7 > 0 && x.e7 > 0)) return false;
     if (rf === 'gb' && !(x && x.b7 < 0)) return false;
+    const lf = $('locF').value;
+    if (lf){ const q = r.loc; if (!q) return false;
+      if (lf === 'bull' ? !q.k.startsWith('bull') : lf === 'bear' ? !q.k.startsWith('bear') : q.k !== lf) return false; }
     const mf2 = $('mtfF').value;
     if (mf2 === 'b' && r.mtfAll !== 1) return false;
     if (mf2 === 's' && r.mtfAll !== -1) return false;
@@ -1860,6 +1908,9 @@ function filtered(){
 
 const POS = {longs: ['New longs', 'Price ↑ OI ↑: new positions opening on the long side'], shorts: ['New shorts', 'Price ↓ OI ↑: new positions opening on the short side'],
   cover: ['Short covering', 'Price ↑ OI ↓: shorts closing; rallies on covering often fade'], liq: ['Long liquidation', 'Price ↓ OI ↓: longs closing or being liquidated'], flat: ['Flat', 'Price and OI both moved less than 0.5%']};
+const LOC_T = {'bull-sr': 'At support', 'bear-sr': 'At resistance', 'bull-ob': 'In bull OB', 'bear-ob': 'In bear OB', 'bull-fvg': 'In bull FVG', 'bear-fvg': 'In bear FVG'};
+function locCell(r){ const q = r.loc; if (!q) return '<span class="mu">—</span>'; const bull = q.k.startsWith('bull');
+  return `<span class="loc ${bull ? 'b' : 's'}" title="${esc(q.name)} · ${q.inside ? 'price is inside' : q.atr.toFixed(1) + ' ATR away'}">${LOC_T[q.k]}</span>`; }
 function posCell(r){ if (!r.pos) return '<span class="mu">—</span>'; const [t, tip] = POS[r.pos]; return `<span class="pos ${r.pos}" title="${tip} (price ${fmtPct(r.pD)}, OI ${fmtPct(r.oiD)})">${t}</span>`; }
 /* BTC trend on every timeframe for the regime bar. Binance returns the forming candle last, so it is dropped. Cached per timeframe for 5 min (1M/1W: 1 h). */
 const BTC_TFS = [['1M', '1M'], ['1w', '1W'], ['1d', '1D'], ['4h', '4H'], ['1h', '1H'], ['30m', '30m'], ['15m', '15m']];
@@ -1922,7 +1973,7 @@ function renderPager(total, size, pages, start, n){
   el.innerHTML = h;
 }
 function anyFilter(){
-  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked || $('gradeF').value || $('rsF').value || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
+  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked || $('gradeF').value || $('rsF').value || $('trigF').value || $('mtfF').value || $('locF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
 }
 function syncCards(){
   const st = {all: !anyFilter(), bull: S.show === 'bull', bear: S.show === 'bear', new: $('newOnly').checked, oi: S.mf.oi === '1', inc: S.incOnly, setup: S.setupOnly, star: $('starOnly').checked};
@@ -1946,7 +1997,7 @@ function render(){
   const rows = filtered(), {k, dir} = S.sort;
   rows.sort((a, b) => { const x = sortVal(a, k), y = sortVal(b, k); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
   if ($('pinStar').checked) rows.sort((a, b) => WATCH.has(b.sym) - WATCH.has(a.sym));   // stable: keeps the sort within each group
-  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value, $('starOnly').checked, $('pinStar').checked, $('gradeF').value, $('minLiq').value, $('extremeFund').value, $('rsF').value]);
+  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value, $('locF').value, $('starOnly').checked, $('pinStar').checked, $('gradeF').value, $('minLiq').value, $('extremeFund').value, $('rsF').value]);
   if (sig !== S.sig){ S.sig = sig; S.page = 0; }            // any filter/sort change → back to page 1
   const size = +$('pageSize').value || rows.length || 1, pages = Math.max(1, Math.ceil(rows.length / size));
   S.page = Math.min(S.page, pages - 1);
@@ -1986,6 +2037,7 @@ function render(){
       bear: `<td><span class="score ${sr} ${r.against && r.bear >= 4 ? 'against' : ''}" ${r.against && r.bear >= 4 ? 'title="Bearish setup against a risk-on regime"' : ''}>${d ? r.bear : '—'}</span></td>`,
       grade: `<td class="c">${gradeCell(r)}</td>`,
       mtfNet: `<td class="c">${mtfCell(r)}</td>`,
+      loc: `<td class="l">${locCell(r)}</td>`,
       trig: `<td class="l trigs">${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}" title="Aligned and triggered on ${S.tf.toUpperCase()}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}${trigCell(r)}</td>`,
     };
     return `<tr data-sym="${r.sym}" class="${r.inc && !d ? 'inc' : ''} ${D.sym === r.sym ? 'sel' : ''} ${ent ? 'entered' : ''} ${r.G ? 't' + r.G.grade : ''} ${UI.prev && !UI.prev.has(r.sym) ? 'fadein' : ''}" title="Click for trade plan">
@@ -3238,7 +3290,7 @@ function loadView(){
   applyCols(); renderPresets();
 }
 function saveView(){ try { localStorage.setItem(COLS_KEY, JSON.stringify({hidden: [...UI.hidden], dens: UI.dens})); } catch {} }
-const PRESET_FIELDS = ['newOnly','starOnly','gradeF','rsF','trigF','mtfF','sector'];
+const PRESET_FIELDS = ['newOnly','starOnly','gradeF','rsF','trigF','mtfF','locF','sector'];
 const BUILTIN = [
   {name: 'A-grade setups', v: {setupOnly: true, gradeF: 'A'}},
   {name: 'Leaders · long side', v: {show: 'bull', rsF: 'lbe', gradeF: 'AB'}},
@@ -3553,7 +3605,8 @@ async function buildRow(u, tf, c){
   let mtf = null;
   if (others.length){ mtf = {}; for (const t of MTF_TFS) mtf[t] = t === tf ? (ev.incomplete ? null : ev.bull >= 3 ? 1 : ev.bear >= 3 ? -1 : 0) : (ok[others.indexOf(t)] ? tfDir(ok[others.indexOf(t)], c) : null); }
   const today = Math.floor(Date.now() / 864e5) * 864e5, dRaw = tf === '1d' ? k : needD ? dExtra : ok[others.indexOf('1d')];
-  return {...u, ev, oi, mtf, dv: divBrief(k), ret7: ret7d(u.price, dRaw ? dRaw.filter(x => x[0] < today) : null)};
+  let loc = null; try { const L0 = taLevels(k, {price: u.price}); loc = L0 ? L0.loc : null; } catch {}
+  return {...u, ev, oi, mtf, loc, dv: divBrief(k), ret7: ret7d(u.price, dRaw ? dRaw.filter(x => x[0] < today) : null)};
 }
 function dvBanner(x){
   const bull = x.side > 0, mc = dvMacd(x), ctx = dvCtx(x);
@@ -3563,7 +3616,7 @@ function dvBanner(x){
 /* ---------- Analysis tab: one coin, its structure and key levels, a rule-based summary, token facts ---------- */
 const ANA_KEY = 'onslaught-ana', ANA_TFS = ['15m', '1h', '4h', '1d'];
 const ANA = {sym: null, tf: '4h', cd: null, L: null, row: null, info: null, facts: null, err: '', busy: false, tok: 0, uni: null, vis: null,
-  show: {sr: true, fvg: true, ob: true, pd: true, liq: true}, recent: []};
+  show: {sr: true, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], mtf: null, btc: null, sel: null, anchorT: null};
 (function(){ try { const o = JSON.parse(localStorage.getItem(ANA_KEY) || '{}'); if (o.show) Object.assign(ANA.show, o.show); if (Array.isArray(o.recent)) ANA.recent = o.recent.slice(0, 6); if (ANA_TFS.includes(o.tf)) ANA.tf = o.tf; } catch {} })();
 const anaSave = () => { try { localStorage.setItem(ANA_KEY, JSON.stringify({show: ANA.show, recent: ANA.recent, tf: ANA.tf})); } catch {} };
 const ANA_NAMES = {EQH: 'Equal highs', EQL: 'Equal lows', PDH: 'Prev day high', PDL: 'Prev day low', PWH: 'Prev week high', PWL: 'Prev week low'};
@@ -3583,7 +3636,7 @@ function anaEnter(){
 function anaTfSync(){ [...$('anaTf').children].forEach(b => b.classList.toggle('on', b.dataset.v === ANA.tf)); }
 async function anaLoad(sym){
   const tok = ++ANA.tok, tf = ANA.tf, c = cfg();
-  Object.assign(ANA, {sym, cd: null, L: null, row: null, facts: null, err: '', busy: true, loadedSym: sym});
+  Object.assign(ANA, {sym, cd: null, L: null, row: null, facts: null, err: '', busy: true, loadedSym: sym, mtf: null, btc: null, sel: null, anchorT: null});
   anaTfSync(); anaRender();
   try {
     const info = (await anaUniverse()).find(u => u.sym === sym);
@@ -3599,7 +3652,7 @@ async function anaLoad(sym){
     if (!base){ try { base = await buildRow(info, tf, c); } catch { base = null; } }
     if (tok !== ANA.tok) return;
     ANA.row = base ? derive(base, c) : null; anaRender();
-    anaFacts(sym, info.base, tok);
+    anaFacts(sym, info.base, tok); anaMtf(sym, tf, tok); if (ANA.show.rel) anaBtcLoad(sym, tf, tok);
   } catch(e){ if (tok !== ANA.tok) return; ANA.busy = false; ANA.err = e.message || String(e); anaRender(); }
 }
 async function anaFacts(sym, base, tok){
@@ -3661,9 +3714,24 @@ function anaChart(L, cd, w, h){
     else if (it.kind === 'fvg') zone(it, x0, acc, (it.dir > 0 ? 'Bull' : 'Bear') + ' FVG', .22);
     else zone(it, x0, it.kind === 'breaker' ? warn : info, it.kind === 'breaker' ? (it.dir > 0 ? 'Bull breaker' : 'Bear breaker') : (it.dir > 0 ? 'Bull OB' : 'Bear OB'), .2, it.kind === 'breaker');
   }
+  if (show.vp && L.vp){
+    const v = L.vp, mx = pw * 0.22, xr2 = w - pad.r;
+    v.bins.forEach((q, b) => { if (!q) return; const y1 = Y(v.lo + (b + 1) * v.step), y2 = Y(v.lo + b * v.step), inVA = v.lo + (b + 0.5) * v.step >= v.val && v.lo + (b + 0.5) * v.step <= v.vah;
+      o.push(`<rect x="${(xr2 - q / v.max * mx).toFixed(1)}" y="${y1.toFixed(1)}" width="${(q / v.max * mx).toFixed(1)}" height="${Math.max(y2 - y1 - 1, 1).toFixed(1)}" fill="${info}" opacity="${inVA ? .3 : .14}"/>`); });
+    for (const [pr, nm, dash] of [[v.poc, 'POC', ''], [v.vah, 'VAH', '4 3'], [v.val, 'VAL', '4 3']]) o.push(`<line x1="${pad.l}" x2="${xr2}" y1="${Y(pr).toFixed(1)}" y2="${Y(pr).toFixed(1)}" stroke="${info}" stroke-opacity="${nm === 'POC' ? .9 : .55}"${dash ? ` stroke-dasharray="${dash}"` : ''}/>${txt(pad.l + 4, Y(pr) - 3, nm, info)}`);
+  }
   const bw = Math.max(2, pw / N * 0.62);
   vis.forEach((k, j) => { const i = s0 + j, col = k[4] >= k[1] ? bull : bear;
     o.push(`<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="${Y(k[2]).toFixed(1)}" y2="${Y(k[3]).toFixed(1)}" stroke="${col}"/><rect x="${(X(i) - bw / 2).toFixed(1)}" y="${Y(Math.max(k[1], k[4])).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(Math.abs(Y(k[1]) - Y(k[4])), 1).toFixed(1)}" fill="${col}"/>`); });
+  if (show.vw){
+    let ai = L.avwap.i, label = 'AVWAP · from ' + L.avwap.auto, vals = L.avwap.v;
+    if (ANA.anchorT != null){ const ci = cd.findIndex(k => k[0] >= ANA.anchorT); if (ci >= 0){ ai = ci; vals = taAvwap(cd, ci); label = 'AVWAP · from picked candle'; } }
+    const pts = []; for (let i = Math.max(ai, s0); i < cd.length; i++) pts.push(`${X(i).toFixed(1)},${Y(vals[i - ai]).toFixed(1)}`);
+    if (pts.length > 1){ const ly = Y(vals[vals.length - 1]); o.push(`<polyline fill="none" stroke="#4dd0e1" stroke-width="1.8" points="${pts.join(' ')}"/>${txt(w - pad.r - 4, ly - 5, label, '#4dd0e1', 'end')}`); }
+    if (ai >= s0) o.push(`<circle cx="${X(ai).toFixed(1)}" cy="${Y(vals[0]).toFixed(1)}" r="3.5" fill="#4dd0e1"/>`);
+  }
+  const selI = ANA.sel && L.list.find(x => anaKey(x) === ANA.sel);
+  if (selI){ if (selI.lo === selI.hi) o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(selI.mid).toFixed(1)}" y2="${Y(selI.mid).toFixed(1)}" stroke="#fff" stroke-width="2"/>`); else o.push(`<rect x="${pad.l}" y="${Y(selI.hi).toFixed(1)}" width="${(w - pad.l - pad.r).toFixed(1)}" height="${Math.max(Y(selI.lo) - Y(selI.hi), 3).toFixed(1)}" fill="rgba(255,255,255,.07)" stroke="#fff" stroke-width="1.6" stroke-dasharray="5 3"/>`); }
   o.push(`<line id="anaCross" x1="0" x2="0" y1="${pad.t}" y2="${pad.t + ph}" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 3" visibility="hidden"/></g>`);
   const yl = Y(L.price);
   o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${yl.toFixed(1)}" y2="${yl.toFixed(1)}" stroke="${acc}" stroke-dasharray="3 3"/><rect x="${w - pad.r}" y="${(yl - 9).toFixed(1)}" width="${pad.r - 4}" height="18" rx="3" fill="${cssv('--accent')}"/><text x="${w - pad.r + 6}" y="${(yl + 4).toFixed(1)}" fill="#fff" font-size="11" font-weight="600">${L.price.toFixed(dec > 4 ? 4 : dec)}</text>`);
@@ -3678,7 +3746,7 @@ function anaSummary(L, row, tf){
   s += '. ';
   if (row && row.mtf) s += `Trend checks: ${MTF_TFS.map(t => `${MTF_LBL[t]} ${row.mtf[t] > 0 ? 'bullish' : row.mtf[t] < 0 ? 'bearish' : 'mixed'}`).join(', ')}. `;
   const z = L.range; s += z.pct < 0 || z.pct > 1 ? `Price is <b class="${z.pct < 0 ? 'up' : 'dn'}">${z.pct < 0 ? 'below' : 'above'}</b> the last ${z.R}-candle range (${fmtPrice(z.lo)} to ${fmtPrice(z.hi)}). ` : `Price is in <b class="${z.zone === 'discount' ? 'up' : 'dn'}">${z.zone}</b>, ${Math.round(z.pct * 100)}% of the way up the last ${z.R}-candle range (${fmtPrice(z.lo)} to ${fmtPrice(z.hi)}). `;
-  const near = side => L.list.find(x => x.side === side && x.kind !== 'eq'), a = near('above'), b = near('below');
+  const near = side => L.list.find(x => x.side === side && x.kind !== 'eq' && x.kind !== 'vp'), a = near('above'), b = near('below');
   const d = x => `${x.name.toLowerCase()} ${Math.abs(x.dist).toFixed(1)}% away (${x.distAtr.toFixed(1)} ATR)`;
   if (a || b) s += `Nearest ${a ? 'level above: ' + d(a) : ''}${a && b ? '; ' : ''}${b ? (a ? 'below: ' : 'level below: ') + d(b) : ''}. `;
   if (row){
@@ -3690,6 +3758,61 @@ function anaSummary(L, row, tf){
     if (row.G) s += `Screener grade <b>${row.G.grade}</b>${row.setup ? `, <b class="${row.setup > 0 ? 'up' : 'dn'}">${row.setup > 0 ? 'LONG' : 'SHORT'}</b> setup` : ''}. `;
   }
   return s;
+}
+
+const ANA_TFL = {'15m': '15M', '1h': '1H', '4h': '4H', '1d': '1D'};
+async function anaMtf(sym, tf, tok){
+  const out = {[tf]: ANA.L};
+  await Promise.all(ANA_TFS.filter(t => t !== tf).map(async t => { try { const cd = await getKlines(sym, t, true); out[t] = taLevels(cd, {price: ANA.L.price}); } catch { out[t] = null; } }));
+  if (tok !== ANA.tok) return; ANA.mtf = out; anaRender();
+}
+async function anaBtcLoad(sym, tf, tok){
+  if (sym === 'BTCUSDT'){ ANA.btc = {self: true}; anaRender(); return; }
+  try { const cd = await getKlines('BTCUSDT', tf, true); if (tok !== ANA.tok) return; ANA.btc = {cd}; } catch { if (tok !== ANA.tok) return; ANA.btc = {err: true}; }
+  anaRender();
+}
+function anaKey(x){ return x.kind + '|' + x.name + '|' + x.mid.toPrecision(8); }
+function anaExplain(x, L){
+  const d = decFor(L.price), f = v => v.toFixed(d > 4 ? 4 : d), age = x.i != null ? L.n - 1 - x.i : null;
+  const rng = x.lo === x.hi ? f(x.lo) : f(x.lo) + ' to ' + f(x.hi);
+  let t;
+  if (x.kind === 'sr') t = `A cluster of ${x.touches} swing points around ${rng}. Price has turned here before, so it often reacts here again (as ${x.side === 'above' ? 'resistance' : x.side === 'below' ? 'support' : 'support or resistance'}). A candle close through it usually flips its role.`;
+  else if (x.kind === 'fvg') t = `A ${x.dir > 0 ? 'bullish' : 'bearish'} imbalance (${rng}) left by a fast move, ${age} candles ago. Price has not closed it yet${x.fill > 0.05 ? ` (${Math.round(x.fill * 100)}% already filled)` : ''}. Price often returns to fill such gaps and may react there; a close through it ends it.`;
+  else if (x.kind === 'ob') t = `The last ${x.dir > 0 ? 'down' : 'up'} candle before a strong ${x.dir > 0 ? 'up' : 'down'} move (${age} candles ago, ${rng}). Price has tested it ${x.touches} time${x.touches === 1 ? '' : 's'} without closing through. It is often defended; a close through it invalidates it.`;
+  else if (x.kind === 'breaker') t = `A former ${x.dir > 0 ? 'bearish' : 'bullish'} order block that failed and flipped (${rng}). It now tends to act as ${x.dir > 0 ? 'support' : 'resistance'} until price closes back through it.`;
+  else if (x.kind === 'liq') t = x.pool === 'EQH' ? `${x.n} swing highs at almost the same price. Stop orders cluster just above equal highs, so price is often drawn up to sweep them before reversing or continuing.`
+    : x.pool === 'EQL' ? `${x.n} swing lows at almost the same price. Stop orders cluster just below equal lows, so price is often drawn down to sweep them.`
+    : `${x.name} is where many traders place stops or targets, so price often reacts or sweeps through it.`;
+  else if (x.kind === 'vp') t = x.pool === 'POC' ? `The price with the most traded volume over the last 250 candles. It acts like a magnet and a common reaction point.` : `${x.pool === 'VAH' ? 'Upper' : 'Lower'} edge of the value area, where 70% of the volume traded. Price back inside the area tends to rotate towards the POC; price accepted outside it often keeps going.`;
+  else t = `The midpoint of the last ${L.range.R}-candle range. Above it is premium (expensive), below it is discount (cheap).`;
+  return t;
+}
+function anaRelChart(L, cd, btc, w){
+  const V = ANA.vis, N = V.N, s0 = V.s0, vis = cd.slice(s0), bm = new Map(btc.map(k => [k[0], k[4]]));
+  const pts = vis.map(k => ({t: k[0], c: k[4], b: bm.get(k[0])})).filter(q => q.b != null);
+  if (pts.length < 10) return '<div class="mu" style="padding:8px">Not enough BTC candles to compare.</div>';
+  const h = 96, pad = V.pad, pw = V.pw, c0 = pts[0].c, b0 = pts[0].b, A = pts.map(q => q.c / c0 * 100), B = pts.map(q => q.b / b0 * 100);
+  let lo = Math.min(...A, ...B), hi = Math.max(...A, ...B); const m = (hi - lo) * 0.1 || 1; lo -= m; hi += m;
+  const X = i => pad.l + pw * (i + (N - pts.length) + 0.5) / N, Y = v => 8 + (h - 24) * (1 - (v - lo) / (hi - lo));
+  const line = (arr, col, wd) => `<polyline fill="none" stroke="${col}" stroke-width="${wd}" points="${arr.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ')}"/>`;
+  const dl = A.at(-1) - B.at(-1), col = cssv('--bull'), bad = cssv('--bear'), mu = cssv('--muted');
+  const base = ANA.sym.replace('USDT', '');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${base} against BTC, rebased to 100"><rect width="${w}" height="${h}" fill="#0e0f14" rx="8"/>
+    <line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(100).toFixed(1)}" y2="${Y(100).toFixed(1)}" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 4"/>
+    ${line(B, mu, 1.4)}${line(A, cssv('--accent-lt'), 1.8)}
+    <text x="${w - pad.r + 6}" y="${(Y(A.at(-1)) + 3).toFixed(1)}" fill="${cssv('--accent-lt')}" font-size="10">${base} ${(A.at(-1) - 100 >= 0 ? '+' : '') + (A.at(-1) - 100).toFixed(1)}%</text>
+    <text x="${w - pad.r + 6}" y="${(Y(B.at(-1)) + 3 + (Math.abs(Y(B.at(-1)) - Y(A.at(-1))) < 11 ? 11 : 0)).toFixed(1)}" fill="${mu}" font-size="10">BTC ${(B.at(-1) - 100 >= 0 ? '+' : '') + (B.at(-1) - 100).toFixed(1)}%</text>
+    <text x="${pad.l + 6}" y="14" fill="${dl >= 0 ? col : bad}" font-size="11" font-weight="600">${dl >= 0 ? 'Outperforming' : 'Underperforming'} BTC by ${Math.abs(dl).toFixed(1)} pp over ${pts.length} candles</text></svg>`;
+}
+function anaMtfStrip(L){
+  const M = ANA.mtf, tfs = ANA_TFS, arr = v => v > 0 ? '<b class="up">▲ Bullish</b>' : v < 0 ? '<b class="dn">▼ Bearish</b>' : '<b class="mu">◆ Ranging</b>';
+  if (!M) return `<div class="panel anamtf"><h4>Timeframe confluence</h4><span class="mu">Loading the other timeframes…</span></div>`;
+  const got = tfs.map(t => M[t]).filter(Boolean), bu = got.filter(x => x.trend > 0).length, be = got.filter(x => x.trend < 0).length;
+  const head = bu >= 3 ? `<b class="up">${bu} of ${got.length} timeframes bullish</b>` : be >= 3 ? `<b class="dn">${be} of ${got.length} timeframes bearish</b>` : `<b class="mu">Timeframes mixed</b> (${bu} bullish, ${be} bearish)`;
+  return `<div class="panel anamtf"><h4>Timeframe confluence <span class="mu" style="text-transform:none;letter-spacing:0;font-weight:400">· click one to switch</span></h4><div class="anamtfrow">${tfs.map(t => { const x = M[t];
+    if (!x) return `<button class="anacell" data-tf="${t}"><b>${ANA_TFL[t]}</b><span class="mu">no data</span></button>`;
+    const z = x.range.pct < 0 ? 'below range' : x.range.pct > 1 ? 'above range' : (x.range.zone === 'discount' ? 'Discount ' : 'Premium ') + Math.round(x.range.pct * 100) + '%';
+    return `<button class="anacell${t === ANA.tf ? ' on' : ''}" data-tf="${t}"><b>${ANA_TFL[t]}</b>${arr(x.trend)}<span class="mu">${z}</span>${x.loc ? `<span class="anaat">${esc(x.loc.name)}</span>` : ''}</button>`; }).join('')}</div><div class="anamtfsum">${head}</div></div>`;
 }
 function anaRender(){
   const body = $('anaBody'), sym = ANA.sym, info = ANA.info, L = ANA.L, row = ANA.row;
@@ -3703,9 +3826,9 @@ function anaRender(){
   if (!sym){ empty('Pick a coin above, or press <b>⌖</b> next to any pair in the Crypto Scanner, to see its structure, key levels and a short summary.'); return; }
   if (ANA.err){ empty(esc(ANA.err)); return; }
   if (!L){ empty('Loading candles…'); return; }
-  const lv = L.list, above = lv.filter(x => x.side === 'above').slice(0, 3).reverse(), below = lv.filter(x => x.side === 'below').slice(0, 3), at = lv.filter(x => x.side === 'at').slice(0, 2);
+  const lv = L.list, above = lv.filter(x => x.side === 'above').slice(0, 4).reverse(), below = lv.filter(x => x.side === 'below').slice(0, 4), at = lv.filter(x => x.side === 'at').slice(0, 2);
   const ccls = x => x.kind === 'sr' ? (x.side === 'above' ? 'dn' : x.side === 'below' ? 'up' : 'mu') : x.kind === 'liq' ? 'wr' : x.kind === 'eq' ? 'mu' : x.dir > 0 ? 'up' : 'dn';
-  const lrow = (x, arrow) => `<div class="lv"><span class="${ccls(x)}">${arrow} ${esc(x.name)}</span><span class="mono">${x.side === 'at' ? 'price is inside' : (x.dist > 0 ? '+' : '') + x.dist.toFixed(1) + '% · ' + x.distAtr.toFixed(1) + ' ATR'}</span></div>`;
+  const lrow = (x, arrow) => `<div class="lv anal${ANA.sel === anaKey(x) ? ' sel' : ''}" data-k="${esc(anaKey(x))}" title="Click to explain this level and highlight it on the chart"><span class="${ccls(x)}">${arrow} ${esc(x.name)}</span><span class="mono">${x.side === 'at' ? 'price is inside' : (x.dist > 0 ? '+' : '') + x.dist.toFixed(1) + '% · ' + x.distAtr.toFixed(1) + ' ATR'}</span></div>`;
   const dec = decFor(L.price), ck = (k, v) => `<div class="lv"><span>${k}</span><span class="mono">${v}</span></div>`;
   const arrowF = v => v > 0 ? '<b class="up">▲</b>' : v < 0 ? '<b class="dn">▼</b>' : '<b class="mu">◆</b>';
   const check = [
@@ -3725,12 +3848,13 @@ function anaRender(){
     facts = `<div class="anaf">${rowf('Mkt cap', fmtBig(f.mc))}${f.rank ? rowf('Rank', '#' + f.rank) : ''}${f.fdv && f.mc ? rowf('FDV / MCap', (f.fdv / f.mc).toFixed(2) + '×') : ''}${sup && f.circ ? rowf('Circulating', Math.min(100, f.circ / sup * 100).toFixed(0) + '%') : ''}${f.ath != null ? rowf('From ATH', `<span class="${cls(f.ath)}">${f.ath.toFixed(0)}%</span>`) : ''}${info ? rowf('Vol 24h', fmtBig(info.qv)) : ''}</div>`; }
   const b = info ? info.base.replace(/^(1000000|1000|1M)/, '') : '', cg = f && f.id ? `https://www.coingecko.com/en/coins/${f.id}` : `https://www.coingecko.com/en/search?query=${encodeURIComponent(b)}`;
   body.innerHTML = `<div class="panel anaverdict"><b>Short analysis.</b> ${anaSummary(L, row, ANA.tf)}<span class="mu">Rule-based summary of the screener's own data and the levels below, not a prediction.</span></div>
+  ${anaMtfStrip(L)}
   <div class="anagrid">
     <div class="panel"><div class="row anatog" id="anaTog">
-      ${[['sr', 'S/R'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity']].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
-      <span class="mu anahov" id="anaHov"></span></div><div id="anaChartBox"></div></div>
+      ${[['sr', 'S/R'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity'], ['vp', 'Volume profile'], ['vw', 'AVWAP'], ...(sym === 'BTCUSDT' ? [] : [['rel', 'vs BTC']])].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
+      <span class="mu anahov" id="anaHov"></span></div><div id="anaChartBox"></div><div id="anaRelBox" class="anarel"></div></div>
     <div class="anaside">
-      <div class="card2"><h4>Key levels (nearest first)</h4>${above.map(x => lrow(x, '▲')).join('')}${at.map(x => lrow(x, '●')).join('')}<div class="lv anapr"><b>● Price</b><b class="mono">${L.price.toFixed(dec > 4 ? 4 : dec)}</b></div>${below.map(x => lrow(x, '▼')).join('')}${above.length + below.length + at.length ? '' : '<p class="mu">No clear levels near price.</p>'}</div>
+      <div class="card2"><h4>Key levels (nearest first)</h4>${above.map(x => lrow(x, '▲')).join('')}${at.map(x => lrow(x, '●')).join('')}<div class="lv anapr"><b>● Price</b><b class="mono">${L.price.toFixed(dec > 4 ? 4 : dec)}</b></div>${below.map(x => lrow(x, '▼')).join('')}${above.length + below.length + at.length ? '' : '<p class="mu">No clear levels near price.</p>'}${(() => { const q = ANA.sel && lv.find(x => anaKey(x) === ANA.sel); return q ? `<div class="anaexp"><b>${esc(q.name)}</b><br>${esc(anaExplain(q, L))}</div>` : ''; })()}</div>
       <div class="card2"><h4>Checklist</h4>${check}</div>
     </div>
   </div>
@@ -3739,11 +3863,19 @@ function anaRender(){
     <div class="card2"><h4>News and research (opens in a new tab)</h4><div class="row"><a class="abtn" href="${cg}" target="_blank" rel="noopener">CoinGecko page</a><a class="abtn" href="https://cryptopanic.com/news/${encodeURIComponent(b.toLowerCase())}/" target="_blank" rel="noopener">CryptoPanic news</a><a class="abtn" href="https://x.com/search?q=%24${encodeURIComponent(b)}&f=live" target="_blank" rel="noopener">X search $${esc(b)}</a><a class="abtn" href="https://www.tradingview.com/symbols/${sym}/ideas/" target="_blank" rel="noopener">TradingView ideas</a></div><div class="note">A live news feed needs a paid key, so the page links out instead.</div></div>
   </div>`;
   const box = $('anaChartBox'); box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), window.innerWidth < 900 ? 340 : 430);
+  const rb = $('anaRelBox'), W0 = Math.max(320, box.clientWidth || 700);
+  rb.innerHTML = ''; rb.style.display = 'none';
+  if (ANA.show.rel && sym !== 'BTCUSDT'){ rb.style.display = ''; rb.innerHTML = !ANA.btc ? '<div class="mu" style="padding:8px">Loading BTC candles…</div>' : ANA.btc.err ? '<div class="mu" style="padding:8px">BTC candles are not available right now.</div>' : ANA.btc.cd ? anaRelChart(L, ANA.cd, ANA.btc.cd, W0) : ''; }
   const side = body.querySelector('.anaside'), pn = box.closest('.panel');
   if (side && pn && window.innerWidth >= 900){                       // line the chart panel up with the right-hand column
-    const cs = getComputedStyle(pn), chrome = box.getBoundingClientRect().top - pn.getBoundingClientRect().top + parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth || 0), h = Math.max(380, Math.round(side.offsetHeight - chrome));
+    const cs = getComputedStyle(pn), chrome = box.getBoundingClientRect().top - pn.getBoundingClientRect().top + parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth || 0) + (rb.style.display === 'none' ? 0 : rb.offsetHeight + 8), h = Math.max(380, Math.round(side.offsetHeight - chrome));
     box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), h);
   }
+}
+function anaIdx(e){
+  const svg = $('anaSvg'), V = ANA.vis; if (!svg || !V || !ANA.cd) return null;
+  const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) * (V.w / r.width), i = V.s0 + Math.floor((x - V.pad.l) / V.pw * V.N);
+  return i < V.s0 || i >= ANA.cd.length ? null : i;
 }
 function anaHover(e){
   const svg = $('anaSvg'), V = ANA.vis; if (!svg || !V || !ANA.cd) return;
@@ -3756,7 +3888,14 @@ function anaHover(e){
 }
 
 $('anaTf').onclick = e => { const b = e.target.closest('button'); if (!b) return; ANA.tf = b.dataset.v; anaSave(); anaTfSync(); if (ANA.sym) anaLoad(ANA.sym); };
-$('anaBody').onclick = e => { const t = e.target.closest('.tachip'); if (t){ ANA.show[t.dataset.k] = !ANA.show[t.dataset.k]; anaSave(); anaRender(); } };
+$('anaBody').onclick = e => {
+  const t = e.target.closest('.tachip');
+  if (t){ const k = t.dataset.k; ANA.show[k] = !ANA.show[k]; if (k === 'vw' && !ANA.show.vw) ANA.anchorT = null; anaSave();
+    if (k === 'rel' && ANA.show.rel && !ANA.btc && ANA.sym) anaBtcLoad(ANA.sym, ANA.tf, ANA.tok); anaRender(); return; }
+  const c = e.target.closest('.anacell'); if (c){ ANA.tf = c.dataset.tf; anaSave(); anaTfSync(); anaLoad(ANA.sym); return; }
+  const l = e.target.closest('.anal'); if (l){ ANA.sel = ANA.sel === l.dataset.k ? null : l.dataset.k; anaRender(); return; }
+  if (e.shiftKey && e.target.closest('#anaSvg')){ const i = anaIdx(e); if (i != null){ ANA.anchorT = ANA.cd[i][0]; ANA.show.vw = true; anaSave(); anaRender(); } }
+};
 $('anaBody').onmousemove = anaHover;
 $('anaBody').onmouseleave = () => { const c = $('anaCross'); if (c) c.setAttribute('visibility', 'hidden'); };
 $('anaQuick').onclick = e => { const x = e.target.closest('[data-rm]'); if (x){ ANA.recent = ANA.recent.filter(s => s !== x.dataset.rm); anaSave(); if (x.dataset.rm === ANA.sym || !ANA.recent.length) anaCloseCoin(); else anaQuick(); return; } const b = e.target.closest('[data-sym]'); if (b) anaOpen(b.dataset.sym); };
@@ -3792,7 +3931,7 @@ $('tfSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('showSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   S.show = b.dataset.v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x === b)); render(); };
 document.querySelectorAll('.mf').forEach(s => s.onchange = () => { S.mf[s.dataset.k] = s.value; render(); });
-$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('starOnly').checked = false; $('gradeF').value = ''; $('rsF').value = ''; $('trigF').value = ''; $('mtfF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
+$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('starOnly').checked = false; $('gradeF').value = ''; $('rsF').value = ''; $('trigF').value = ''; $('mtfF').value = ''; $('locF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
   S.show = 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === 'all')); render(); };
 for (const id of ['oiThr','oiN','sector','mcap','newOnly']) $(id).onchange = () => { saveSettings(); render(); };
 $('search').oninput = render;
@@ -3816,6 +3955,7 @@ function renderFChips(){
   document.querySelectorAll('.mf').forEach(m => { if (m.value !== '') L.push([m.parentNode.firstChild.textContent.trim() + ': ' + selTxt(m), () => { m.value = ''; m.dispatchEvent(new Event('change', {bubbles: true})); }]); });
   if ($('rsF').value) L.push(['RS: ' + selTxt($('rsF')), el('rsF')]);
   if ($('mtfF').value) L.push(['MTF: ' + selTxt($('mtfF')), el('mtfF')]);
+  if ($('locF').value) L.push(['Location: ' + selTxt($('locF')), el('locF')]);
   if (S.incOnly) L.push(['Incomplete data', () => { S.incOnly = false; render(); }]);
   if (S.setupOnly) L.push(['Triggered setups', () => { S.setupOnly = false; render(); }]);
   FCHIPS = L;
@@ -3826,7 +3966,7 @@ function renderFChips(){
 $('fChips').onclick = e => { const c = e.target.closest('.fchip'); if (c) FCHIPS[+c.dataset.i][1](); };
 
 $('universe').onchange = saveSettings; $('closed').onchange = saveSettings; $('mtfOn').onchange = saveSettings;
-for (const id of ['trigF','mtfF']) $(id).onchange = render;
+for (const id of ['trigF','mtfF','locF']) $(id).onchange = render;
 $('trigN').onchange = () => { saveSettings(); render(); };
 for (const id of ['rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) $(id).onchange = saveSettings;
 for (const id of ['fundHot','fundCold','minLiq','extremeFund','gradeF','rsF']) $(id).onchange = () => { saveSettings(); render(); };
