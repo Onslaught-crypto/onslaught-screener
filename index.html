@@ -176,7 +176,7 @@ td.trigs{white-space:nowrap}
 .jdel{background:none;border:0;color:var(--dim);padding:2px 6px} .jdel:hover{color:var(--bear)}
 .filebtn{border:1px solid var(--line);border-radius:6px;padding:6px 12px;background:var(--panel2);color:var(--text);font-size:13px;cursor:pointer}
 .toolbar{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.anahead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.anapick{position:relative}.anapick input{width:210px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font:inherit}.anapick input:focus{outline:none;border-color:var(--accent)}
+.anahead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.anapick{position:relative}#anaIn{width:230px;padding:7px 10px 7px 30px;background:#0b1206;color:var(--bull);border:1px solid var(--bull);border-radius:8px;font-size:13px;box-shadow:0 0 6px rgba(158,255,0,.45),inset 0 0 6px rgba(158,255,0,.10);font-family:var(--mono);caret-color:var(--bull);transition:box-shadow .15s}#anaIn::placeholder{color:rgba(158,255,0,.55)}#anaIn:focus{outline:none;box-shadow:0 0 12px rgba(158,255,0,.75),0 0 2px rgba(158,255,0,.9),inset 0 0 8px rgba(158,255,0,.15)}
 .anasug{position:absolute;left:0;top:100%;margin:4px 0 0;padding:4px;list-style:none;background:var(--panel2);border:1px solid var(--accent);border-radius:8px;min-width:210px;z-index:20;box-shadow:0 10px 30px #000a}.anasug li{padding:6px 10px;border-radius:5px;cursor:pointer}.anasug li.on,.anasug li:hover{background:rgba(138,82,156,.3)}.anasug[hidden]{display:none}
 .anatitle{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.anasym{font-size:20px}.anapx{font:600 15px var(--mono)}
 .anapill{border-radius:10px;padding:2px 9px;font-size:12px;font-weight:600;background:rgba(138,82,156,.3);color:var(--accent-lt)}.anapill.g{background:rgba(158,255,0,.15);color:var(--bull)}
@@ -189,7 +189,7 @@ td.trigs{white-space:nowrap}
 .mono{font-family:var(--mono)}.wr{color:var(--warn)}.anatog{margin-bottom:8px;gap:6px}.anahov{margin-left:auto;font:11px var(--mono)}
 .anaf{display:flex;gap:18px;flex-wrap:wrap}.anaf .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}.anaf .v{font:600 15px var(--mono)}
 a.abtn{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 11px;color:var(--text);text-decoration:none}a.abtn:hover{border-color:var(--accent)}
-@media (max-width:900px){.anagrid,.anagrid2{grid-template-columns:minmax(0,1fr)}.anapick input{width:100%}.anapick{flex:1;min-width:150px}}
+@media (max-width:900px){.anagrid,.anagrid2{grid-template-columns:minmax(0,1fr)}#anaIn{width:100%}.anapick{flex:1;min-width:150px}}
 .fbar{display:flex;flex-direction:column;gap:10px}
 .fpanel{display:flex;flex-wrap:wrap;gap:10px 40px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}.fpanel[hidden]{display:none}
 .fgrp h4{margin:0 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
@@ -728,7 +728,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <div id="viewTa" hidden>
     <div class="panel anahead">
-      <div class="anapick"><input id="anaIn" type="text" placeholder="Pick a coin, e.g. SOL" autocomplete="off" spellcheck="false" aria-label="Pick a coin"><ul class="anasug" id="anaSug" hidden></ul></div>
+      <div class="anapick searchbox"><span class="sicon" aria-hidden="true">⌕</span><input id="anaIn" type="text" placeholder="Pick a coin, e.g. SOL" autocomplete="off" spellcheck="false" aria-label="Pick a coin"><ul class="anasug" id="anaSug" hidden></ul></div>
       <div class="anatitle" id="anaTitle"></div>
       <span style="flex:1"></span>
       <div class="seg" id="anaTf"><button data-v="15m">15M</button><button data-v="1h">1H</button><button data-v="4h">4H</button><button data-v="1d">1D</button></div>
