@@ -662,7 +662,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="panel">
       <div class="row">
         <span class="mu">Timeframes</span><div class="seg" id="dvTf"><button data-v="15m" class="on">15m</button><button data-v="1h" class="on">1H</button><button data-v="4h" class="on">4H</button><button data-v="1d" class="on">1D</button></div>
-        <span class="mu">Indicator</span><div class="seg" id="dvInd"><button data-v="all" class="on" title="Show RSI, MACD and both">All</button><button data-v="rsi" title="Pairs where RSI diverges from price (includes the ones where MACD agrees too)">RSI</button><button data-v="macd" title="Pairs where the MACD histogram diverges from price (includes the ones where RSI agrees too)">MACD</button><button data-v="both" title="RSI and MACD diverge on the same two swings: the most reliable kind">Both</button></div>
+        <span class="mu">Indicator</span><div class="seg" id="dvInd"><button data-v="all" class="on" title="Show RSI, MACD and both">All</button><button data-v="rsi" title="Pairs where RSI diverges from price (includes the ones where MACD agrees too)">RSI</button><button data-v="macd" title="Pairs where the MACD histogram diverges from price (includes the ones where RSI agrees too)">MACD</button><button data-v="obv" title="Pairs where OBV (volume) also diverges from price, or only OBV does">OBV</button><button data-v="both" title="RSI and MACD diverge on the same two swings">Both</button><button data-v="all3" title="RSI, MACD and OBV all diverge on the same two swings: the strongest kind">3/3</button></div>
         <span class="mu">Direction</span><div class="seg" id="dvDir"><button data-v="0" class="on">All</button><button data-v="1">Bullish</button><button data-v="-1">Bearish</button></div>
       </div>
       <div class="row">
@@ -1247,6 +1247,7 @@ function divPair(side, a, b, ind, h, l, A){
   const va = ind.v[ia], vb = ind.v[ib], di = side > 0 ? vb - va : va - vb;
   if (!(di >= ind.minDiff)) return null;                     // the indicator must disagree by a real margin
   if (ind.kind === 'rsi' && (side > 0 ? (va > 50 || vb > 50) : (va < 50 || vb < 50))) return null;      // RSI must be on the weak side (bullish) or strong side (bearish) of 50
+  if (ind.kind === 'obv'){ if (Math.abs(vb - va) < 1e-9) return null; }
   if (ind.kind === 'macd'){                                  // two separate momentum waves: both extremes on the same side of zero, with a swing through zero between them
     if (side > 0 ? (va >= -ind.tol * 5 || vb >= 0) : (va <= ind.tol * 5 || vb <= 0)) return null;
     let cross = false; for (let j = ia + 1; j < ib; j++) if (side > 0 ? ind.v[j] > 0 : ind.v[j] < 0){ cross = true; break; }
@@ -1277,9 +1278,12 @@ function divergences(cd, o = {}){
   let ms = 0, q = 0; for (let i = Math.max(0, n - 120); i < n; i++) if (Number.isFinite(M[i])){ ms += Math.abs(M[i]); q++; }
   ms = q ? ms / q : 0;
   if (!(ms > 0) || !Number.isFinite(A[L])) return [];
-  const IND = {rsi: {kind: 'rsi', v: R, minDiff: 3, tol: 1}, macd: {kind: 'macd', v: M, minDiff: 0.2 * ms, tol: 0.05 * ms}};
+  // OBV is a running total with no fixed scale, so it is measured in "average candles of volume" (OBV / mean volume of the last 120 bars)
+  const OB0 = obv(c, cd.map(x => x[5])); let mv = 0, qv = 0; for (let i = Math.max(0, n - 120); i < n; i++){ mv += cd[i][5]; qv++; } mv = qv ? mv / qv : 0;
+  const OB = mv > 0 ? OB0.map(x => x / mv) : null;
+  const IND = {rsi: {kind: 'rsi', v: R, minDiff: 3, tol: 1}, macd: {kind: 'macd', v: M, minDiff: 0.2 * ms, tol: 0.05 * ms}, obv: OB ? {kind: 'obv', v: OB, minDiff: 1.5, tol: 0.75} : null};
   const from = Math.max(0, n - 100), pv = divPivots(h, l, P.k), out = [];
-  const view = {from, t: cd.slice(from).map(x => x[0]), o: cd.slice(from).map(x => x[1]), h: h.slice(from), l: l.slice(from), c: c.slice(from), r: R.slice(from), m: M.slice(from)};
+  const view = {from, t: cd.slice(from).map(x => x[0]), o: cd.slice(from).map(x => x[1]), h: h.slice(from), l: l.slice(from), c: c.slice(from), r: R.slice(from), m: M.slice(from), ob: OB ? OB.slice(from) : null};
   const trend = Number.isFinite(e20[L]) && Number.isFinite(e50[L]) ? (e20[L] > e50[L] ? 1 : -1) : 0;
   for (const side of [1, -1]){
     const piv = side > 0 ? pv.lo : pv.hi, px = side > 0 ? l : h; let doneConf = false, doneForm = false;
@@ -1287,31 +1291,33 @@ function divergences(cd, o = {}){
       const b = piv[bi], conf = L - b >= P.k, ago = conf ? L - b - P.k : 0;
       if (ago > P.maxAgo) break;
       if (conf ? doneConf : doneForm) continue;
-      let both = null, rs = null, mc = null;
+      let both = null, rs = null, mc = null, ob = null;
       for (let ai = bi - 1; ai >= Math.max(0, bi - P.back); ai--){
         const a = piv[ai], gap = b - a;
         if (a < 20 || gap > P.maxGap) break;                // indicators need ~20 bars of warm-up
         if (gap < P.minGap) continue;
-        const r = divPair(side, a, b, IND.rsi, h, l, A[b]), m = divPair(side, a, b, IND.macd, h, l, A[b]);
-        if (r && m && !both) both = {a, r, m};
-        if (r && !rs) rs = {a, r};
-        if (m && !mc) mc = {a, m};
+        const r = divPair(side, a, b, IND.rsi, h, l, A[b]), m = divPair(side, a, b, IND.macd, h, l, A[b]), o = IND.obv ? divPair(side, a, b, IND.obv, h, l, A[b]) : null;
+        if (r && m && (!both || (o && !both.o))) both = {a, r, m, o};
+        if (r && (!rs || (o && !rs.o))) rs = {a, r, o};
+        if (m && (!mc || (o && !mc.o))) mc = {a, m, o};
+        if (o && !r && !m && !ob) ob = {a, o};
       }
-      const mk = (ind, a, r, m) => {
+      const mk = (ind, a, r, m, o) => {
         const rb = r ? r.vb : R[divNear(R, b, side)], ra = r ? r.va : R[divNear(R, a, side)];
-        let s = ind === 'both' ? 35 : ind === 'rsi' ? 20 : 15;
+        let s = ind === 'both' ? 35 : ind === 'rsi' ? 20 : ind === 'macd' ? 15 : 8;
+        if (o && ind !== 'obv') s += 8;                                              // volume (OBV) disagrees with price too
         s += Math.max(0, Math.min(15, (side > 0 ? 50 - rb : rb - 50) - 5));        // deep in oversold / overbought
-        s += r ? Math.min(15, r.di) : Math.min(15, m.di / ms * 8);                 // how far the indicator disagrees
-        s += Math.min(10, (r || m).dp / A[b] * 2);                                  // how far price pushed on
+        s += r ? Math.min(15, r.di) : m ? Math.min(15, m.di / ms * 8) : Math.min(10, o.di);   // how far the indicator disagrees
+        s += Math.min(10, (r || m || o).dp / A[b] * 2);                                  // how far price pushed on
         s += conf ? 10 : 0; s += ago <= 1 ? 10 : ago <= 3 ? 5 : 0;
         s = Math.round(Math.max(0, Math.min(100, s)));
         return {side, ind, conf, ago, bars: L - b, a, b, tA: cd[a][0], tB: cd[b][0], pA: px[a], pB: px[b], rsiA: ra, rsiB: rb,
-          mhA: m ? m.va : null, mhB: m ? m.vb : null, ri: r ? [r.ia, r.ib] : null, mi: m ? [m.ia, m.ib] : null,
+          mhA: m ? m.va : null, mhB: m ? m.vb : null, ri: r ? [r.ia, r.ib] : null, mi: m ? [m.ia, m.ib] : null, oi: o ? [o.ia, o.ib] : null, ov: !!o,
           score: s, level: s >= 70 ? 'strong' : s >= 50 ? 'medium' : 'weak', trend, view};
       };
       let emitted = false;
-      if (both){ out.push(mk('both', both.a, both.r, both.m)); emitted = true; }
-      else { if (rs){ out.push(mk('rsi', rs.a, rs.r, null)); emitted = true; } if (mc){ out.push(mk('macd', mc.a, null, mc.m)); emitted = true; } }
+      if (both){ out.push(mk('both', both.a, both.r, both.m, both.o)); emitted = true; }
+      else { if (rs){ out.push(mk('rsi', rs.a, rs.r, null, rs.o)); emitted = true; } if (mc){ out.push(mk('macd', mc.a, null, mc.m, mc.o)); emitted = true; } if (!emitted && ob){ out.push(mk('obv', ob.a, null, null, ob.o)); emitted = true; } }
       if (emitted){ if (conf) doneConf = true; else doneForm = true; }
     }
   }
@@ -1330,7 +1336,7 @@ function divEarly(cd){
   if (!(A > 0)) return [];
   const out = [];
   for (const x of divergences(cd, {k: 2, maxAgo: 2, back: 4})){
-    if (!x.conf || x.bars < 2 || x.bars > 4 || x.score < 60) continue;
+    if (!x.conf || x.ind === 'obv' || x.bars < 2 || x.bars > 4 || x.score < 60) continue;
     const b = x.b, bull = x.side > 0; let top = true;
     for (let j = Math.max(0, b - 10); j <= L; j++) if (j !== b && (bull ? l[j] < l[b] : h[j] > h[b])){ top = false; break; }
     if (!top) continue;
@@ -3128,7 +3134,7 @@ const DIV = {rows: [], t: 0, scanning: false, uni: new Map(), tfs: new Set(DV_TF
 (function dvLoad(){
   try { const o = JSON.parse(localStorage.getItem(DV_KEY) || '{}');
     if (Array.isArray(o.tfs) && o.tfs.some(t => DV_TFS.includes(t))) DIV.tfs = new Set(o.tfs.filter(t => DV_TFS.includes(t)));
-    if (['all', 'rsi', 'macd', 'both'].includes(o.ind)) DIV.ind = o.ind;
+    if (['all', 'rsi', 'macd', 'obv', 'both', 'all3'].includes(o.ind)) DIV.ind = o.ind;
     if (o.dir === 1 || o.dir === -1) DIV.dir = o.dir;
     if (o.conf === false) DIV.conf = false;
     if (o.early === false) DIV.early = false;
@@ -3188,7 +3194,7 @@ async function divJournal(rows){
     const v = x.view, n = v.c.length, i = n - 1 - x.ago, A = atr(v.h, v.l, v.c, 14)[i];
     if (!(A > 0) || !(v.c[i] > 0)) continue;
     J.entries.push({id, key: `${x.sym}|${x.tf}|div|${x.side}`, sym: x.sym, tf: x.tf, kind: 'div', dir: x.side, ct: v.t[i], price: v.c[i], atr: A, score: null,
-      ds: x.score, dind: x.ind, early: !!x.early, dtr: x.trend ? x.side * x.trend : 0, rs7: null, grade: null, trig: [], regime: S.regimeDir || 0, mtf: null, ext: null, pos: null, fFlag: 0, out: null});
+      ds: x.score, dind: x.ind, dov: !!x.ov, early: !!x.early, dtr: x.trend ? x.side * x.trend : 0, rs7: null, grade: null, trig: [], regime: S.regimeDir || 0, mtf: null, ext: null, pos: null, fFlag: 0, out: null});
     seen.add(id); added++;
   }
   if (added){ await saveJournal(); updateOutcomes(false); }
@@ -3199,6 +3205,7 @@ function dvRecord(){
   add('Entry', 'Confirmed (5 candles)', es); add('Entry', 'Early ⚡ (2 candles)', ea);
   add('All', 'All confirmed divergences', es);
   add('Indicator', 'RSI + MACD', es.filter(e => e.dind === 'both')); add('Indicator', 'RSI only', es.filter(e => e.dind === 'rsi')); add('Indicator', 'MACD only', es.filter(e => e.dind === 'macd'));
+  add('OBV', 'OBV agrees too', es.filter(e => e.dov)); add('OBV', 'OBV does not agree', es.filter(e => !e.dov));
   add('Strength', 'Strong (70+)', es.filter(e => e.ds >= 70)); add('Strength', 'Medium (50–69)', es.filter(e => e.ds < 70));
   add('Side', 'Bullish', es.filter(e => e.dir > 0)); add('Side', 'Bearish', es.filter(e => e.dir < 0));
   add('Trend', 'With trend', es.filter(e => e.dtr > 0)); add('Trend', 'Against trend', es.filter(e => e.dtr < 0));
@@ -3212,11 +3219,11 @@ function dvRecord(){
 const dvKey = x => `${x.sym}|${x.tf}|${x.side}|${x.tB}|${x.ind}`;
 function dvFiltered(){
   const f = x => (!x.early || DIV.early) && DIV.tfs.has(x.tf) && x.ago <= DIV.age && x.score >= DIV.str && (!DIV.dir || x.side === DIV.dir) && (!DIV.conf || x.conf)
-    && (DIV.ind === 'all' || (DIV.ind === 'both' ? x.ind === 'both' : x.ind === DIV.ind || x.ind === 'both'));
+    && (DIV.ind === 'all' || (DIV.ind === 'both' ? x.ind === 'both' : DIV.ind === 'obv' ? (x.ov || x.ind === 'obv') : DIV.ind === 'all3' ? (x.ind === 'both' && x.ov) : x.ind === DIV.ind || x.ind === 'both'));
   return DIV.rows.filter(f).sort((a, b) => b.score - a.score || a.bars - b.bars);
 }
 const dvAge = x => x.early ? `⚡ Early · swing ${x.bars} candles ago, last candle turned ${x.side > 0 ? 'up' : 'down'}` : x.conf ? (x.ago === 0 ? 'Confirmed on the last candle' : `Confirmed ${x.ago} candle${x.ago > 1 ? 's' : ''} ago`) : `Forming · swing ${x.bars ? x.bars + ' candle' + (x.bars > 1 ? 's' : '') + ' ago' : 'on the last candle'}`;
-const dvIndLbl = x => x.ind === 'both' ? 'RSI + MACD' : x.ind === 'rsi' ? 'RSI' : 'MACD';
+const dvIndLbl = x => x.ind === 'obv' ? 'OBV' : (x.ind === 'both' ? 'RSI + MACD' : x.ind === 'rsi' ? 'RSI' : 'MACD') + (x.ov ? ' + OBV' : '');
 const dvMacd = x => x.mhA != null && x.mhA !== 0 ? Math.round((1 - Math.abs(x.mhB) / Math.abs(x.mhA)) * 100) : null;   // how much weaker the histogram swing is
 const dvCtx = x => !x.trend ? null : x.side * x.trend > 0
   ? ['With trend', 'In the direction of the EMA20 / EMA50 trend: a ' + (x.side > 0 ? 'pullback' : 'bounce') + ' may be ending.']
@@ -3225,8 +3232,8 @@ const dvTip = x => `${x.side > 0 ? 'Bullish' : 'Bearish'} divergence on ${DV_LBL
 
 /* Mini chart: last 100 candles, the two swings joined by a line on price and on each indicator that diverges. */
 function dvChart(x){
-  const v = x.view, n = v.t.length, W = 300, both = x.ind === 'both', showR = x.ind !== 'macd', showM = x.ind !== 'rsi';
-  const pH = 62, iH = both ? 26 : 36, gap = 6, rT = pH + gap, mT = rT + (showR ? iH + gap : 0), H = pH + (showR ? gap + iH : 0) + (showM ? gap + iH : 0);
+  const v = x.view, n = v.t.length, W = 300, showR = !!x.ri, showM = !!x.mi, showO = !!x.oi && !!v.ob, cnt = showR + showM + showO;
+  const pH = 62, iH = cnt >= 3 ? 20 : cnt === 2 ? 26 : 36, gap = 6, rT = pH + gap, mT = rT + (showR ? iH + gap : 0), oT = mT + (showM ? iH + gap : 0), H = pH + cnt * (gap + iH);
   const px = i => 4 + (i + .5) * (W - 8) / n, bw = Math.max(1, (W - 8) / n * .62), f = q => q.toFixed(1), col = x.side > 0 ? 'var(--bull)' : 'var(--bear)';
   let lo = Infinity, hi = -Infinity; for (let i = 0; i < n; i++){ if (v.l[i] < lo) lo = v.l[i]; if (v.h[i] > hi) hi = v.h[i]; }
   const rg = hi - lo || 1, py = p => 3 + (hi - p) / rg * (pH - 6);
@@ -3261,6 +3268,16 @@ function dvChart(x){
     s += link(px(ia), my(v.m[ia]), px(ib), my(v.m[ib]), !x.conf);
     s += `<text x="3" y="${mT + 8}" font-size="7" fill="var(--muted)">MACD</text>`;
   }
+  if (showO){
+    let lo2 = Infinity, hi2 = -Infinity; for (let i = 0; i < n; i++) if (Number.isFinite(v.ob[i])){ if (v.ob[i] < lo2) lo2 = v.ob[i]; if (v.ob[i] > hi2) hi2 = v.ob[i]; }
+    const r2 = hi2 - lo2 || 1, oy = q => oT + 2 + (1 - (q - lo2) / r2) * (iH - 4);
+    s += `<rect x="0" y="${oT}" width="${W}" height="${iH}" fill="rgba(255,255,255,.03)"/>`;
+    let d = ''; for (let i = 0; i < n; i++) if (Number.isFinite(v.ob[i])) d += (d ? 'L' : 'M') + f(px(i)) + ' ' + f(oy(v.ob[i]));
+    s += `<path d="${d}" stroke="var(--warn)" stroke-width="1.2" fill="none"/>`;
+    const [ia, ib] = x.oi.map(j => j - v.from);
+    s += link(px(ia), oy(v.ob[ia]), px(ib), oy(v.ob[ib]), !x.conf);
+    s += `<text x="3" y="${oT + 8}" font-size="7" fill="var(--muted)">OBV</text>`;
+  }
   return s + '</svg>';
 }
 function dvCard(x){
@@ -3277,7 +3294,7 @@ function renderDiv(){
   dvRecord();
   const all = dvFiltered(), rows = all.slice(0, DV_MAX);
   const nb = all.filter(x => x.side > 0).length, nboth = all.filter(x => x.ind === 'both').length;
-  $('dvSum').innerHTML = DIV.t ? `<b>${all.length}</b> signal${all.length === 1 ? '' : 's'} · <span class="up">▲ ${nb} bullish</span> · <span class="dn">▼ ${all.length - nb} bearish</span> · ${nboth} with RSI + MACD${all.length > DV_MAX ? ` · showing the ${DV_MAX} strongest` : ''}` : '';
+  $('dvSum').innerHTML = DIV.t ? `<b>${all.length}</b> signal${all.length === 1 ? '' : 's'} · <span class="up">▲ ${nb} bullish</span> · <span class="dn">▼ ${all.length - nb} bearish</span> · ${nboth} with RSI + MACD${all.filter(x => x.ov).length ? ` · ${all.filter(x => x.ov).length} with OBV` : ''}${all.length > DV_MAX ? ` · showing the ${DV_MAX} strongest` : ''}` : '';
   $('dvGrid').innerHTML = rows.length ? rows.map(dvCard).join('') : `<div class="panel mu" style="grid-column:1/-1">${DIV.scanning ? 'Scanning…' : DIV.t ? 'No divergences match these filters right now. Try a longer age, "Any" strength, or more timeframes.' : 'Press Scan to look for divergences in the top 100 pairs.'}</div>`;
 }
 
@@ -3297,7 +3314,7 @@ async function divAlertText(items, early){
   if (S.macro && S.macro.reg) lines.push(`🌐 Macro: ${esc(S.macro.reg.name)}${S.macro.reg.froth ? ' 🔥' : ''}`);
   for (const x of items.slice(0, 6)){
     const bull = x.side > 0, dec = decFor(x.pB), mc = dvMacd(x), ctx = dvCtx(x);
-    lines.push('', `<b>${esc(x.sym.replace('USDT', ''))} ${DV_LBL[x.tf]} · ${bull ? 'BULLISH 🟢' : 'BEARISH 🔴'}</b> · RSI + MACD · ${x.level} (${x.score})`,
+    lines.push('', `<b>${esc(x.sym.replace('USDT', ''))} ${DV_LBL[x.tf]} · ${bull ? 'BULLISH 🟢' : 'BEARISH 🔴'}</b> · ${dvIndLbl(x)} · ${x.level} (${x.score})`,
       `Price ${fp(x.pA, dec)} → ${fp(x.pB, dec)} (${bull ? 'lower low' : 'higher high'}) · RSI ${x.rsiA.toFixed(0)} → ${x.rsiB.toFixed(0)}${mc != null ? ` · MACD hist −${mc}%` : ''}`,
       `${dvAge(x)}${ctx ? ' · ' + ctx[0].toLowerCase() + (x.side * x.trend < 0 ? ' ⚠️' : '') : ''}`);
     if ($('tgPlan').checked){
