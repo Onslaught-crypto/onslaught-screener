@@ -180,10 +180,10 @@ td.trigs{white-space:nowrap}
 .anasug{position:absolute;left:0;top:100%;margin:4px 0 0;padding:4px;list-style:none;background:var(--panel2);border:1px solid var(--accent);border-radius:8px;min-width:210px;z-index:20;box-shadow:0 10px 30px #000a}.anasug li{padding:6px 10px;border-radius:5px;cursor:pointer}.anasug li.on,.anasug li:hover{background:rgba(138,82,156,.3)}.anasug[hidden]{display:none}
 .anatitle{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.anasym{font-size:20px}.anapx{font:600 15px var(--mono)}
 .anapill{border-radius:10px;padding:2px 9px;font-size:12px;font-weight:600;background:rgba(138,82,156,.3);color:var(--accent-lt)}.anapill.g{background:rgba(158,255,0,.15);color:var(--bull)}
-.anaquick{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.anagl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin:0 2px 0 8px}.anagl:first-child{margin-left:0}
+.anaquick{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.anax{margin-left:6px;opacity:.5;font-weight:700}.anax:hover{opacity:1;color:var(--bear)}.anachip.on{background:rgba(138,82,156,.25);border-color:var(--accent);color:var(--text)}.anagrid>.panel{display:flex;flex-direction:column;margin:0}.anagl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin:0 2px 0 8px}.anagl:first-child{margin-left:0}
 .anachip,.tachip{border:1px solid var(--line);border-radius:12px;padding:3px 10px;font-size:12px;color:var(--muted);background:none}.anachip:hover{color:var(--text);border-color:var(--accent)}.tachip.on{background:rgba(138,82,156,.25);border-color:var(--accent);color:var(--text)}
 .anaverdict{border-left:3px solid var(--accent-lt);line-height:1.6;margin-bottom:12px}
-.anagrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;margin-bottom:12px;align-items:start}.anagrid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;align-items:start}
+.anagrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;margin-bottom:12px;align-items:stretch}.anagrid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;align-items:start}
 .anaside{display:grid;gap:12px}.card2{background:var(--panel);border-radius:10px;padding:12px 14px}.card2 h4{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .card2 .lv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:12.5px}.card2 h4+.lv{border-top:0}.card2 .anapr{border-top:2px solid var(--accent)}
 .mono{font-family:var(--mono)}.wr{color:var(--warn)}.anatog{margin-bottom:8px;gap:6px}.anahov{margin-left:auto;font:11px var(--mono)}
@@ -438,7 +438,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <button role="tab" data-view="sectors">Sector Flow</button>
     <button role="tab" data-view="macro">Macro</button>
     <button role="tab" data-view="div">Divergences<span class="newb" id="divNew" hidden>NEW</span></button>
-    <button role="tab" data-view="ta">Analysis</button>
+    <button role="tab" data-view="ta">Technical Analysis</button>
     <button role="tab" data-view="liq">Liquidations</button>
     <button role="tab" data-view="journal">Journal</button>
   </nav>
@@ -733,7 +733,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <span style="flex:1"></span>
       <div class="seg" id="anaTf"><button data-v="15m">15M</button><button data-v="1h">1H</button><button data-v="4h">4H</button><button data-v="1d">1D</button></div>
       <a id="anaTv" class="abtn" target="_blank" rel="noopener" hidden>↗ TradingView</a>
-      <button id="anaLink" hidden title="Copy a link that opens this coin in the Analysis tab">Copy link</button>
+      <button id="anaClose" hidden title="Close this coin and clear the analysis">✕ Close</button><button id="anaLink" hidden title="Copy a link that opens this coin in the Technical Analysis tab">Copy link</button>
       <button id="anaPlan" class="primary" hidden title="Open the trade plan for this coin">Trade plan</button>
     </div>
     <div class="anaquick" id="anaQuick"></div>
@@ -807,7 +807,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
 <div class="palette" id="palette" hidden role="dialog" aria-label="Quick search">
   <div class="palbox"><input id="palIn" type="text" placeholder="Search a pair and press Enter…" autocomplete="off" aria-label="Pair"><ul id="palList"></ul>
-  <div class="palhint mu">↑ ↓ to move · Enter to open the trade plan · Shift+Enter for the Analysis tab · Esc to close · <b>Ctrl+K</b> anywhere</div></div></div>
+  <div class="palhint mu">↑ ↓ to move · Enter to open the trade plan · Shift+Enter for Technical Analysis · Esc to close · <b>Ctrl+K</b> anywhere</div></div></div>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-label="Trade plan" aria-hidden="true">
   <div class="dhead">
@@ -840,7 +840,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="dsize" id="dSize"></div>
   </div>
   <div class="dsec"><ul class="dwarn" id="dWarn"></ul></div>
-  <div class="dsec row"><button id="dCopy" class="primary">Copy plan</button><button id="dTg" title="Send this plan to your Telegram">Send to Telegram</button><button id="dAna" title="Open this coin in the Analysis tab: structure, key levels and a short summary">Analysis →</button><button id="dLink" title="Copy a link that opens this coin and timeframe">Copy link</button><span class="mu" id="dCopied" style="font-size:12px"></span></div>
+  <div class="dsec row"><button id="dCopy" class="primary">Copy plan</button><button id="dTg" title="Send this plan to your Telegram">Send to Telegram</button><button id="dAna" title="Open this coin in the Technical Analysis tab: structure, key levels and a short summary">Technical Analysis →</button><button id="dLink" title="Copy a link that opens this coin and timeframe">Copy link</button><span class="mu" id="dCopied" style="font-size:12px"></span></div>
   <p class="dnote">Levels come from closed candles on the selected timeframe. Swing stop = nearest swing low/high beyond entry ± 0.25 ATR. Targets = nearest swing levels and 1.272 / 1.618 extensions of the last impulse, with R-multiples as fallback. A starting point for your own chart read, not advice.</p>
 </aside>
 
@@ -2072,7 +2072,7 @@ function setView(v){
   if (v === 'div'){ try { localStorage.setItem('onslaught-newseen', '1'); } catch {} $('divNew').hidden = true; }
   $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div'; $('viewTa').hidden = v !== 'ta';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Analysis', liq: 'Liquidation Map', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
+  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Technical Analysis', liq: 'Liquidation Map', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   if (v === 'journal') renderJournal();
@@ -3608,8 +3608,8 @@ async function anaFacts(sym, base, tok){
   } catch(e){ if (tok === ANA.tok){ ANA.facts = {err: true}; anaRender(); } }
 }
 function anaQuick(){
-  const chip = (s, t) => `<button class="anachip" data-sym="${s}">${t || s.replace('USDT', '')}</button>`, g = (l, a) => a.length ? `<span class="mu anagl">${l}</span>${a.join('')}` : '';
-  const c = cfg(), star = [...WATCH].slice(0, 8).map(s => chip(s)), rec = ANA.recent.filter(s => s !== ANA.sym).map(s => chip(s));
+  const chip = (s, t) => `<button class="anachip${s === ANA.sym ? ' on' : ''}" data-sym="${s}">${t || s.replace('USDT', '')}</button>`, g = (l, a) => a.length ? `<span class="mu anagl">${l}</span>${a.join('')}` : '';
+  const c = cfg(), star = [...WATCH].slice(0, 8).map(s => chip(s)), rec = ANA.recent.map(s => `<button class="anachip${s === ANA.sym ? ' on' : ''}" data-sym="${s}">${s.replace('USDT', '')}<span class="anax" data-rm="${s}" title="Remove from Recent">×</span></button>`);
   const gA = S.rows.map(r => derive(r, c)).filter(r => r.setup && r.G && r.G.grade === 'A').sort((a, b) => b.score - a.score).slice(0, 6).map(r => chip(r.sym, r.sym.replace('USDT', '') + (r.setup > 0 ? ' ▲' : ' ▼')));
   $('anaQuick').innerHTML = g('★ Watchlist', star) + g('Recent', rec) + g('A-grade setups', gA);
 }
@@ -3688,7 +3688,7 @@ function anaSummary(L, row, tf){
 function anaRender(){
   const body = $('anaBody'), sym = ANA.sym, info = ANA.info, L = ANA.L, row = ANA.row;
   const empty = t => body.innerHTML = `<div class="panel mu" style="margin-top:12px">${t}</div>`;
-  $('anaTv').hidden = $('anaPlan').hidden = $('anaLink').hidden = !sym;
+  $('anaTv').hidden = $('anaPlan').hidden = $('anaLink').hidden = $('anaClose').hidden = !sym;
   if (sym){ $('anaTv').href = `https://www.tradingview.com/chart/?symbol=BINANCE:${sym}.P`; }
   const tags = info ? tagsOf(info.base).slice(0, 3).map(t => `<span class="tag">${esc(t)}</span>`).join('') : '';
   const lp = sym && LIVE.q.get(sym), price = lp ? lp[0] : info ? info.price : null, chg = lp && lp[1] != null ? lp[1] : info ? info.chg : null;
@@ -3732,7 +3732,12 @@ function anaRender(){
     <div class="card2"><h4>Token and fundamentals</h4>${facts}<div class="note">Source: CoinGecko and Binance. ${tags ? 'Sector: ' + tags : ''}</div></div>
     <div class="card2"><h4>News and research (opens in a new tab)</h4><div class="row"><a class="abtn" href="${cg}" target="_blank" rel="noopener">CoinGecko page</a><a class="abtn" href="https://cryptopanic.com/news/${encodeURIComponent(b.toLowerCase())}/" target="_blank" rel="noopener">CryptoPanic news</a><a class="abtn" href="https://x.com/search?q=%24${encodeURIComponent(b)}&f=live" target="_blank" rel="noopener">X search $${esc(b)}</a><a class="abtn" href="https://www.tradingview.com/symbols/${sym}/ideas/" target="_blank" rel="noopener">TradingView ideas</a></div><div class="note">A live news feed needs a paid key, so the page links out instead.</div></div>
   </div>`;
-  const box = $('anaChartBox'); box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), window.innerWidth < 700 ? 320 : 430);
+  const box = $('anaChartBox'); box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), window.innerWidth < 900 ? 340 : 430);
+  const side = body.querySelector('.anaside'), pn = box.closest('.panel');
+  if (side && pn && window.innerWidth >= 900){                       // line the chart panel up with the right-hand column
+    const cs = getComputedStyle(pn), chrome = box.getBoundingClientRect().top - pn.getBoundingClientRect().top + parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth || 0), h = Math.max(380, Math.round(side.offsetHeight - chrome));
+    box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), h);
+  }
 }
 function anaHover(e){
   const svg = $('anaSvg'), V = ANA.vis; if (!svg || !V || !ANA.cd) return;
@@ -3748,7 +3753,8 @@ $('anaTf').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('anaBody').onclick = e => { const t = e.target.closest('.tachip'); if (t){ ANA.show[t.dataset.k] = !ANA.show[t.dataset.k]; anaSave(); anaRender(); } };
 $('anaBody').onmousemove = anaHover;
 $('anaBody').onmouseleave = () => { const c = $('anaCross'); if (c) c.setAttribute('visibility', 'hidden'); };
-$('anaQuick').onclick = e => { const b = e.target.closest('[data-sym]'); if (b) anaOpen(b.dataset.sym); };
+$('anaQuick').onclick = e => { const x = e.target.closest('[data-rm]'); if (x){ ANA.recent = ANA.recent.filter(s => s !== x.dataset.rm); anaSave(); anaQuick(); return; } const b = e.target.closest('[data-sym]'); if (b) anaOpen(b.dataset.sym); };
+$('anaClose').onclick = () => { ANA.tok++; Object.assign(ANA, {sym: null, L: null, cd: null, row: null, info: null, facts: null, err: '', busy: false, loadedSym: null}); $('anaIn').value = ''; anaQuick(); anaRender(); };
 $('anaIn').oninput = anaSuggest; $('anaIn').onfocus = anaSuggest;
 const anaPickSym = s => { $('anaSug').hidden = true; $('anaIn').value = ''; $('anaIn').blur(); anaOpen(s); };
 $('anaIn').onkeydown = e => {
