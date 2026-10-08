@@ -314,6 +314,8 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
 .macv .mbias{display:flex;flex-direction:column;gap:4px;font-size:12px;white-space:nowrap}
 .macv .mbias span b{font-family:var(--mono)}
 .macv.good{border-left-color:var(--bull)} .macv.good .mname{color:var(--bull)} .macv.bad{border-left-color:var(--bear)} .macv.bad .mname{color:var(--bear)}
+.rhist{display:flex;height:24px;border-radius:6px;overflow:hidden;gap:1px;margin:8px 0} .rseg{min-width:2px} .rseg.good{background:var(--bull);opacity:.7} .rseg.bad{background:var(--bear);opacity:.8} .rseg.warn{background:var(--warn);opacity:.75} .rseg.neut{background:var(--neutral)}
+.rhl{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px} .rhl i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px} .rhl i.good{background:var(--bull)} .rhl i.bad{background:var(--bear)} .rhl i.warn{background:var(--warn)} .rhl i.neut{background:var(--neutral)}
 .macv.warn{border-left-color:var(--warn)} .macv.warn .mname{color:var(--warn)} .macv.neut .mname{color:var(--accent-lt)}
 .macv .mdirs{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .mname .mtf{font:700 10px system-ui;letter-spacing:1px;text-transform:uppercase;background:var(--panel2);color:var(--muted);border-radius:4px;padding:2px 6px;margin-right:8px;vertical-align:4px}
@@ -642,6 +644,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
     <div id="macVerdict"></div>
     <div class="maccards" id="macCards"></div>
+    <div class="panel" id="macHistPanel"><div class="lqfh"><b>Regime history</b> <span class="mu" id="macHistNote">how the macro regime read on each past day, from the same rebuilt indices</span></div><div id="macHist"></div></div>
     <div class="macbottom">
       <div class="panel"><div class="lqfh"><b>Macro regimes</b> <span class="mu">how the four indices combine · current one highlighted</span></div><div id="macMatrix"></div></div>
       <div class="panel macchart"><div class="row" style="margin-bottom:8px"><b>TradingView</b><div class="seg" id="macTv"><button data-v="CRYPTOCAP:BTC.D" class="on">BTC.D</button><button data-v="CRYPTOCAP:USDT.D+CRYPTOCAP:USDC.D">USDT.D+USDC.D</button><button data-v="CRYPTOCAP:USDT.D">USDT.D</button><button data-v="CRYPTOCAP:USDC.D">USDC.D</button><button data-v="CRYPTOCAP:TOTAL3ES">TOTAL3ES</button><button data-v="CRYPTOCAP:OTHERS.D">OTHERS.D</button><button data-v="CRYPTOCAP:TOTAL">TOTAL</button></div><span class="mu">official indices, draw your own levels</span></div><div id="macTvBox" class="mactv"></div></div>
@@ -2565,6 +2568,7 @@ function mapDrag(){
 
 /* ---------- Macro (BTC.D, USDT.D+USDC.D, TOTAL3ES, OTHERS.D) ---------- */
 const MAC = {loading: false, win: 90, tf: 'd', tv: 'CRYPTOCAP:BTC.D', tvShown: null};
+const MAC_HUE = {riskoff: '#e94c2a', flight: '#b8365a', caution: '#ff7a0a', btcled: '#d9b21e', btcrally: '#5fbf6b', riskon: '#9eff00', altseason: '#22d3b0', mixed: '#6d7078'};
 const MAC_TONE = {riskoff: 'bad', flight: 'bad', caution: 'warn', btcled: 'warn', btcrally: 'good', riskon: 'good', altseason: 'good', mixed: 'neut'};
 const MAC_COND = {riskoff: 'stables ↑ · alts ↓', flight: 'BTC.D ↑ · alts ↓', caution: 'stables ↑', btcled: 'BTC.D ↑ · alts flat', btcrally: 'stables ↓ · alts ↑ · BTC.D ↑',
   riskon: 'stables ↓ · alts ↑ · BTC.D flat', altseason: 'BTC.D ↓ · alts ↑', mixed: 'anything else'};
@@ -2666,7 +2670,7 @@ function macWinBar(){
 }
 function renderMacro(){
   if ($('viewMacro').hidden) return;
-  macWinBar();
+  macWinBar(); $('macHistPanel').hidden = true;
   const M = S.macro, W = MAC.tf === 'w';
   if (M && W && !M.regW && M.series){ M.weekly = weekly(M.series); M.regW = macroRegime(M.weekly, 2); }
   const R = M && (W ? M.regW : M.reg), SER = M && (W ? M.weekly : M.series), u = W ? 'w' : 'd', uL = W ? 'week' : 'day';
@@ -2684,7 +2688,28 @@ function renderMacro(){
       <div class="mh"><span class="mk">${m.name}</span><span class="mdir ${tn}">${arrow(t.dir)} ${t.dir ? m.words[t.dir > 0 ? 0 : 1].split(':')[0] : 'flat'}</span></div><div class="ms">${m.sub}</div>
       <div class="mv">${m.fmt(t.v)}</div><div class="mc"><span>${W ? '7w' : '7d'} <b class="${cls(t.r7)}">${signed(t.r7)}%</b></span><span>${W ? '30w' : '30d'} <b class="${cls(t.r30)}">${signed(t.r30)}%</b></span><span>${MAC_WINS[MAC.tf].find(([v]) => v === MAC.win)[1]} <b class="${cls(wr)}">${signed(wr)}%</b></span>${extra}</div>
       ${macChart(vals, e20, tn)}<div class="ms">${vals.length} ${uL}s · dashed = 20-${uL} average</div></div>`; }).join('');
-  macMatrix(R); macTv();
+  macMatrix(R); macHist(SER, W); macTv();
+}
+/* Regime on each past day (or week): the same read as the verdict, re-run on the history up to that point. */
+function macHist(SER, W){
+  $('macHistPanel').hidden = false;
+  const n = SER.length, win = Math.min(MAC.win, n), k = W ? 2 : 1, uL = W ? 'week' : 'day', days = [];
+  for (let i = Math.max(29, n - win); i < n; i++){ const r = macroRegime(SER.slice(0, i + 1), k); if (r) days.push({t: SER[i].t, key: r.key, name: r.name}); }
+  if (days.length < 3){ $('macHist').innerHTML = '<div class="mu" style="padding:8px 0">Not enough history for this window. Pick a longer window or press Refresh.</div>'; return; }
+  /* A regime only takes over the bar once it has held for 3 days (2 weeks on the weekly view) in a row, so one-day flickers don't clutter the history. */
+  const HOLD = W ? 2 : 3, sm = []; let on = days[0], cand = null, cn = 0;
+  for (const d of days){
+    if (d.key === on.key){ cand = null; cn = 0; }
+    else { if (cand && cand.key === d.key) cn++; else { cand = d; cn = 1; } if (cn >= HOLD){ on = d; cand = null; cn = 0; } }
+    sm.push({t: d.t, key: on.key, name: on.name});
+  }
+  const runs = []; for (const d of sm){ const l = runs.at(-1); if (l && l.key === d.key){ l.n++; l.end = d.t; } else runs.push({key: d.key, name: d.name, n: 1, start: d.t, end: d.t}); }
+  let rawN = 0; for (let i = days.length - 1; i >= 0 && days[i].key === days.at(-1).key; i--) rawN++;
+  const f = t => new Date(t).toLocaleDateString([], {day: 'numeric', month: 'short', year: '2-digit'}), cur = {name: days.at(-1).name, n: rawN}, tot = {};
+  for (const r of runs) (tot[r.key] ||= {name: r.name, n: 0}).n += r.n;
+  $('macHist').innerHTML = `<div class="rhist">${runs.map(r => `<span class="rseg" style="flex:${r.n};background:${MAC_HUE[r.key]}" title="${r.name} · ${f(r.start)} to ${f(r.end)} · ${r.n} ${uL}${r.n > 1 ? 's' : ''}"></span>`).join('')}</div>
+    <div class="mu" style="font-size:12px;margin-bottom:6px">${f(days[0].t)} → ${f(days.at(-1).t)} · now <b>${cur.name}</b> for ${cur.n} ${uL}${cur.n > 1 ? 's' : ''} · ${runs.length - 1} change${runs.length === 2 ? '' : 's'} in this window (flickers under ${HOLD} ${uL}s are merged)</div>
+    <div class="rhl">${Object.entries(tot).sort((a, b) => b[1].n - a[1].n).map(([key, v]) => `<span><i style="background:${MAC_HUE[key]}"></i>${v.name} ${Math.round(100 * v.n / days.length)}%</span>`).join('')}</div>`;
 }
 function macMatrix(R){
   $('macMatrix').innerHTML = `<table class="mtab">${Object.entries(MACRO_REGIMES).map(([k, [name, , b]]) => `<tr class="${R && R.key === k ? 'on' : ''}"><td>${name}</td><td class="cond">${MAC_COND[k]}</td><td class="mu">alts L ${signed(b.alt[0], 0)} / S ${signed(b.alt[1], 0)} · BTC L ${signed(b.btc[0], 0)} / S ${signed(b.btc[1], 0)}</td></tr>`).join('')}</table>`;
