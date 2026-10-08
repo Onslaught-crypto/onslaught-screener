@@ -551,6 +551,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label title="From @BotFather. Stored only in this browser.">Telegram bot token <input id="tgToken" type="password" autocomplete="off" placeholder="123456789:ABC…" style="width:230px"></label>
         <label title="Your chat ID (message @userinfobot), or a group/channel ID">Chat ID <input id="tgChat" type="text" autocomplete="off" style="width:130px"></label>
         <label><input id="tgOn" type="checkbox"> Send alerts to Telegram</label>
+        <label title="Message me when BTC or ETH trades within 0.5% of one of the largest estimated liquidation clusters (15m model, same as the Liquidations tab). Checked every 5 minutes while this page is open."><input id="tgLiq" type="checkbox"> Liquidation alerts</label>
         <label title="Include entry, stop and targets for each alert"><input id="tgPlan" type="checkbox" checked> with trade plan</label>
         <label title="Also message me when RSI and MACD both diverge from price on a confirmed swing (1H, 4H or 1D, Strong). The Divergences tab scans in the background while this page is open."><input id="tgDiv" type="checkbox"> Divergence alerts</label>
         <label title="No Telegram messages during these hours (your local time). Alerts that would have fired are skipped, not sent later."><input id="tgQuiet" type="checkbox"> Quiet hours</label>
@@ -1844,7 +1845,7 @@ async function scan(){
 
 function setAuto(){
   clearInterval(S.timer); const s = +$('auto').value;
-  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on || tgActive()) scan(); if (tgActive() && $('tgDiv').checked) divScan(); }, s * 1000);
+  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on || tgActive()) scan(); if (tgActive() && $('tgDiv').checked) divScan(); if (tgActive() && $('tgLiq').checked) liqAlertScan(); }, s * 1000);
 }
 
 function exportCSV(){
@@ -2179,8 +2180,8 @@ function toast(msg, items){
 /* ---------- Telegram ---------- */
 const TG_KEY = 'onslaught-tg';
 function tgLoad(){ let o = {}; try { o = JSON.parse(localStorage.getItem(TG_KEY) || '{}'); } catch {}
-  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgDiv').checked = !!o.div; $('tgQuiet').checked = !!o.quiet; $('tgQFrom').value = o.qFrom || '23:00'; $('tgQTo').value = o.qTo || '07:00'; }
-function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, div: $('tgDiv').checked, quiet: $('tgQuiet').checked, qFrom: $('tgQFrom').value, qTo: $('tgQTo').value})); } catch {} }
+  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgDiv').checked = !!o.div; $('tgLiq').checked = !!o.liq; $('tgQuiet').checked = !!o.quiet; $('tgQFrom').value = o.qFrom || '23:00'; $('tgQTo').value = o.qTo || '07:00'; }
+function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, div: $('tgDiv').checked, liq: $('tgLiq').checked, quiet: $('tgQuiet').checked, qFrom: $('tgQFrom').value, qTo: $('tgQTo').value})); } catch {} }
 const tgReady = () => /^\d+:[\w-]{20,}$/.test($('tgToken').value.trim()) && $('tgChat').value.trim() !== '';
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 /* Form-encoded POST = a "simple" CORS request (no preflight). If the browser can't read the reply, the message has usually still gone. */
@@ -2658,7 +2659,7 @@ function macChart(vals, e20s, tone){
 function emaSeries(vals, p){ const k = 2 / (p + 1); let e = vals[0]; return vals.map(v => (e = v * k + e * (1 - k))); }
 const signed = (v, d = 1) => v == null || !Number.isFinite(v) ? '—' : (v > 0 ? '+' : '') + v.toFixed(d);
 function biasTxt(v){ return v >= 1 ? `<b class="up">favoured (+${v})</b>` : v <= -2 ? `<b class="dn">avoid (${v})</b>` : v < 0 ? `<b style="color:var(--warn)">cautious (${v})</b>` : '<b class="mu">neutral (0)</b>'; }
-const MAC_WINS = {d: [[30, '30d'], [60, '60d'], [90, '90d'], [180, '6M'], [365, '1Y']], w: [[13, '3M'], [26, '6M'], [52, '1Y']]};
+const MAC_WINS = {d: [[30, '30d'], [60, '60d'], [90, '90d'], [180, '6M'], [365, '1Y']], w: [[4, '30d'], [9, '60d'], [13, '90d'], [26, '6M'], [52, '1Y']]};   // the same spans as the daily view, in weekly bars
 function weekly(series){                                          // last reading of each week (weeks start Monday, UTC)
   const out = [], wk = t => Math.floor((t / 864e5 + 3) / 7);
   for (const x of series){ if (out.length && wk(out.at(-1).t) === wk(x.t)) out[out.length - 1] = x; else out.push(x); }
@@ -2696,19 +2697,20 @@ function macHist(SER, W){
   const n = SER.length, win = Math.min(MAC.win, n), k = W ? 2 : 1, uL = W ? 'week' : 'day', days = [];
   for (let i = Math.max(29, n - win); i < n; i++){ const r = macroRegime(SER.slice(0, i + 1), k); if (r) days.push({t: SER[i].t, key: r.key, name: r.name}); }
   if (days.length < 3){ $('macHist').innerHTML = '<div class="mu" style="padding:8px 0">Not enough history for this window. Pick a longer window or press Refresh.</div>'; return; }
-  /* A regime only takes over the bar once it has held for 3 days (2 weeks on the weekly view) in a row, so one-day flickers don't clutter the history. */
-  const HOLD = W ? 2 : 3, sm = []; let on = days[0], cand = null, cn = 0;
-  for (const d of days){
-    if (d.key === on.key){ cand = null; cn = 0; }
-    else { if (cand && cand.key === d.key) cn++; else { cand = d; cn = 1; } if (cn >= HOLD){ on = d; cand = null; cn = 0; } }
-    sm.push({t: d.t, key: on.key, name: on.name});
-  }
-  const runs = []; for (const d of sm){ const l = runs.at(-1); if (l && l.key === d.key){ l.n++; l.end = d.t; } else runs.push({key: d.key, name: d.name, n: 1, start: d.t, end: d.t}); }
+  /* Short flickers inside the history are merged into their neighbour (shorter than HOLD readings); the latest run always stays as read, so the strip ends on today's regime. */
+  const HOLD = W ? 2 : 3, raw = []; for (const d of days){ const l = raw.at(-1); if (l && l.key === d.key){ l.n++; l.end = d.t; } else raw.push({key: d.key, name: d.name, n: 1, start: d.t, end: d.t}); }
+  const runs = [];
+  raw.forEach((x, i) => {
+    const last = i === raw.length - 1, p = runs.at(-1);
+    if (!last && x.n < HOLD){ if (p){ p.n += x.n; p.end = x.end; } else { raw[i + 1].n += x.n; raw[i + 1].start = x.start; } }
+    else if (p && p.key === x.key){ p.n += x.n; p.end = x.end; }
+    else runs.push({...x});
+  });
   let rawN = 0; for (let i = days.length - 1; i >= 0 && days[i].key === days.at(-1).key; i--) rawN++;
   const f = t => new Date(t).toLocaleDateString([], {day: 'numeric', month: 'short', year: '2-digit'}), cur = {name: days.at(-1).name, n: rawN}, tot = {};
   for (const r of runs) (tot[r.key] ||= {name: r.name, n: 0}).n += r.n;
   $('macHist').innerHTML = `<div class="rhist">${runs.map(r => `<span class="rseg" style="flex:${r.n};background:${MAC_HUE[r.key]}" title="${r.name} · ${f(r.start)} to ${f(r.end)} · ${r.n} ${uL}${r.n > 1 ? 's' : ''}"></span>`).join('')}</div>
-    <div class="mu" style="font-size:12px;margin-bottom:6px">${f(days[0].t)} → ${f(days.at(-1).t)} · now <b>${cur.name}</b> for ${cur.n} ${uL}${cur.n > 1 ? 's' : ''} · ${runs.length - 1} change${runs.length === 2 ? '' : 's'} in this window (flickers under ${HOLD} ${uL}s are merged)</div>
+    <div class="mu" style="font-size:12px;margin-bottom:6px">${f(days[0].t)} → ${f(days.at(-1).t)} · now <b>${cur.name}</b> for ${cur.n} ${uL}${cur.n > 1 ? 's' : ''} · ${runs.length - 1} change${runs.length === 2 ? '' : 's'} in this window (flickers under ${HOLD} ${uL}s are merged)${days.length < MAC.win ? ` · shows ${days.length} of ${MAC.win} ${uL}s: the read needs 30 ${uL}s of history first` : ''}</div>
     <div class="rhl">${Object.entries(tot).sort((a, b) => b[1].n - a[1].n).map(([key, v]) => `<span><i style="background:${MAC_HUE[key]}"></i>${v.name} ${Math.round(100 * v.n / days.length)}%</span>`).join('')}</div>`;
 }
 function macMatrix(R){
@@ -2759,13 +2761,13 @@ async function loadLiq(){
   finally { LQ.loading = false; $('lqLoad').disabled = false; }
   liqWs();
 }
-function buildLiq(){
-  const D = LQ.data; if (!D || !D.k.length) return;
-  const {k, oi} = D, n = k.length, levs = Object.keys(LEV_MIX).map(Number).filter(L => document.querySelector(`#lqLev input[value="${L}"]`)?.checked);
+/* Estimated liquidation model for candles + open interest (pure: also used by the liquidation alerts). */
+function lqModel(D, range, levs){
+  const {k, oi} = D, n = k.length;
   const wsum = levs.reduce((a, L) => a + LEV_MIX[L], 0) || 1, step = n > 1 ? k[1].t - k[0].t : 9e5;
   const idx = new Map(k.map((c, i) => [c.t, i])), dOI = new Float64Array(n), prev = new Float64Array(n);
   for (let j = 1; j < oi.length; j++){ const i = idx.get(Math.floor(oi[j - 1].t / step) * step); if (i == null) continue; dOI[i] += oi[j].n - oi[j - 1].n; prev[i] = oi[j - 1].n; }
-  const cur = k[n - 1].c, lo = cur * (1 - LQ.range / 100), hi = cur * (1 + LQ.range / 100), nb = 220;
+  const cur = k[n - 1].c, lo = cur * (1 - range / 100), hi = cur * (1 + range / 100), nb = 220;
   const bin = p => Math.floor((p - lo) / (hi - lo) * nb);
   const grid = new Float32Array(n * nb), lev = [], swept = new Float64Array(n);
   let active = [];
@@ -2789,9 +2791,62 @@ function buildLiq(){
   const prof = new Float64Array(nb); for (const z of active) if (z.b >= 0 && z.b < nb) prof[z.b] += z.amt;
   const nz = []; for (let i = 0; i < grid.length; i += 3) if (grid[i] > 0) nz.push(grid[i]); nz.sort((a, b) => a - b);
   const vmax = nz.length ? nz[Math.floor(nz.length * .995)] : 1;
-  LQ.model = {n, nb, lo, hi, cur, grid, prof, active, swept, vmax, step, levs};
+  return {n, nb, lo, hi, cur, grid, prof, active, swept, vmax, step, levs};
+}
+function buildLiq(){
+  const D = LQ.data; if (!D || !D.k.length) return;
+  LQ.model = lqModel(D, LQ.range, Object.keys(LEV_MIX).map(Number).filter(L => document.querySelector(`#lqLev input[value="${L}"]`)?.checked));
 }
 const lqUsd = v => '$' + (v >= 1e9 ? (v / 1e9).toFixed(2) + 'B' : v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v.toFixed(0));
+/* ---- Liquidation alerts: price close to a large estimated cluster (BTC and ETH, 15m model, ±8%) ---- */
+const LQA = {syms: ['BTCUSDT', 'ETHUSDT'], maxPct: .5, minRel: .9, cool: 6 * 36e5, every: 5 * 6e4, t: 0, busy: false, KEY: 'onslaught-liqsent'};
+/* Clusters within maxPct of price whose size is at least minRel × the largest cluster anywhere in the ±8% range. */
+function lqNear(M, maxPct, minRel){
+  const sm = Array.from(M.prof, (_, b) => { let q = 0; for (let d = -2; d <= 2; d++) q += M.prof[b + d] || 0; return q; });
+  const tot = M.prof.reduce((a, x) => a + x, 0), mx = Math.max(...sm); if (!(tot > 0) || !(mx > 0)) return [];
+  const pAt = b => M.lo + (b + .5) / M.nb * (M.hi - M.lo), cb = Math.floor((M.cur - M.lo) / (M.hi - M.lo) * M.nb), out = [];
+  for (const side of [1, -1]){                                   // 1 = above price (shorts), -1 = below (longs)
+    let bi = -1;
+    for (let b = 0; b < M.nb; b++){
+      if (side > 0 ? b <= cb : b >= cb) continue;
+      if (Math.abs(pAt(b) / M.cur - 1) * 100 > maxPct) continue;
+      if (sm[b] > 0 && (bi < 0 || sm[b] > sm[bi])) bi = b;
+    }
+    if (bi >= 0 && sm[bi] >= minRel * mx) out.push({side, price: pAt(bi), usd: sm[bi], rel: sm[bi] / mx, dist: (pAt(bi) / M.cur - 1) * 100});
+  }
+  return out;
+}
+const lqaLoad = () => { try { return JSON.parse(localStorage.getItem(LQA.KEY) || '{}'); } catch { return {}; } };
+async function liqAlertScan(force){
+  if (LQA.busy || !tgActive() || !$('tgLiq').checked) return;
+  if (!force && Date.now() - LQA.t < LQA.every) return;
+  LQA.busy = true; LQA.t = Date.now();
+  try {
+    const sent = lqaLoad(), now = Date.now(), msgs = [];
+    for (const k of Object.keys(sent)) if (now - sent[k] > 2 * LQA.cool) delete sent[k];
+    for (const sym of LQA.syms){
+      const [k, oi] = await Promise.all([
+        getJSON(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=500`, WEIGHT, klineWeight(500)),
+        getJSON(`${FAPI}/futures/data/openInterestHist?symbol=${sym}&period=15m&limit=500`, OILIM, 1)]);
+      const D = {sym, tf: '15m', k: k.map(x => ({t: +x[0], o: +x[1], h: +x[2], l: +x[3], c: +x[4], v: +x[5], tb: +x[9]})), oi: oi.map(x => ({t: +x.timestamp, n: +x.sumOpenInterest})).sort((a, b) => a.t - b.t)};
+      if (D.k.length < 50) continue;
+      const M = lqModel(D, 8, Object.keys(LEV_MIX).map(Number));
+      for (const c of lqNear(M, LQA.maxPct, LQA.minRel)){
+        const key = `${sym}|${c.side}|${Math.round(Math.log(c.price) / Math.log(1.0025))}`;     // same cluster = same 0.25% price band
+        if (sent[key] && now - sent[key] < LQA.cool) continue;
+        sent[key] = now;
+        if (!tgQuiet()) msgs.push(lqaText(sym, M.cur, c));
+      }
+    }
+    try { localStorage.setItem(LQA.KEY, JSON.stringify(sent)); } catch {}
+    if (msgs.length) await tgSend(msgs.join('\n\n'));
+  } catch(e){ if (!LQA.errShown){ LQA.errShown = true; toast('Liquidation alert check failed: ' + e.message); } }
+  finally { LQA.busy = false; }
+}
+function lqaText(sym, cur, c){
+  const nm = sym.replace('USDT', ''), up = c.side > 0;
+  return `🧲 <b>${nm} · liquidation cluster ${up ? 'above' : 'below'}</b>\nPrice ${fmtPrice(cur)} is ${Math.abs(c.dist).toFixed(2)}% ${up ? 'below' : 'above'} an estimated <b>${lqUsd(c.usd)}</b> ${up ? 'short' : 'long'}-liquidation cluster at <b>${fmtPrice(c.price)}</b> (${c.rel >= .999 ? 'the biggest within 8%' : Math.round(c.rel * 100) + '% of the biggest within 8%'}).\n${up ? 'A push up may run into forced short covering there, and often reverses after the sweep.' : 'A drop may cascade through long liquidations there, and often reverses after the sweep.'} Estimate, not data.`;
+}
 function lqStats(){
   const M = LQ.model, D = LQ.data; if (!M) return;
   const pAt = b => M.lo + (b + .5) / M.nb * (M.hi - M.lo), cb = Math.floor((M.cur - M.lo) / (M.hi - M.lo) * M.nb);
@@ -3369,7 +3424,7 @@ $('lqAll').onchange = renderLiqFeed;
 $('macLoad').onclick = () => loadMacro(true);
 
 $('macWin').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.win = +b.dataset.v; renderMacro(); };
-$('macTf').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.tf = b.dataset.v; [...$('macTf').children].forEach(x => x.classList.toggle('on', x === b)); renderMacro(); };
+$('macTf').onclick = e => { const b = e.target.closest('button'); if (!b) return; const was = MAC_WINS[MAC.tf].find(([v]) => v === MAC.win)?.[1]; MAC.tf = b.dataset.v; const same = MAC_WINS[MAC.tf].find(([, l]) => l === was); if (same) MAC.win = same[0]; [...$('macTf').children].forEach(x => x.classList.toggle('on', x === b)); renderMacro(); };
 $('macTv').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.tv = b.dataset.v; renderMacro(); };
 $('macCards').onclick = e => { const c = e.target.closest('[data-tv]'); if (!c) return; MAC.tv = c.dataset.tv; renderMacro(); $('macTvBox').scrollIntoView({behavior: 'smooth', block: 'center'}); };
 $('regime').addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (g) setView(g.dataset.goto); });
@@ -3493,6 +3548,13 @@ $('dvScan').onclick = () => divScan();
 const dvOpen = el => { const a = el.closest('.dvc'); if (!a) return; const x = DIV.rows.find(r => dvKey(r) === a.dataset.k); if (x) openDrawer(x.sym, {tf: x.tf, dir: x.side, div: x}); };
 $('dvGrid').onclick = e => dvOpen(e.target);
 $('dvGrid').onkeydown = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); dvOpen(e.target); } };
+$('tgLiq').onchange = () => {
+  if ($('tgLiq').checked && !$('tgOn').checked){ $('tgOn').checked = true; $('tgOn').dispatchEvent(new Event('change')); }
+  tgSave();
+  if ($('tgLiq').checked){ if (!tgReady()){ toast('Add the bot token and chat ID first, then tick this again.'); $('tgLiq').checked = false; tgSave(); return; }
+    if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); }
+    LQA.errShown = false; liqAlertScan(true); }
+};
 $('tgDiv').onchange = () => {
   if ($('tgDiv').checked && !$('tgOn').checked){ $('tgOn').checked = true; $('tgOn').dispatchEvent(new Event('change')); }
   tgSave();
