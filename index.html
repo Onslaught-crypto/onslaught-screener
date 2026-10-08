@@ -551,7 +551,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label title="Message me when BTC or ETH trades within 0.5% of one of the largest estimated liquidation clusters (15m model, same as the Liquidations tab). Checked every 5 minutes while this page is open."><input id="tgLiq" type="checkbox"> Liquidation alerts</label>
         <label title="Include entry, stop and targets for each alert"><input id="tgPlan" type="checkbox" checked> with trade plan</label>
         <label title="Also message me when RSI and MACD both diverge from price on a confirmed swing (1H, 4H or 1D, Strong). The Divergences tab scans in the background while this page is open."><input id="tgDiv" type="checkbox"> Divergence alerts</label>
-        <label title="Also message me about early divergences: the swing has 2 closed candles after it (instead of 5) and the last candle already turns against it. About 3 candles sooner, strength 60+, RSI + MACD, 1H / 4H / 1D. They fail more often than the confirmed ones. Needs this page open."><input id="tgDivE" type="checkbox"> Early divergence alerts ⚡</label>
+        <label title="Also message me about early divergences: the swing has 2 closed candles after it (instead of 5) and the last candle already turns against it. About 3 candles sooner, strength 60+, RSI + MACD, 1H / 4H / 1D. They fail more often than the confirmed ones. Needs this page open."><input id="tgDivE" type="checkbox"> ⚡ Early divergence alerts</label>
         <label title="No Telegram messages during these hours (your local time). Alerts that would have fired are skipped, not sent later."><input id="tgQuiet" type="checkbox"> Quiet hours</label>
         <input id="tgQFrom" type="time" value="23:00" aria-label="Quiet hours start"> to <input id="tgQTo" type="time" value="07:00" aria-label="Quiet hours end">
         <button id="tgTest">Send test</button>
@@ -662,13 +662,13 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div id="viewDiv" hidden>
     <div class="panel">
       <div class="row">
-        <span class="mu">Timeframes</span><div class="seg" id="dvTf"><button data-v="15m" class="on">15m</button><button data-v="1h" class="on">1H</button><button data-v="4h" class="on">4H</button><button data-v="1d" class="on">1D</button></div>
+        <span class="mu">Timeframes</span><div class="seg" id="dvTf"><button data-v="15m" class="on">15m</button><button data-v="1h" class="on">1H</button><button data-v="4h" class="on">4H</button><button data-v="1d" class="on">1D</button><button data-v="1w" class="on">1W</button></div>
         <span class="mu">Indicator</span><div class="seg" id="dvInd"><button data-v="all" class="on" title="Every divergence, whichever indicators agree">All</button><button data-v="rsi" title="Only RSI diverges (MACD and OBV do not)">RSI</button><button data-v="macd" title="Only the MACD histogram diverges (RSI and OBV do not)">MACD</button><button data-v="obv" title="Only OBV (volume) diverges (RSI and MACD do not)">OBV</button><button data-v="rsi+macd" title="RSI and MACD diverge together, OBV does not">RSI + MACD</button><button data-v="rsi+obv" title="RSI and OBV diverge together, MACD does not">RSI + OBV</button><button data-v="macd+obv" title="MACD and OBV diverge together, RSI does not">MACD + OBV</button><button data-v="rsi+macd+obv" title="RSI, MACD and OBV all diverge on the same two swings: the strongest kind">RSI + MACD + OBV</button></div>
         <span class="mu">Direction</span><div class="seg" id="dvDir"><button data-v="0" class="on">All</button><button data-v="1">Bullish</button><button data-v="-1">Bearish</button></div>
       </div>
       <div class="row">
         <label title="A swing is confirmed once 5 candles have closed after it. Unconfirmed (forming) swings can still change with the next candle."><input id="dvConf" type="checkbox" checked> Confirmed only</label>
-        <label title="Early ⚡: the swing has only 2 closed candles after it (not 5) and the last candle already turns against it, so you see it about 3 candles sooner. It needs strength 60+ and fails more often than a confirmed signal."><input id="dvEarly" type="checkbox" checked> Early ⚡ signals</label>
+        <label title="⚡ Early: the swing has only 2 closed candles after it (not 5) and the last candle already turns against it, so you see it about 3 candles sooner. It needs strength 60+ and fails more often than a confirmed signal."><input id="dvEarly" type="checkbox"> ⚡ Early signals</label>
         <label>Age <select id="dvAge"><option value="3">last 3 candles</option><option value="5" selected>last 5 candles</option><option value="10">last 10 candles</option></select></label>
         <label>Strength <select id="dvStr"><option value="0">Any</option><option value="50">Medium or better</option><option value="70">Strong only</option></select></label>
         <button id="dvScan" class="primary">Scan</button>
@@ -1364,7 +1364,9 @@ function divBrief(cd){
 const FAPI = 'https://fapi.binance.com';
 const TFS = ['5m','15m','1h','4h','1d'];
 const MTF_TFS = ['1d','4h','1h'];
-const TF_MS = {'5m':3e5,'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5};
+const TF_MS = {'5m':3e5,'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5,'1w':6048e5};
+/* Open time of the candle containing t. Binance weekly candles open on Monday 00:00 UTC, 4 days after the epoch (a Thursday). */
+const tfOpen = (tf, t) => { const ms = TF_MS[tf], off = tf === '1w' ? 3456e5 : 0; return Math.floor((t - off) / ms) * ms + off; };
 const KLIMIT = 300;           // weight 2 per full request
 const CONCURRENCY = 8;
 const OI_POINTS = 11;         // enough for N up to 10
@@ -1485,7 +1487,7 @@ async function getMcaps(){
 }
 
 async function getKlines(sym, tf, closedOnly){
-  const ms = TF_MS[tf], now = Date.now(), cur = Math.floor(now / ms) * ms; // open time of forming candle
+  const ms = TF_MS[tf], now = Date.now(), cur = tfOpen(tf, now); // open time of forming candle
   const key = `k:${sym}:${tf}`;
   let c = (await Cache.get(key)) || [];
   const last = c.length ? c[c.length - 1][0] : 0;
@@ -1518,7 +1520,8 @@ async function getDaily(sym){
   return v;
 }
 async function getOI(sym, tf){
-  const ms = TF_MS[tf], cur = Math.floor(Date.now() / ms) * ms;
+  if (tf === '1w') return null;                                  // Binance has no weekly open-interest history
+  const ms = TF_MS[tf], cur = tfOpen(tf, Date.now());
   const key = `oi:${sym}:${tf}`, c = await Cache.get(key);
   if (c && c.b === cur) return c.v;
   try {
@@ -2415,7 +2418,7 @@ async function drawChart(){
   const ch = LightweightCharts.createChart(el, {width: el.clientWidth, height: el.clientHeight,
     layout: {background: {type: 'solid', color: cssv('--panel')}, textColor: cssv('--muted'), fontSize: 11},
     grid: {vertLines: {color: 'rgba(255,255,255,.04)'}, horzLines: {color: 'rgba(255,255,255,.04)'}},
-    rightPriceScale: {borderColor: cssv('--line')}, timeScale: {borderColor: cssv('--line'), timeVisible: D.tf !== '1d'}, crosshair: {mode: 0}});
+    rightPriceScale: {borderColor: cssv('--line')}, timeScale: {borderColor: cssv('--line'), timeVisible: D.tf !== '1d' && D.tf !== '1w'}, crosshair: {mode: 0}});
   const cs = ch.addCandlestickSeries({upColor: cssv('--bull'), downColor: cssv('--bear'), borderVisible: false, wickUpColor: cssv('--bull'), wickDownColor: cssv('--bear'),
     priceFormat: {type: 'price', precision: dec, minMove: Math.pow(10, -dec)}});
   cs.setData(D.candles.map(k => ({time: T(k), open: k[1], high: k[2], low: k[3], close: k[4]})));
@@ -3129,22 +3132,22 @@ function liveToggle(){ LIVE.on = !LIVE.on; try { localStorage.setItem('onslaught
   if (LIVE.on) liveConnect(); else { if (LIVE.ws) LIVE.ws.close(); LIVE.ws = null; liveSet('off'); } }
 
 /* ---------- Divergences tab ---------- */
-const DV_TFS = ['15m', '1h', '4h', '1d'], DV_LBL = {'15m': '15m', '1h': '1H', '4h': '4H', '1d': '1D'};
-const DV_KEY = 'onslaught-div', DVSENT_KEY = 'onslaught-divsent', DV_ALERT_TFS = ['1h', '4h', '1d'], DV_ALERT_MIN = 70, DV_EARLY_MIN = 60, DV_EARLY_TFS = ['15m', '1h', '4h', '1d'], DV_MAX = 60, DV_TOP = 100;
-const DIV = {rows: [], t: 0, scanning: false, uni: new Map(), tfs: new Set(DV_TFS), ind: 'all', dir: 0, conf: true, early: true, age: 5, str: 0, errShown: false};
+const DV_TFS = ['15m', '1h', '4h', '1d', '1w'], DV_LBL = {'15m': '15m', '1h': '1H', '4h': '4H', '1d': '1D', '1w': '1W'};
+const DV_KEY = 'onslaught-div', DVSENT_KEY = 'onslaught-divsent', DV_ALERT_TFS = ['1h', '4h', '1d'], DV_ALERT_MIN = 70, DV_EARLY_MIN = 60, DV_EARLY_TFS = ['15m', '1h', '4h', '1d', '1w'], DV_MAX = 60, DV_TOP = 100;
+const DIV = {rows: [], t: 0, scanning: false, uni: new Map(), tfs: new Set(DV_TFS), ind: 'all', dir: 0, conf: true, early: false, age: 5, str: 0, errShown: false};
 (function dvLoad(){
   try { const o = JSON.parse(localStorage.getItem(DV_KEY) || '{}');
-    if (Array.isArray(o.tfs) && o.tfs.some(t => DV_TFS.includes(t))) DIV.tfs = new Set(o.tfs.filter(t => DV_TFS.includes(t)));
+    if (Array.isArray(o.tfs) && o.tfs.some(t => DV_TFS.includes(t))){ DIV.tfs = new Set(o.tfs.filter(t => DV_TFS.includes(t))); if (!o.tfsV) DIV.tfs.add('1w'); }
     const mig = {both: 'rsi+macd', all3: 'rsi+macd+obv'}, iv = mig[o.ind] || o.ind;
     if (['all', 'rsi', 'macd', 'obv', 'rsi+macd', 'rsi+obv', 'macd+obv', 'rsi+macd+obv'].includes(iv)) DIV.ind = iv;
     if (o.dir === 1 || o.dir === -1) DIV.dir = o.dir;
     if (o.conf === false) DIV.conf = false;
-    if (o.early === false) DIV.early = false;
+    if (o.earlyOn === true) DIV.early = true;
     if ([3, 5, 10].includes(+o.age)) DIV.age = +o.age;
     if ([0, 50, 70].includes(+o.str)) DIV.str = +o.str;
   } catch {}
 })();
-function dvSave(){ try { localStorage.setItem(DV_KEY, JSON.stringify({tfs: [...DIV.tfs], ind: DIV.ind, dir: DIV.dir, conf: DIV.conf, early: DIV.early, age: DIV.age, str: DIV.str})); } catch {} }
+function dvSave(){ try { localStorage.setItem(DV_KEY, JSON.stringify({tfsV: 2, tfs: [...DIV.tfs], ind: DIV.ind, dir: DIV.dir, conf: DIV.conf, earlyOn: DIV.early, age: DIV.age, str: DIV.str})); } catch {} }
 function dvSync(){
   for (const b of $('dvTf').children) b.classList.toggle('on', DIV.tfs.has(b.dataset.v));
   for (const b of $('dvInd').children) b.classList.toggle('on', b.dataset.v === DIV.ind);
@@ -3204,7 +3207,7 @@ async function divJournal(rows){
 function dvRecord(){
   const all = J.entries.filter(e => e.kind === 'div'), es = all.filter(e => !e.early), ea = all.filter(e => e.early), g = [];
   const add = (group, bucket, list) => { if (list.length) g.push({group, bucket, logged: list.length, ...jStats(list)}); };
-  add('Entry', 'Confirmed (5 candles)', es); add('Entry', 'Early ⚡ (2 candles)', ea);
+  add('Entry', 'Confirmed (5 candles)', es); add('Entry', '⚡ Early (2 candles)', ea);
   add('All', 'All confirmed divergences', es);
   const dv = (ind, ov) => es.filter(e => e.dind === ind && !!e.dov === ov);
   add('Indicators', 'RSI + MACD + OBV', dv('both', true)); add('Indicators', 'RSI + MACD', dv('both', false));
@@ -3311,7 +3314,7 @@ function dvSentLoad(){ try { return JSON.parse(localStorage.getItem(DVSENT_KEY) 
 function dvSentSave(o){ try { localStorage.setItem(DVSENT_KEY, JSON.stringify(o)); } catch {} }
 async function divPlan(sym, tf, dir){
   let cd = await Cache.get(`k:${sym}:${tf}`); if (!cd) return null;
-  const cur = Math.floor(Date.now() / TF_MS[tf]) * TF_MS[tf]; cd = cd.filter(k => k[0] < cur);
+  const cur = tfOpen(tf, Date.now()); cd = cd.filter(k => k[0] < cur);
   if (cd.length < 60) return null;
   let slMode = 'swing', atrMult = 1.5; try { const o = JSON.parse(localStorage.getItem(PLAN_KEY) || '{}'); slMode = o.slMode || slMode; atrMult = parseFloat(o.atrMult) || atrMult; } catch {}
   return tradePlan(cd, dir, {slMode, atrMult, entry: null});
