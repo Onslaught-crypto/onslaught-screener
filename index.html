@@ -3671,7 +3671,7 @@ function anaQuick(){
   const chip = (s, t) => `<button class="anachip${s === ANA.sym ? ' on' : ''}" data-sym="${s}">${t || s.replace('USDT', '')}</button>`, g = (l, a) => a.length ? `<span class="mu anagl">${l}</span>${a.join('')}` : '';
   const c = cfg(), star = [...WATCH].slice(0, 8).map(s => chip(s)), rec = ANA.recent.map(s => `<button class="anachip${s === ANA.sym ? ' on' : ''}" data-sym="${s}">${s.replace('USDT', '')}<span class="anax" data-rm="${s}" title="Remove from Recent">×</span></button>`);
   const gA = S.rows.map(r => derive(r, c)).filter(r => r.setup && r.G && r.G.grade === 'A').sort((a, b) => b.score - a.score).slice(0, 6).map(r => chip(r.sym, r.sym.replace('USDT', '') + (r.setup > 0 ? ' ▲' : ' ▼')));
-  $('anaQuick').innerHTML = g('★ Watchlist', star) + g('Recent', rec) + g('A-grade setups', gA);
+  $('anaQuick').innerHTML = ANA.sym ? g('Recent', rec) : g('★ Watchlist', star) + g('Recent', rec) + g('Scanner A-grade setups (▲ long, ▼ short)', gA);   // shortcuts to pick a first coin; once one is open only Recent stays
 }
 function anaSuggest(){
   const q = $('anaIn').value.trim().toUpperCase().replace(/USDT$/, ''), box = $('anaSug');
