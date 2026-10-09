@@ -181,7 +181,6 @@ td.trigs{white-space:nowrap}
 .anamtfsum{margin-top:8px;font-size:12.5px}.card2 .anal{cursor:pointer}.card2 .anal:hover{background:rgba(255,255,255,.04)}.card2 .anal.sel{background:rgba(138,82,156,.22)}
 .anaexp{margin-top:10px;padding:9px 11px;border-radius:8px;background:rgba(255,255,255,.04);border-left:3px solid var(--accent-lt);font-size:12.5px;line-height:1.55}.anarel{margin-top:8px}
 @media (max-width:600px){.anamtfrow{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.loc{border-radius:10px;padding:2px 8px;font-size:11.5px;font-weight:600;white-space:nowrap}.loc.b{background:rgba(158,255,0,.14);color:var(--bull)}.loc.s{background:rgba(255,77,77,.15);color:var(--bear)}
 .anapick{position:relative}#anaIn{width:230px;padding:7px 10px 7px 30px;background:#0b1206;color:var(--bull);border:1px solid var(--bull);border-radius:8px;font-size:13px;box-shadow:0 0 6px rgba(158,255,0,.45),inset 0 0 6px rgba(158,255,0,.10);font-family:var(--mono);caret-color:var(--bull);transition:box-shadow .15s}#anaIn::placeholder{color:rgba(158,255,0,.55)}#anaIn:focus{outline:none;box-shadow:0 0 12px rgba(158,255,0,.75),0 0 2px rgba(158,255,0,.9),inset 0 0 8px rgba(158,255,0,.15)}
 .anasug{position:absolute;left:0;top:100%;margin:4px 0 0;padding:4px;list-style:none;background:var(--panel2);border:1px solid var(--accent);border-radius:8px;min-width:210px;z-index:20;box-shadow:0 10px 30px #000a}.anasug li{padding:6px 10px;border-radius:5px;cursor:pointer}.anasug li.on,.anasug li:hover{background:rgba(138,82,156,.3)}.anasug[hidden]{display:none}
 .anatitle{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.anasym{font-size:20px}.anapx{font:600 15px var(--mono)}
@@ -310,7 +309,7 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
   #tbody td:nth-child(1){grid-column:3;grid-row:1;text-align:right} #tbody td:nth-child(1)::before,#tbody td:nth-child(2)::before{display:none}
   #tbody td:nth-child(2){grid-column:1 / 3;grid-row:1;font-size:16px}
   #tbody td.empty{grid-column:1 / -1}
-  #tbody td[data-c=sector],#tbody td[data-c=qv],#tbody td[data-c=mcap],#tbody td[data-c=dmi],#tbody td[data-c=rsiEma],#tbody td[data-c=rsi50],#tbody td[data-c=obv],#tbody td[data-c=oiUp],#tbody td[data-c=oiD],#tbody td[data-c=bull],#tbody td[data-c=bear],#tbody td[data-c=mtfNet],#tbody td[data-c=loc],th[data-k=loc]{display:none}
+  #tbody td[data-c=sector],#tbody td[data-c=qv],#tbody td[data-c=mcap],#tbody td[data-c=dmi],#tbody td[data-c=rsiEma],#tbody td[data-c=rsi50],#tbody td[data-c=obv],#tbody td[data-c=oiUp],#tbody td[data-c=oiD],#tbody td[data-c=bull],#tbody td[data-c=bear],#tbody td[data-c=mtfNet]{display:none}
   #tbody td[data-c=trig]{grid-column:1 / -1}
   tr.skel{display:block!important}
 }
@@ -511,7 +510,6 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="fgrp"><h4>Strength</h4><div class="row">
         <label title="Relative strength filter over 7 days">RS <select id="rsF"><option value="">Any</option><option value="lb">Leaders vs BTC</option><option value="lbe">Leaders vs BTC + ETH</option><option value="gb">Laggards vs BTC</option></select></label>
         <label title="Multi-timeframe filter: All bull / All bear = 1D, 4H and 1H all agree">MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
-        <label title="Where price sits now: at a support or resistance zone, inside an order block or a fair value gap (this timeframe)">Location <select id="locF"><option value="">Any</option><option value="bull">Bullish spots</option><option value="bear">Bearish spots</option><option value="bull-sr">At support</option><option value="bear-sr">At resistance</option><option value="bull-ob">In bull OB</option><option value="bear-ob">In bear OB</option><option value="bull-fvg">In bull FVG</option><option value="bear-fvg">In bear FVG</option></select></label>
       </div></div>
     </div>
     <div class="row" id="fChips" hidden></div>
@@ -1826,11 +1824,11 @@ function trigCell(r){
   const shown = r.trig.slice(0, 3).map(t => `<span class="tg ${t.dir > 0 ? 'b' : t.dir < 0 ? 's' : 'n'}" title="${t.name}${t.t === 'coil' ? '' : ', ' + (t.ago === 0 ? 'last candle' : t.ago + ' candle' + (t.ago > 1 ? 's' : '') + ' ago')}">${TRIG_SHORT[t.t]}${t.ago && t.t !== 'coil' ? '<sub>' + t.ago + '</sub>' : ''}</span>`).join('');
   return shown + (r.trig.length > 3 ? `<span class="tg n" title="${r.trig.slice(3).map(t => t.name).join(', ')}">+${r.trig.length - 3}</span>` : '');
 }
-const COL_HELP = {"loc": "Where price sits right now on this timeframe: inside or within a fraction of an ATR of a support or resistance zone, order block or fair value gap. Click the \u2316 icon for the full Technical Analysis.", "star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "spark": "Price over the last 30 candles of the selected timeframe (green = up over that span, red = down). Sort to rank by that move.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
+const COL_HELP = {"star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "spark": "Price over the last 30 candles of the selected timeframe (green = up over that span, red = down). Sort to rank by that move.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
 const COLS_BASE = [
   {k:'star', t:'★', c:'c'}, {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'spark', t:'Trend', c:'c'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA', c:'c'},
-  {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'loc', t:'Location', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'rs', t:'RS 7D', c:'c'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'grade', t:'Grade', c:'c'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
+  {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'rs', t:'RS 7D', c:'c'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'grade', t:'Grade', c:'c'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
 ];
 const COLS = COLS_BASE.slice(), COLORD_KEY = 'onslaught-colorder', COL_FIXED = new Set(['star', 'sym']);
 function applyColOrder(){
@@ -1852,7 +1850,6 @@ function sortVal(r, k){
   if (k === 'rs') return r.rs?.b7 ?? -1e9;
   if (k === 'grade') return r.G ? GRADE_RANK[r.G.grade] * 100 + r.G.pts : -1;
   if (k === 'trig') return r.setup ? 100 + r.trig.length : r.trig.length;
-  if (k === 'loc') return r.loc ? (r.loc.k.startsWith('bull') ? 1 : -1) * (r.loc.inside ? 2 : 1) : 0;
   if (k === 'pos') return {longs: 4, cover: 3, flat: 2, liq: 1, shorts: 0}[r.pos] ?? -1;
   const v = r[k]; return v == null || !Number.isFinite(v) ? -Infinity : v;
 }
@@ -1891,9 +1888,6 @@ function filtered(){
     if (rf === 'lb' && !(x && x.b7 > 0)) return false;
     if (rf === 'lbe' && !(x && x.b7 > 0 && x.e7 > 0)) return false;
     if (rf === 'gb' && !(x && x.b7 < 0)) return false;
-    const lf = $('locF').value;
-    if (lf){ const q = r.loc; if (!q) return false;
-      if (lf === 'bull' ? !q.k.startsWith('bull') : lf === 'bear' ? !q.k.startsWith('bear') : q.k !== lf) return false; }
     const mf2 = $('mtfF').value;
     if (mf2 === 'b' && r.mtfAll !== 1) return false;
     if (mf2 === 's' && r.mtfAll !== -1) return false;
@@ -1908,9 +1902,6 @@ function filtered(){
 
 const POS = {longs: ['New longs', 'Price ↑ OI ↑: new positions opening on the long side'], shorts: ['New shorts', 'Price ↓ OI ↑: new positions opening on the short side'],
   cover: ['Short covering', 'Price ↑ OI ↓: shorts closing; rallies on covering often fade'], liq: ['Long liquidation', 'Price ↓ OI ↓: longs closing or being liquidated'], flat: ['Flat', 'Price and OI both moved less than 0.5%']};
-const LOC_T = {'bull-sr': 'At support', 'bear-sr': 'At resistance', 'bull-ob': 'In bull OB', 'bear-ob': 'In bear OB', 'bull-fvg': 'In bull FVG', 'bear-fvg': 'In bear FVG'};
-function locCell(r){ const q = r.loc; if (!q) return '<span class="mu">—</span>'; const bull = q.k.startsWith('bull');
-  return `<span class="loc ${bull ? 'b' : 's'}" title="${esc(q.name)} · ${q.inside ? 'price is inside' : q.atr.toFixed(1) + ' ATR away'}">${LOC_T[q.k]}</span>`; }
 function posCell(r){ if (!r.pos) return '<span class="mu">—</span>'; const [t, tip] = POS[r.pos]; return `<span class="pos ${r.pos}" title="${tip} (price ${fmtPct(r.pD)}, OI ${fmtPct(r.oiD)})">${t}</span>`; }
 /* BTC trend on every timeframe for the regime bar. Binance returns the forming candle last, so it is dropped. Cached per timeframe for 5 min (1M/1W: 1 h). */
 const BTC_TFS = [['1M', '1M'], ['1w', '1W'], ['1d', '1D'], ['4h', '4H'], ['1h', '1H'], ['30m', '30m'], ['15m', '15m']];
@@ -1973,7 +1964,7 @@ function renderPager(total, size, pages, start, n){
   el.innerHTML = h;
 }
 function anyFilter(){
-  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked || $('gradeF').value || $('rsF').value || $('trigF').value || $('mtfF').value || $('locF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
+  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked || $('gradeF').value || $('rsF').value || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
 }
 function syncCards(){
   const st = {all: !anyFilter(), bull: S.show === 'bull', bear: S.show === 'bear', new: $('newOnly').checked, oi: S.mf.oi === '1', inc: S.incOnly, setup: S.setupOnly, star: $('starOnly').checked};
@@ -1997,7 +1988,7 @@ function render(){
   const rows = filtered(), {k, dir} = S.sort;
   rows.sort((a, b) => { const x = sortVal(a, k), y = sortVal(b, k); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
   if ($('pinStar').checked) rows.sort((a, b) => WATCH.has(b.sym) - WATCH.has(a.sym));   // stable: keeps the sort within each group
-  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value, $('locF').value, $('starOnly').checked, $('pinStar').checked, $('gradeF').value, $('minLiq').value, $('extremeFund').value, $('rsF').value]);
+  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value, $('starOnly').checked, $('pinStar').checked, $('gradeF').value, $('minLiq').value, $('extremeFund').value, $('rsF').value]);
   if (sig !== S.sig){ S.sig = sig; S.page = 0; }            // any filter/sort change → back to page 1
   const size = +$('pageSize').value || rows.length || 1, pages = Math.max(1, Math.ceil(rows.length / size));
   S.page = Math.min(S.page, pages - 1);
@@ -2037,7 +2028,6 @@ function render(){
       bear: `<td><span class="score ${sr} ${r.against && r.bear >= 4 ? 'against' : ''}" ${r.against && r.bear >= 4 ? 'title="Bearish setup against a risk-on regime"' : ''}>${d ? r.bear : '—'}</span></td>`,
       grade: `<td class="c">${gradeCell(r)}</td>`,
       mtfNet: `<td class="c">${mtfCell(r)}</td>`,
-      loc: `<td class="l">${locCell(r)}</td>`,
       trig: `<td class="l trigs">${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}" title="Aligned and triggered on ${S.tf.toUpperCase()}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}${trigCell(r)}</td>`,
     };
     return `<tr data-sym="${r.sym}" class="${r.inc && !d ? 'inc' : ''} ${D.sym === r.sym ? 'sel' : ''} ${ent ? 'entered' : ''} ${r.G ? 't' + r.G.grade : ''} ${UI.prev && !UI.prev.has(r.sym) ? 'fadein' : ''}" title="Click for trade plan">
@@ -3290,7 +3280,7 @@ function loadView(){
   applyCols(); renderPresets();
 }
 function saveView(){ try { localStorage.setItem(COLS_KEY, JSON.stringify({hidden: [...UI.hidden], dens: UI.dens})); } catch {} }
-const PRESET_FIELDS = ['newOnly','starOnly','gradeF','rsF','trigF','mtfF','locF','sector'];
+const PRESET_FIELDS = ['newOnly','starOnly','gradeF','rsF','trigF','mtfF','sector'];
 const BUILTIN = [
   {name: 'A-grade setups', v: {setupOnly: true, gradeF: 'A'}},
   {name: 'Leaders · long side', v: {show: 'bull', rsF: 'lbe', gradeF: 'AB'}},
@@ -3605,8 +3595,7 @@ async function buildRow(u, tf, c){
   let mtf = null;
   if (others.length){ mtf = {}; for (const t of MTF_TFS) mtf[t] = t === tf ? (ev.incomplete ? null : ev.bull >= 3 ? 1 : ev.bear >= 3 ? -1 : 0) : (ok[others.indexOf(t)] ? tfDir(ok[others.indexOf(t)], c) : null); }
   const today = Math.floor(Date.now() / 864e5) * 864e5, dRaw = tf === '1d' ? k : needD ? dExtra : ok[others.indexOf('1d')];
-  let loc = null; try { const L0 = taLevels(k, {price: u.price}); loc = L0 ? L0.loc : null; } catch {}
-  return {...u, ev, oi, mtf, loc, dv: divBrief(k), ret7: ret7d(u.price, dRaw ? dRaw.filter(x => x[0] < today) : null)};
+  return {...u, ev, oi, mtf, dv: divBrief(k), ret7: ret7d(u.price, dRaw ? dRaw.filter(x => x[0] < today) : null)};
 }
 function dvBanner(x){
   const bull = x.side > 0, mc = dvMacd(x), ctx = dvCtx(x);
@@ -3931,7 +3920,7 @@ $('tfSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('showSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   S.show = b.dataset.v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x === b)); render(); };
 document.querySelectorAll('.mf').forEach(s => s.onchange = () => { S.mf[s.dataset.k] = s.value; render(); });
-$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('starOnly').checked = false; $('gradeF').value = ''; $('rsF').value = ''; $('trigF').value = ''; $('mtfF').value = ''; $('locF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
+$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('starOnly').checked = false; $('gradeF').value = ''; $('rsF').value = ''; $('trigF').value = ''; $('mtfF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
   S.show = 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === 'all')); render(); };
 for (const id of ['oiThr','oiN','sector','mcap','newOnly']) $(id).onchange = () => { saveSettings(); render(); };
 $('search').oninput = render;
@@ -3955,7 +3944,6 @@ function renderFChips(){
   document.querySelectorAll('.mf').forEach(m => { if (m.value !== '') L.push([m.parentNode.firstChild.textContent.trim() + ': ' + selTxt(m), () => { m.value = ''; m.dispatchEvent(new Event('change', {bubbles: true})); }]); });
   if ($('rsF').value) L.push(['RS: ' + selTxt($('rsF')), el('rsF')]);
   if ($('mtfF').value) L.push(['MTF: ' + selTxt($('mtfF')), el('mtfF')]);
-  if ($('locF').value) L.push(['Location: ' + selTxt($('locF')), el('locF')]);
   if (S.incOnly) L.push(['Incomplete data', () => { S.incOnly = false; render(); }]);
   if (S.setupOnly) L.push(['Triggered setups', () => { S.setupOnly = false; render(); }]);
   FCHIPS = L;
@@ -3966,7 +3954,7 @@ function renderFChips(){
 $('fChips').onclick = e => { const c = e.target.closest('.fchip'); if (c) FCHIPS[+c.dataset.i][1](); };
 
 $('universe').onchange = saveSettings; $('closed').onchange = saveSettings; $('mtfOn').onchange = saveSettings;
-for (const id of ['trigF','mtfF','locF']) $(id).onchange = render;
+for (const id of ['trigF','mtfF']) $(id).onchange = render;
 $('trigN').onchange = () => { saveSettings(); render(); };
 for (const id of ['rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) $(id).onchange = saveSettings;
 for (const id of ['fundHot','fundCold','minLiq','extremeFund','gradeF','rsF']) $(id).onchange = () => { saveSettings(); render(); };
