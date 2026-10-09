@@ -545,7 +545,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <div class="panel" style="margin-top:12px">
     <details>
-      <summary>How to read this · settings</summary>
+      <summary>How to read this</summary>
       <ul>
         <li><b>DMI</b>: ▲ when +DI &gt; −DI and ADX ≥ threshold (trend has strength), ▼ when −DI &gt; +DI and ADX ≥ threshold, · when ADX is below threshold.</li>
         <li><b>RSI &gt; EMA</b>: RSI(14) above its own EMA means momentum is improving. <b>RSI &gt; 50</b>: momentum regime.</li>
@@ -567,6 +567,12 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <li><b>Aligned</b> = 4 or 5 of 5 checks in one direction. <b>NEW</b> = alignment appeared on the latest candle (it wasn't aligned on the one before).</li>
         <li>Hover any check to see the raw values. Click a row to open its trade plan (chart, entry, stop, targets, sizing). The ↗ next to a pair opens TradingView.</li>
       </ul>
+    </details>
+  </div>
+
+  <div class="panel" style="margin-top:12px">
+    <details id="setDet">
+      <summary>Settings</summary>
       <div class="row">
         <label>RSI length <input id="rsiLen" type="number" min="2" value="14"></label>
         <label>RSI EMA length <input id="rsiEmaLen" type="number" min="2" value="14"></label>
@@ -581,6 +587,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="row">
         <label>Alert on <select id="alertWhat"><option value="setup">Triggered setups</option><option value="aligned">Setups + new alignments</option></select></label>
         <label title="Only alert on setups of at least this grade">Min grade <select id="alertGrade"><option value="">Any</option><option value="B">B or better</option><option value="A">A only</option></select></label>
+        <label title="Only alert on pairs whose market cap is inside this range. Pairs with no market cap data are skipped while a range is set.">Market cap <select id="alertMcapMin"><option value="0">Any</option><option value="1e7">$10M</option><option value="5e7">$50M</option><option value="1e8">$100M</option><option value="5e8">$500M</option><option value="1e9">$1B</option><option value="5e9">$5B</option><option value="1e10">$10B</option></select> to <select id="alertMcapMax"><option value="0">Any</option><option value="5e7">$50M</option><option value="1e8">$100M</option><option value="5e8">$500M</option><option value="1e9">$1B</option><option value="5e9">$5B</option><option value="1e10">$10B</option></select></label>
         <label><input id="alertStar" type="checkbox"> Starred pairs only</label>
         <label><input id="alertSound" type="checkbox" checked> Sound</label>
       </div>
@@ -1764,13 +1771,13 @@ function cfg(){
 }
 function saveSettings(){
   const o = {tf: S.tf, auto: $('auto').value, universe: $('universe').value, mcap: $('mcap').value, oiThr: $('oiThr').value, oiN: $('oiN').value,
-    closed: $('closed').checked, mtfOn: $('mtfOn').checked, jOn: $('jOn').checked, jWhat: $('jWhat').value, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value, minLiq: $('minLiq').value, extremeFund: $('extremeFund').value, gradeF: $('gradeF').value, rsF: $('rsF').value, alertGrade: $('alertGrade').value};
+    closed: $('closed').checked, mtfOn: $('mtfOn').checked, jOn: $('jOn').checked, jWhat: $('jWhat').value, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertMcapMin: $('alertMcapMin').value, alertMcapMax: $('alertMcapMax').value, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value, minLiq: $('minLiq').value, extremeFund: $('extremeFund').value, gradeF: $('gradeF').value, rsF: $('rsF').value, alertGrade: $('alertGrade').value};
   store.set(o);
 }
 function loadSettings(){
   const o = store.get();
   if (o.tf && TFS.includes(o.tf)) S.tf = o.tf;
-  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold','minLiq','extremeFund','gradeF','alertGrade','rsF']) if (o[k] != null) $(k).value = o[k];
+  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold','minLiq','extremeFund','gradeF','alertGrade','alertMcapMin','alertMcapMax','rsF']) if (o[k] != null) $(k).value = o[k];
   if (o.closed != null) $('closed').checked = o.closed;
   if (o.mtfOn != null) $('mtfOn').checked = o.mtfOn;
   for (const k of ['pinStar','alertStar','alertSound']) if (o[k] != null) $(k).checked = o[k];
@@ -2554,6 +2561,8 @@ function fireAlerts(entered){
   if (!(ALERT.on || tgActive()) || !entered.length) return;
   let items = entered.filter(e => $('alertWhat').value === 'aligned' || e.kind === 'setup');
   if ($('alertStar').checked) items = items.filter(e => WATCH.has(e.sym));
+  const mcLo = +$('alertMcapMin').value || 0, mcHi = +$('alertMcapMax').value || Infinity;
+  if (mcLo || mcHi < Infinity) items = items.filter(e => { const b = S.rows.find(r => r.sym === e.sym), m = b && b.mcap; return m >= mcLo && m <= mcHi; });
   const minG = GRADE_RANK[$('alertGrade').value] || 0;
   if (minG){ const c = cfg(); items = items.filter(e => { const b = S.rows.find(r => r.sym === e.sym), x = b && derive(b, c); return x && x.G && GRADE_RANK[x.G.grade] >= minG; }); }
   if (!items.length) return;
@@ -4045,6 +4054,7 @@ $('trigN').onchange = () => { saveSettings(); render(); };
 for (const id of ['rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) $(id).onchange = saveSettings;
 for (const id of ['fundHot','fundCold','minLiq','extremeFund','gradeF','rsF']) $(id).onchange = () => { saveSettings(); render(); };
 $('alertGrade').onchange = saveSettings;
+for (const id of ['alertMcapMin', 'alertMcapMax']) $(id).onchange = () => { const lo = +$('alertMcapMin').value, hi = +$('alertMcapMax').value; if (lo && hi && lo >= hi){ $('alertMcapMax').value = '0'; toast('The upper market cap must be above the lower one, so the upper limit was reset to Any.'); } saveSettings(); };
 $('auto').onchange = () => { saveSettings(); setAuto(); };
 $('scanBtn').onclick = scan;
 $('tabs').onclick = e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); };
