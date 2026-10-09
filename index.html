@@ -1867,17 +1867,22 @@ function scopeLabel(){
   if (sec) p.push(sec);
   return p.join(' · ');
 }
-function filtered(){
-  const c = cfg(), sec = $('sector').value, q = $('search').value.trim().toUpperCase(), mcapMin = +$('mcap').value, newOnly = $('newOnly').checked;
+/* The stat cards are also filters (momentum, new, OI rising, incomplete, watchlist, triggered). cardOk(r, skip) tests those, optionally leaving one out. */
+function cardOk(r, skip){
+  if (skip !== 'show'){ if (S.show === 'bull' && r.bull < 4) return false; if (S.show === 'bear' && r.bear < 4) return false; }
+  if (skip !== 'new' && $('newOnly').checked && !r.isNew) return false;
+  if (skip !== 'inc' && S.incOnly && !r.inc) return false;
+  if (skip !== 'setup' && S.setupOnly && !r.setup) return false;
+  if (skip !== 'star' && $('starOnly').checked && !WATCH.has(r.sym)) return false;
+  if (skip !== 'oi' && S.mf.oi !== undefined && S.mf.oi !== '' && r.oiUp !== +S.mf.oi) return false;
+  return true;
+}
+function filtered(core){
+  const c = cfg(), sec = $('sector').value, q = $('search').value.trim().toUpperCase(), mcapMin = +$('mcap').value;
   return S.rows.map(r => derive(r, c)).filter(r => {
     if (!inScope(r, mcapMin, sec)) return false;
     if (q && !r.sym.includes(q)) return false;
-    if (S.show === 'bull' && r.bull < 4) return false;
-    if (S.show === 'bear' && r.bear < 4) return false;
-    if (newOnly && !r.isNew) return false;
-    if (S.incOnly && !r.inc) return false;
-    if (S.setupOnly && !r.setup) return false;
-    if ($('starOnly').checked && !WATCH.has(r.sym)) return false;
+    if (!core && !cardOk(r)) return false;
     const tf2 = $('trigF').value;
     if (tf2 === 'b' && !r.tB) return false;
     if (tf2 === 's' && !r.tS) return false;
@@ -1894,7 +1899,7 @@ function filtered(){
     if (mf2 === 's' && r.mtfAll !== -1) return false;
     for (const [k, v] of Object.entries(S.mf)){
       if (v === '') continue;
-      if (k === 'oi'){ if (r.oiUp !== +v) return false; }
+      if (k === 'oi'){ if (!core && r.oiUp !== +v) return false; }
       else if (!r.d || r.d.s[k] !== +v) return false;
     }
     return true;
@@ -1975,14 +1980,16 @@ function setShow(v){ S.show = v; [...$('showSeg').children].forEach(x => x.class
 function render(){
   if (S.view === 'map') queueMicrotask(renderMap);
   const c = cfg(), market = S.rows.map(r => derive(r, c)), all = market.filter(r => inScope(r)), scope = scopeLabel();
-  setNum('sScanned', all.length); $('sOf').textContent = scope ? `${scope} · of ${S.rows.length} scanned` : `of ${S.total} perpetuals`;
-  setNum('sBull', all.filter(r => r.bull >= 4).length);
-  setNum('sBear', all.filter(r => r.bear >= 4).length);
-  setNum('sNew', all.filter(r => r.isNew).length);
-  setNum('sOi', all.filter(r => r.oiUp).length); $('sOiS').textContent = `≥ ${c.oiThr}% over ${c.oiN} candles`;
-  setNum('sInc', all.filter(r => r.inc).length);
-  { const ws = all.filter(r => WATCH.has(r.sym)); setNum('sStar', ws.length); $('sStarS').textContent = `${ws.filter(r => r.bull >= 4 || r.bear >= 4).length} aligned · ${ws.filter(r => r.setup).length} triggered`; }
-  setNum('sSetup', all.filter(r => r.setup).length); $('sSetupS').textContent = `aligned + trigger in last ${c.trigN} · ${all.filter(r => r.setup && r.G && r.G.grade === 'A').length} A-grade`;
+  const base = filtered(true), sub = (skip, pred) => base.filter(r => cardOk(r, skip) && (!pred || pred(r)));   // each card counts what clicking it would show, under the other active filters
+  const fl = sub(null), filt = anyFilter();
+  setNum('sScanned', fl.length); $('sOf').textContent = filt ? `${fl.length === S.rows.length ? 'all' : fl.length} match your filters · of ${S.rows.length} scanned` : (scope ? `${scope} · of ${S.rows.length} scanned` : `of ${S.total} perpetuals`);
+  setNum('sBull', sub('show', r => r.bull >= 4).length);
+  setNum('sBear', sub('show', r => r.bear >= 4).length);
+  setNum('sNew', sub('new', r => r.isNew).length);
+  setNum('sOi', sub('oi', r => r.oiUp).length); $('sOiS').textContent = `≥ ${c.oiThr}% over ${c.oiN} candles`;
+  setNum('sInc', sub('inc', r => r.inc).length);
+  { const ws = sub('star', r => WATCH.has(r.sym)); setNum('sStar', ws.length); $('sStarS').textContent = `${ws.filter(r => r.bull >= 4 || r.bear >= 4).length} aligned · ${ws.filter(r => r.setup).length} triggered`; }
+  { const su = sub('setup', r => r.setup); setNum('sSetup', su.length); $('sSetupS').textContent = `aligned + trigger in last ${c.trigN} · ${su.filter(r => r.G && r.G.grade === 'A').length} A-grade`; }
   renderRegime(market, c);   // regime reads the whole market, not the scope
 
   $('thead').innerHTML = COLS.map(col => `<th class="${col.c || ''} ${S.sort.k === col.k ? 'sorted' : ''}" data-k="${col.k}" ${COL_FIXED.has(col.k) ? '' : 'draggable="true"'} title="${(COL_HELP[col.k] || '').replace(/"/g, '&quot;')} (click to sort, drag to move)">${col.t}${S.sort.k === col.k ? (S.sort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
@@ -1995,7 +2002,6 @@ function render(){
   S.page = Math.min(S.page, pages - 1);
   const start = S.page * size, pageRows = rows.slice(start, start + size);
   S.nMatch = rows.length;
-  if (anyFilter()) $('sOf').textContent += ` · ${rows.length} match your filters`;
   renderPager(rows.length, size, pages, start, pageRows.length);
   syncCards(); renderFChips();
   if (!rows.length){
