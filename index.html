@@ -1104,7 +1104,7 @@ function sectorFlow(coins, o = {}){
     r.shareD = r.share - r.share7;                       // percentage points
     const heavy = r.vsWeek >= hot || r.vsMonth >= hot;
     r.timing = r.vsWeek >= hot && r.vsMonth >= hot ? 'fuel' : r.vsMonth >= hot && r.vsWeek < 1.2 ? 'late' : r.vsWeek >= hot && r.vsMonth < 1.2 ? 'early' : null;
-    r.verdict = heavy && r.part < 30 ? 'narrow' : heavy && r.priceVW > 0.5 ? 'in' : heavy && r.priceVW < -0.5 ? 'out' : heavy ? 'churn' : r.vsWeek < 0.8 ? 'quiet' : 'normal';
+    r.verdict = heavy && r.part < 40 ? 'narrow' : heavy && r.priceVW > 0.5 ? 'in' : heavy && r.priceVW < -0.5 ? 'out' : heavy ? 'churn' : r.vsWeek < 0.8 ? 'quiet' : 'normal';
   }
   return rows.sort((a, b) => b.shareD - a.shareD);
 }
@@ -2145,7 +2145,7 @@ function setView(v){
 
 /* ---------- Sector Flow ---------- */
 const SEC = {coins: null, rows: [], open: new Set(), sort: {k: 'shareD', dir: -1}, loading: false, t: null};
-const VERDICT = {in: ['Money in', 'Heavy volume with price up'], out: ['Money out', 'Heavy volume with price down'], narrow: ['One-coin move', 'Heavy volume but under 30% of coins are busy'],
+const VERDICT = {in: ['Buying', 'Heavy volume, price up'], out: ['Selling', 'Heavy volume, price down'], narrow: ['One-coin move', 'Heavy volume but under 40% of coins are busy'],
   churn: ['Heavy churn', 'Heavy volume, price flat'], quiet: ['Quiet', 'Volume below 0.8× its weekly normal'], normal: ['Normal', 'Volume near its normal']};
 const TIMING = {fuel: ['Fuel', 'Hot vs both week and month: a real move'], early: ['Early', 'Hot vs the week but not the month: just started'], late: ['Late', 'Hot vs the month but flat vs the week: running all week']};
 async function loadSectors(){
