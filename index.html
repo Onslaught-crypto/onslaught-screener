@@ -247,7 +247,9 @@ a.abtn{display:inline-block;background:var(--panel2);border:1px solid var(--line
 .quads{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .quad{background:var(--panel);border:1px solid var(--line);border-top:2px solid;border-radius:10px;padding:10px;display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start}
 .quad.lead{border-top-color:var(--bull)} .quad.imp{border-top-color:var(--info)} .quad.lag{border-top-color:var(--bear)} .quad.weak{border-top-color:var(--warn)}
-.quad .qh{width:100%;font-size:12.5px;margin-bottom:4px}
+.quad .qh{width:100%;font-size:12.5px;margin-bottom:4px;position:relative}
+.qh:has(.qnav)>.mu{display:inline-block;max-width:calc(100% - 175px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.qnav{position:absolute;right:0;top:-2px;display:flex;align-items:center;gap:4px;font:600 11px var(--mono)}.qnav button{background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);width:22px;height:20px;padding:0;line-height:1;font-size:14px}.qnav button:hover:not(:disabled){border-color:var(--accent)}.qnav button:disabled{opacity:.3;cursor:default}
 .qchip{font:600 11.5px var(--mono);padding:3px 7px;display:inline-flex;gap:4px;align-items:center}
 .qchip .gr{min-width:0;font-size:10px;padding:0 4px}
 .qchip .setup{font-size:9px;padding:1px 4px;margin:0}
@@ -2794,11 +2796,16 @@ function renderMap(){
   </svg>`;
   MAP.anim = false;
   const tot = rows.length || 1;
+  MAP.rows = new Map(rows.map(r => [r.sym, r]));
+  MAP.q = {groups, names, tot}; drawQuads();
+}
+const QPAGE = 10, QPG = {imp: 0, lead: 0, lag: 0, weak: 0};
+function drawQuads(){
+  const {groups, names, tot} = MAP.q;
   $('mapQuads').innerHTML = ['imp', 'lead', 'lag', 'weak'].map(k => { const g = groups[k], ns = g.filter(r => r.setup).length;
     return `<div class="quad ${k}"><div class="qh"><b>${names[k][0]}</b> <span class="qcount">${g.length}</span> <span class="mu">${names[k][1]}${ns ? ` · ${ns} setup${ns > 1 ? 's' : ''}` : ''}</span>
-      <div class="qbar"><i style="width:${(100 * g.length / tot).toFixed(1)}%"></i></div></div>
-    ${g.sort((a, b) => (!!b.setup - !!a.setup) || ((b.G ? 'CBA'.indexOf(b.G.grade) : -1) - (a.G ? 'CBA'.indexOf(a.G.grade) : -1)) || (b.qv - a.qv)).slice(0, 10).map(r => `<button class="qchip" data-open="${r.sym}">${r.sym.replace('USDT', '')}${r.G ? ` <span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'L' : 'S'}</span>` : ''}</button>`).join('') || '<span class="mu">none</span>'}</div>`; }).join('');
-  MAP.rows = new Map(rows.map(r => [r.sym, r]));
+      ${g.length > QPAGE ? `<span class="qnav"><button data-qp="${k}" data-d="-1" aria-label="Previous pairs" ${QPG[k] <= 0 ? 'disabled' : ''}>‹</button><span class="mu">${QPG[k] + 1}/${Math.ceil(g.length / QPAGE)}</span><button data-qp="${k}" data-d="1" aria-label="Next pairs" ${(QPG[k] + 1) * QPAGE >= g.length ? 'disabled' : ''}>›</button></span>` : ''}<div class="qbar"><i style="width:${(100 * g.length / tot).toFixed(1)}%"></i></div></div>
+    ${g.sort((a, b) => (!!b.setup - !!a.setup) || ((b.G ? 'CBA'.indexOf(b.G.grade) : -1) - (a.G ? 'CBA'.indexOf(a.G.grade) : -1)) || (b.qv - a.qv)).slice((QPG[k] = Math.min(QPG[k], Math.max(0, Math.ceil(g.length / QPAGE) - 1))) * QPAGE, QPG[k] * QPAGE + QPAGE).map(r => `<button class="qchip" data-open="${r.sym}">${r.sym.replace('USDT', '')}${r.G ? ` <span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'L' : 'S'}</span>` : ''}</button>`).join('') || '<span class="mu">none</span>'}</div>`; }).join('');
 }
 function mapTip(e){
   const g = e.target.closest('.dot'), tip = $('mapTip'), guide = document.getElementById('mapGuide');
@@ -4022,6 +4029,7 @@ try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v
 $('alertBtn').onclick = toggleAlerts; paintAlertBtn();
 for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
 for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
+$('mapQuads').addEventListener('click', e => { const b = e.target.closest('[data-qp]'); if (!b || b.disabled) return; e.stopPropagation(); const hs = [...document.querySelectorAll('#mapQuads .quad')].map(q => q.offsetHeight); QPG[b.dataset.qp] += +b.dataset.d; drawQuads(); document.querySelectorAll('#mapQuads .quad').forEach((q, i) => q.style.minHeight = hs[i] + 'px'); }, true);
 document.addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (b){ openDrawer(b.dataset.open); $('toast').classList.remove('show'); return; }
   if (e.target.closest('#toast .tx')) $('toast').classList.remove('show'); });
 loadAcct();
