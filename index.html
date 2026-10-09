@@ -2477,12 +2477,13 @@ async function planFor(sym, dir){
   let slMode = 'swing', atrMult = 1.5; try { const o = JSON.parse(localStorage.getItem(PLAN_KEY) || '{}'); slMode = o.slMode || slMode; atrMult = parseFloat(o.atrMult) || atrMult; } catch {}
   return tradePlan(cd, dir, {slMode, atrMult, entry: null});
 }
-async function tgAlertText(items){
+async function tgAlertParts(items){
   const c = cfg(), lines = [`⚡ <b>Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} · ${S.tf.toUpperCase()}</b>`];
   if (S.regime) lines.push(`Regime: ${S.regimeDir > 0 ? 'Risk-on 🟢' : S.regimeDir < 0 ? 'Risk-off 🔴' : 'Mixed 🟠'}${S.macro && S.macro.reg ? ` · 🌐 Macro: ${S.macro.reg.name}${S.macro.reg.froth ? ' 🔥' : ''}` : ''}`);
+  const head = lines.slice(), blocks = [];
   for (const e of items.slice(0, 6)){
-    const base = S.rows.find(r => r.sym === e.sym), x = base ? derive(base, c) : null;
-    lines.push('', `<b>${esc(e.sym.replace('USDT', ''))} ${e.dir > 0 ? 'LONG 🟢' : 'SHORT 🔴'}</b> · ${x ? (e.dir > 0 ? x.bull : x.bear) + '/5' : ''}${x && x.G ? ' · <b>Grade ' + x.G.grade + '</b>' : ''} · ${e.kind === 'setup' ? 'triggered' : 'aligned'}`);
+    const lines = [], base = S.rows.find(r => r.sym === e.sym), x = base ? derive(base, c) : null;
+    lines.push(`<b>${esc(e.sym.replace('USDT', ''))} ${e.dir > 0 ? 'LONG 🟢' : 'SHORT 🔴'}</b> · ${x ? (e.dir > 0 ? x.bull : x.bear) + '/5' : ''}${x && x.G ? ' · <b>Grade ' + x.G.grade + '</b>' : ''} · ${e.kind === 'setup' ? 'triggered' : 'aligned'}`);
     if (x && x.rs && x.rs.b7 != null) lines.push(`RS 7d: vs BTC ${ppf(x.rs.b7)} pp · vs ETH ${ppf(x.rs.e7)} pp`);
     if (x && x.G && x.G.flags.length) lines.push('⚠️ ' + esc(x.G.flags.join(', ')));
     if (x){
@@ -2500,10 +2501,12 @@ async function tgAlertText(items){
         const w = Math.abs(P.sl / P.entry - 1) * 100; if (w >= 12) lines.push(`⚠️ wide stop (${w.toFixed(1)}%): size down`); }
     }
     lines.push(`<a href="https://www.tradingview.com/chart/?symbol=BINANCE:${e.sym}.P">Chart</a>`);
+    blocks.push({e, lines});
   }
-  if (items.length > 6) lines.push('', `+${items.length - 6} more in the screener`);
-  return lines.join('\n');
+  return {head, blocks, tail: items.length > 6 ? ['', `+${items.length - 6} more in the screener`] : []};
 }
+async function tgAlertText(items){ const P = await tgAlertParts(items); return [...P.head, ...P.blocks.flatMap(b => ['', ...b.lines]), ...P.tail].join('\n'); }
+
 
 
 /* Chart picture for a Telegram alert: the signal candle sits in the middle, 50 candles of history on the left, empty room on the right for entry, stop and targets. */
@@ -2539,14 +2542,28 @@ async function tgChartBlob(sym, dir){
   return new Promise(res => cv.toBlob(res, 'image/png'));
 }
 async function tgSendPhoto(blob, caption){
-  const fd = new FormData(); fd.append('chat_id', $('tgChat').value.trim()); fd.append('photo', blob, 'chart.png'); fd.append('caption', caption); fd.append('parse_mode', 'HTML');
-  try { const r = await fetch(`https://api.telegram.org/bot${$('tgToken').value.trim()}/sendPhoto`, {method: 'POST', body: fd}); const j = await r.json().catch(() => null); return !j || j.ok; } catch { return false; }
-}
-async function tgCharts(items){
-  for (const e of items.slice(0, 6)){
-    try { const b = await tgChartBlob(e.sym, e.dir); if (b){ const base = S.rows.find(r => r.sym === e.sym), x = base && derive(base, cfg());
-      await tgSendPhoto(b, `<b>${esc(e.sym.replace('USDT', ''))} ${e.dir > 0 ? 'LONG 🟢' : 'SHORT 🔴'}</b> · ${S.tf.toUpperCase()}${x && x.G ? ' · Grade ' + x.G.grade : ''}`); await new Promise(r => setTimeout(r, 600)); } } catch {}
+  for (let a = 0; a < 3; a++){
+    const fd = new FormData(); fd.append('chat_id', $('tgChat').value.trim()); fd.append('photo', blob, 'chart.png'); fd.append('caption', caption); fd.append('parse_mode', 'HTML');
+    let r; try { r = await fetch(`https://api.telegram.org/bot${$('tgToken').value.trim()}/sendPhoto`, {method: 'POST', body: fd}); } catch { return 'unconfirmed'; }   // the picture has usually gone even if the browser can't read the reply
+    const j = await r.json().catch(() => null);
+    if (!j || j.ok) return 'sent';
+    if (r.status === 429 && j.parameters && j.parameters.retry_after){ await new Promise(z => setTimeout(z, Math.min(40, j.parameters.retry_after + 1) * 1000)); continue; }
+    return false;
   }
+  return false;
+}
+/* One alert with a chart under each coin: the header, then per coin a picture whose caption is that coin's text (or the picture plus the text when it is too long for a caption). */
+async function tgDeliver(items){
+  const P = await tgAlertParts(items), wait = ms => new Promise(z => setTimeout(z, ms));
+  await tgSend([...P.head].join('\n'));
+  const vis = h => h.replace(/<[^>]+>/g, '').replace(/&amp;|&lt;|&gt;/g, '_').length;
+  for (const b of P.blocks){
+    await wait(1100);                                     // Telegram allows about one message a second to a chat
+    const text = b.lines.join('\n'); let ok = false, sentText = false;
+    try { const bl = await tgChartBlob(b.e.sym, b.e.dir); if (bl){ const long = vis(text) > 1000; ok = await tgSendPhoto(bl, long ? b.lines[0] : text); sentText = !!ok && !long; } } catch {}
+    if (!sentText){ if (ok) await wait(1100); await tgSend(text); }
+  }
+  if (P.tail.length) await tgSend(P.tail.join('\n').trim());
 }
 const tgActive = () => $('tgOn').checked && tgReady();
 /* Quiet hours: true while the local time is inside the chosen window (a window like 23:00 to 07:00 crosses midnight). */
@@ -2569,7 +2586,7 @@ function fireAlerts(entered){
   const line = e => `${e.sym.replace('USDT', '')} ${e.dir > 0 ? 'LONG' : 'SHORT'}${e.kind === 'setup' ? ' (triggered)' : ' (aligned)'}`;
   const title = `Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} on ${S.tf.toUpperCase()}`;
   const body = items.slice(0, 6).map(line).join('\n') + (items.length > 6 ? `\n+${items.length - 6} more` : '');
-  if (tgActive() && !tgQuiet()) tgAlertText(items).then(tgSend).then(() => $('tgImg').checked ? tgCharts(items) : null).catch(e => toast(e.message));
+  if (tgActive() && !tgQuiet()) ($('tgImg').checked ? tgDeliver(items) : tgAlertText(items).then(tgSend)).catch(e => toast(e.message));
   if (!ALERT.on) return;                                         // Telegram works on its own; page and desktop alerts need 🔔
   if (!!window.Notification && Notification.permission === 'granted'){
     try { const n = new Notification(title, {body, tag: 'onslaught-' + S.tf, renotify: true}); n.onclick = () => { window.focus(); openDrawer(items[0].sym); n.close(); }; } catch {}
