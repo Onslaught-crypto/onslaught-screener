@@ -733,7 +733,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <div id="viewTa" hidden>
     <div class="panel anahead">
-      <div class="anapick searchbox"><span class="sicon" aria-hidden="true">⌕</span><input id="anaIn" type="text" placeholder="Pick a coin, e.g. SOL" autocomplete="off" spellcheck="false" aria-label="Pick a coin"><ul class="anasug" id="anaSug" hidden></ul></div>
+      <div class="anapick searchbox"><span class="sicon" aria-hidden="true">⌕</span><input id="anaIn" type="text" placeholder="Pick a coin, e.g. BTC" autocomplete="off" spellcheck="false" aria-label="Pick a coin"><ul class="anasug" id="anaSug" hidden></ul></div>
       <div class="anatitle" id="anaTitle"></div>
       <span style="flex:1"></span>
       <div class="seg" id="anaTf"><button data-v="15m">15M</button><button data-v="1h">1H</button><button data-v="4h">4H</button><button data-v="1d">1D</button></div>
@@ -3605,7 +3605,7 @@ function dvBanner(x){
 /* ---------- Analysis tab: one coin, its structure and key levels, a rule-based summary, token facts ---------- */
 const ANA_KEY = 'onslaught-ana', ANA_TFS = ['15m', '1h', '4h', '1d'];
 const ANA = {sym: null, tf: '4h', cd: null, L: null, row: null, info: null, facts: null, err: '', busy: false, tok: 0, uni: null, vis: null,
-  show: {sr: true, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], mtf: null, btc: null, sel: null, anchorT: null};
+  show: {sr: true, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], deriv: null, mtf: null, btc: null, sel: null, anchorT: null};
 (function(){ try { const o = JSON.parse(localStorage.getItem(ANA_KEY) || '{}'); if (o.show) Object.assign(ANA.show, o.show); if (Array.isArray(o.recent)) ANA.recent = o.recent.slice(0, 6); if (ANA_TFS.includes(o.tf)) ANA.tf = o.tf; } catch {} })();
 const anaSave = () => { try { localStorage.setItem(ANA_KEY, JSON.stringify({show: ANA.show, recent: ANA.recent, tf: ANA.tf})); } catch {} };
 const ANA_NAMES = {EQH: 'Equal highs', EQL: 'Equal lows', PDH: 'Prev day high', PDL: 'Prev day low', PWH: 'Prev week high', PWL: 'Prev week low'};
@@ -3625,7 +3625,7 @@ function anaEnter(){
 function anaTfSync(){ [...$('anaTf').children].forEach(b => b.classList.toggle('on', b.dataset.v === ANA.tf)); }
 async function anaLoad(sym){
   const tok = ++ANA.tok, tf = ANA.tf, c = cfg();
-  Object.assign(ANA, {sym, cd: null, L: null, row: null, facts: null, err: '', busy: true, loadedSym: sym, mtf: null, btc: null, sel: null, anchorT: null});
+  Object.assign(ANA, {sym, cd: null, L: null, row: null, facts: null, err: '', busy: true, loadedSym: sym, mtf: null, btc: null, sel: null, anchorT: null, deriv: null});
   anaTfSync(); anaRender();
   try {
     const info = (await anaUniverse()).find(u => u.sym === sym);
@@ -3641,7 +3641,7 @@ async function anaLoad(sym){
     if (!base){ try { base = await buildRow(info, tf, c); } catch { base = null; } }
     if (tok !== ANA.tok) return;
     ANA.row = base ? derive(base, c) : null; anaRender();
-    anaFacts(sym, info.base, tok); anaMtf(sym, tf, tok); if (ANA.show.rel) anaBtcLoad(sym, tf, tok);
+    anaFacts(sym, info.base, tok); anaMtf(sym, tf, tok); anaDeriv(sym, info, tok); if (ANA.show.rel) anaBtcLoad(sym, tf, tok);
   } catch(e){ if (tok !== ANA.tok) return; ANA.busy = false; ANA.err = e.message || String(e); anaRender(); }
 }
 async function anaFacts(sym, base, tok){
@@ -3738,10 +3738,12 @@ function anaSummary(L, row, tf){
   const near = side => L.list.find(x => x.side === side && x.kind !== 'eq' && x.kind !== 'vp'), a = near('above'), b = near('below');
   const d = x => `${x.name.toLowerCase()} ${Math.abs(x.dist).toFixed(1)}% away (${x.distAtr.toFixed(1)} ATR)`;
   if (a || b) s += `Nearest ${a ? 'level above: ' + d(a) : ''}${a && b ? '; ' : ''}${b ? (a ? 'below: ' : 'level below: ') + d(b) : ''}. `;
+  s += anaInvalid(L, tf);
   if (row){
     const bits = [];
     if (row.fund != null) bits.push(`funding ${row.fund > 0 ? '+' : ''}${row.fund.toFixed(4)}%${row.fFlag ? ' (crowded)' : ''}`);
     if (row.pos) bits.push(POS[row.pos][0].toLowerCase());
+    const dv = ANA.deriv; if (dv && dv.ls){ const t = anaLsTag(dv.ls); if (t[0] !== 'balanced') bits.push(`${t[0]} accounts (long/short ${dv.ls.ratio.toFixed(2)})`); }
     if (row.rs && row.rs.b7 != null) bits.push(`${ppf(row.rs.b7)} pp vs BTC over 7 days`);
     if (bits.length) s += `Derivatives and strength: ${bits.join(', ')}. `;
     if (row.G) s += `Screener grade <b>${row.G.grade}</b>${row.setup ? `, <b class="${row.setup > 0 ? 'up' : 'dn'}">${row.setup > 0 ? 'LONG' : 'SHORT'}</b> setup` : ''}. `;
@@ -3749,6 +3751,28 @@ function anaSummary(L, row, tf){
   return s;
 }
 
+const SPOTLIM = {win: 60000, cap: 600, log: []}, DERIV = new Map();
+async function anaDeriv(sym, info, tok){
+  const hit = DERIV.get(sym); if (hit && Date.now() - hit.t < 3e5){ ANA.deriv = hit.v; anaRender(); return; }
+  const out = {};
+  const ls = (async () => { try {
+    const d = await getJSON(`${FAPI}/futures/data/globalLongShortAccountRatio?symbol=${sym}&period=1h&limit=24`, OILIM, 1);
+    if (Array.isArray(d) && d.length){ const a = d.at(-1), b = d[0]; out.ls = {ratio: +a.longShortRatio, long: +a.longAccount, prev: +b.longShortRatio}; } } catch {} })();
+  const sp = (async () => { const cands = [sym, sym.replace(/^(1000000|1000)/, '')].filter((x, i, a) => a.indexOf(x) === i);
+    for (const c of cands){ try { await take(SPOTLIM, 2); const r = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${c}`); if (!r.ok) continue; const j = await r.json(); const q = +j.quoteVolume; if (q > 0){ out.spot = {qv: q, perp: info.qv}; return; } } catch {} } out.spot = {none: true}; })();
+  await Promise.all([ls, sp]);
+  if (tok !== ANA.tok) return; DERIV.set(sym, {t: Date.now(), v: out}); ANA.deriv = out; anaRender();
+}
+function anaLsTag(ls){ return ls.ratio >= 1.8 ? ['crowded long', 'dn'] : ls.ratio <= 0.7 ? ['crowded short', 'up'] : ['balanced', 'mu']; }
+function anaPsTag(r){ return r >= 8 ? ['leverage-driven', 'wr'] : r <= 3 ? ['spot-supported', 'up'] : ['mixed', 'mu']; }
+function anaInvalid(L, tf){
+  const T = tf.toUpperCase(), d = decFor(L.price), f = v => v.toFixed(d > 4 ? 4 : d), zone = x => ['sr', 'fvg', 'ob', 'breaker'].includes(x.kind);
+  const sup = L.list.filter(x => zone(x) && x.side === 'below').sort((a, b) => b.hi - a.hi)[0], res = L.list.filter(x => zone(x) && x.side === 'above').sort((a, b) => a.lo - b.lo)[0];
+  const lo = sup ? sup.lo : L.range.lo, hi = res ? res.hi : L.range.hi, ln = sup ? sup.name.toLowerCase() : 'range low', hn = res ? res.name.toLowerCase() : 'range high';
+  if (L.trend > 0) return `<b>Invalidation.</b> A ${T} close below ${f(lo)} (${ln}) would break the bullish read; a close above ${f(hi)} (${hn}) would strengthen it. `;
+  if (L.trend < 0) return `<b>Invalidation.</b> A ${T} close above ${f(hi)} (${hn}) would break the bearish read; a close below ${f(lo)} (${ln}) would strengthen it. `;
+  return `<b>To set a direction.</b> Price needs a ${T} close above ${f(hi)} (${hn}) or below ${f(lo)} (${ln}). `;
+}
 const ANA_TFL = {'15m': '15M', '1h': '1H', '4h': '4H', '1d': '1D'};
 async function anaMtf(sym, tf, tok){
   const out = {[tf]: ANA.L};
@@ -3826,6 +3850,8 @@ function anaRender(){
     row && row.mtf ? ck('Trend 1D / 4H / 1H', MTF_TFS.map(t => arrowF(row.mtf[t])).join(' ')) : '',
     row ? ck('Divergence', row.dv ? `<b class="${row.dv.side > 0 ? 'up' : 'dn'}">${row.dv.side > 0 ? 'Bull' : 'Bear'}</b> ${row.dv.ago === 0 ? 'now' : row.dv.ago + ' ago'}` : 'none') : '',
     row && row.fund != null ? ck('Funding / positioning', `${row.fund > 0 ? '+' : ''}${row.fund.toFixed(4)}%${row.fFlag ? ' 🔥' : ''} · ${row.pos ? POS[row.pos][0] : '—'}`) : '',
+    ANA.deriv && ANA.deriv.ls ? (t => ck('Long/short accounts', `${ANA.deriv.ls.ratio.toFixed(2)} · ${(ANA.deriv.ls.long * 100).toFixed(0)}% long · <b class="${t[1]}">${t[0]}</b>`))(anaLsTag(ANA.deriv.ls)) : '',
+    ANA.deriv && ANA.deriv.spot && !ANA.deriv.spot.none ? (r => ck('Perp / spot volume', `${r.toFixed(1)}× · <b class="${anaPsTag(r)[1]}">${anaPsTag(r)[0]}</b>`))(ANA.deriv.spot.perp / ANA.deriv.spot.qv) : ANA.deriv && ANA.deriv.spot ? ck('Perp / spot volume', '<span class="mu">no spot market</span>') : '',
     row && row.rs && row.rs.b7 != null ? ck('RS 7D vs BTC', `<b class="${cls(row.rs.b7)}">${ppf(row.rs.b7)} pp</b>`) : '',
     !row ? '<div class="lv"><span class="mu">Loading screener context…</span></div>' : ''].join('');
   const f = ANA.facts, rowf = (k, v) => `<div><div class="k">${k}</div><div class="v">${v}</div></div>`;
