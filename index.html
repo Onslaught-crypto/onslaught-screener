@@ -590,6 +590,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input id="tgOn" type="checkbox"> Send alerts to Telegram</label>
         <label title="Message me when BTC or ETH trades within 0.5% of one of the largest estimated liquidation clusters (15m model, same as the Liquidations tab). Checked every 5 minutes while this page is open."><input id="tgLiq" type="checkbox"> Liquidation alerts</label>
         <label title="Include entry, stop and targets for each alert"><input id="tgPlan" type="checkbox" checked> with trade plan</label>
+        <label title="Send a chart picture for each setup, centered on the signal candle with entry, stop and targets"><input id="tgImg" type="checkbox" checked> with chart image</label>
         <label title="Also message me when RSI and MACD both diverge from price on a confirmed swing (1H, 4H or 1D, Strong). The Divergences tab scans in the background while this page is open."><input id="tgDiv" type="checkbox"> Divergence alerts</label>
         <label title="Also message me about early divergences: the swing has 2 closed candles after it (instead of 5) and the last candle already turns against it. About 3 candles sooner, strength 60+, RSI + MACD, 1H / 4H / 1D. They fail more often than the confirmed ones. Needs this page open."><input id="tgDivE" type="checkbox"> ⚡ Early divergence alerts</label>
         <label title="No Telegram messages during these hours (your local time). Alerts that would have fired are skipped, not sent later."><input id="tgQuiet" type="checkbox"> Quiet hours</label>
@@ -2445,8 +2446,8 @@ function toast(msg, items){
 /* ---------- Telegram ---------- */
 const TG_KEY = 'onslaught-tg';
 function tgLoad(){ let o = {}; try { o = JSON.parse(localStorage.getItem(TG_KEY) || '{}'); } catch {}
-  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgDiv').checked = !!o.div; $('tgDivE').checked = !!o.divE; $('tgLiq').checked = !!o.liq; $('tgQuiet').checked = !!o.quiet; $('tgQFrom').value = o.qFrom || '23:00'; $('tgQTo').value = o.qTo || '07:00'; }
-function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, div: $('tgDiv').checked, divE: $('tgDivE').checked, liq: $('tgLiq').checked, quiet: $('tgQuiet').checked, qFrom: $('tgQFrom').value, qTo: $('tgQTo').value})); } catch {} }
+  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgImg').checked = o.img !== false; $('tgDiv').checked = !!o.div; $('tgDivE').checked = !!o.divE; $('tgLiq').checked = !!o.liq; $('tgQuiet').checked = !!o.quiet; $('tgQFrom').value = o.qFrom || '23:00'; $('tgQTo').value = o.qTo || '07:00'; }
+function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, img: $('tgImg').checked, div: $('tgDiv').checked, divE: $('tgDivE').checked, liq: $('tgLiq').checked, quiet: $('tgQuiet').checked, qFrom: $('tgQFrom').value, qTo: $('tgQTo').value})); } catch {} }
 const tgReady = () => /^\d+:[\w-]{20,}$/.test($('tgToken').value.trim()) && $('tgChat').value.trim() !== '';
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 /* Form-encoded POST = a "simple" CORS request (no preflight). If the browser can't read the reply, the message has usually still gone. */
@@ -2497,6 +2498,49 @@ async function tgAlertText(items){
   return lines.join('\n');
 }
 
+
+/* Chart picture for a Telegram alert: the signal candle sits in the middle, 50 candles of history on the left, empty room on the right for entry, stop and targets. */
+async function tgChartBlob(sym, dir){
+  const P = await planFor(sym, dir); if (!P) return null;
+  let cd = await Cache.get(`k:${sym}:${S.tf}`); if (!cd) return null;
+  const cur = Math.floor(Date.now() / TF_MS[S.tf]) * TF_MS[S.tf]; cd = cd.filter(k => k[0] < cur);
+  const BEF = 50, AFT = 28, seg = cd.slice(-(BEF + 1)); if (seg.length < 20) return null;
+  const cs = getComputedStyle(document.documentElement), col = (n, d) => (cs.getPropertyValue(n) || '').trim() || d;
+  const UP = col('--bull', '#9eff00'), DN = col('--bear', '#e94c2a'), BG = '#0e0f14', GRID = 'rgba(255,255,255,.07)', TXT = '#c9c9d1', MU = '#8b8b90';
+  const W = 960, H = 540, m = {l: 14, r: 92, t: 54, b: 30}, pw = W - m.l - m.r, ph = H - m.t - m.b;
+  let lo = Math.min(...seg.map(k => k[3]), P.entry, P.sl), hi = Math.max(...seg.map(k => k[2]), P.entry, P.sl);
+  const span0 = hi - lo, reach = [];
+  for (const t of P.tps){ const nl = Math.min(lo, t.price), nh = Math.max(hi, t.price); if ((nh - nl) <= span0 * 2.2){ lo = nl; hi = nh; reach.push(true); } else reach.push(false); }
+  const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+  const dec = decFor(P.entry), X = i => m.l + (i + 0.5) / (BEF + 1 + AFT) * pw, Y = v => m.t + (hi - v) / (hi - lo) * ph, bw = Math.max(2, pw / (BEF + 1 + AFT) * 0.62);
+  const cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H * 2; const g = cv.getContext('2d'); g.scale(2, 2);
+  g.fillStyle = BG; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(255,255,255,.03)'; g.fillRect(X(BEF) + pw / (BEF + 1 + AFT) / 2, m.t, pw - (X(BEF) - m.l) - pw / (BEF + 1 + AFT) / 2, ph);
+  g.font = '11px monospace'; g.textBaseline = 'middle';
+  for (let i = 0; i <= 5; i++){ const v = lo + (hi - lo) * i / 5, y = Y(v); g.strokeStyle = GRID; g.beginPath(); g.moveTo(m.l, y); g.lineTo(W - m.r, y); g.stroke(); g.fillStyle = MU; g.textAlign = 'left'; g.fillText(fp(v, dec), W - m.r + 6, y); }
+  seg.forEach((k, i) => { const up = k[4] >= k[1], c = up ? UP : DN, x = X(i); g.strokeStyle = c; g.fillStyle = c; g.beginPath(); g.moveTo(x, Y(k[2])); g.lineTo(x, Y(k[3])); g.stroke(); const y1 = Y(Math.max(k[1], k[4])), y2 = Y(Math.min(k[1], k[4])); g.fillRect(x - bw / 2, y1, bw, Math.max(1, y2 - y1)); });
+  const xs = X(BEF); g.setLineDash([4, 4]); g.strokeStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.moveTo(xs, m.t); g.lineTo(xs, H - m.b); g.stroke(); g.setLineDash([]);
+  g.fillStyle = MU; g.textAlign = 'center'; g.fillText('signal', xs, H - m.b + 14);
+  const line = (v, c, label, dash, clipped) => { const yy = Math.max(m.t + 4, Math.min(H - m.b - 4, Y(v))); g.strokeStyle = c; g.setLineDash(dash); g.lineWidth = 1.3; g.beginPath(); g.moveTo(xs, yy); g.lineTo(W - m.r, yy); g.stroke(); g.setLineDash([]); g.lineWidth = 1;
+    g.fillStyle = c; g.textAlign = 'right'; g.fillText(`${label}${clipped ? (v > hi ? ' ↑' : ' ↓') : ''}  ${fp(v, dec)}`, W - m.r - 6, yy - 8); };
+  line(P.sl, DN, 'SL', [6, 4]); line(P.entry, '#e8e8ee', 'Entry', [2, 3]);
+  P.tps.forEach((t, i) => line(t.price, UP, `TP${i + 1} ${t.r.toFixed(1)}R`, [6, 4], !reach[i]));
+  const dc = dir > 0 ? UP : DN;
+  g.textAlign = 'left'; g.font = 'bold 20px sans-serif'; g.fillStyle = TXT; g.fillText(sym.replace('USDT', ''), m.l, 24);
+  const w = g.measureText(sym.replace('USDT', '')).width; g.fillStyle = dc; g.fillText(`  ${dir > 0 ? 'LONG' : 'SHORT'}`, m.l + w, 24);
+  g.font = '12px monospace'; g.fillStyle = MU; g.fillText(`${S.tf.toUpperCase()} · ${new Date(seg.at(-1)[0]).toLocaleString([], {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})} candle · Onslaught Screener`, m.l, 44);
+  return new Promise(res => cv.toBlob(res, 'image/png'));
+}
+async function tgSendPhoto(blob, caption){
+  const fd = new FormData(); fd.append('chat_id', $('tgChat').value.trim()); fd.append('photo', blob, 'chart.png'); fd.append('caption', caption); fd.append('parse_mode', 'HTML');
+  try { const r = await fetch(`https://api.telegram.org/bot${$('tgToken').value.trim()}/sendPhoto`, {method: 'POST', body: fd}); const j = await r.json().catch(() => null); return !j || j.ok; } catch { return false; }
+}
+async function tgCharts(items){
+  for (const e of items.slice(0, 6)){
+    try { const b = await tgChartBlob(e.sym, e.dir); if (b){ const base = S.rows.find(r => r.sym === e.sym), x = base && derive(base, cfg());
+      await tgSendPhoto(b, `<b>${esc(e.sym.replace('USDT', ''))} ${e.dir > 0 ? 'LONG 🟢' : 'SHORT 🔴'}</b> · ${S.tf.toUpperCase()}${x && x.G ? ' · Grade ' + x.G.grade : ''}`); await new Promise(r => setTimeout(r, 600)); } } catch {}
+  }
+}
 const tgActive = () => $('tgOn').checked && tgReady();
 /* Quiet hours: true while the local time is inside the chosen window (a window like 23:00 to 07:00 crosses midnight). */
 function tgQuiet(){
@@ -2516,7 +2560,7 @@ function fireAlerts(entered){
   const line = e => `${e.sym.replace('USDT', '')} ${e.dir > 0 ? 'LONG' : 'SHORT'}${e.kind === 'setup' ? ' (triggered)' : ' (aligned)'}`;
   const title = `Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} on ${S.tf.toUpperCase()}`;
   const body = items.slice(0, 6).map(line).join('\n') + (items.length > 6 ? `\n+${items.length - 6} more` : '');
-  if (tgActive() && !tgQuiet()) tgAlertText(items).then(tgSend).catch(e => toast(e.message));
+  if (tgActive() && !tgQuiet()) tgAlertText(items).then(tgSend).then(() => $('tgImg').checked ? tgCharts(items) : null).catch(e => toast(e.message));
   if (!ALERT.on) return;                                         // Telegram works on its own; page and desktop alerts need 🔔
   if (!!window.Notification && Notification.permission === 'granted'){
     try { const n = new Notification(title, {body, tag: 'onslaught-' + S.tf, renotify: true}); n.onclick = () => { window.focus(); openDrawer(items[0].sym); n.close(); }; } catch {}
@@ -4182,7 +4226,7 @@ $('pEntryEma').onclick = () => { if (!D.plan) return; D.entry = D.plan.ema20; $(
 $('dTg').onclick = async () => { try { const txt = `<b>Onslaught plan</b>\n<pre>${esc(planText())}</pre>`; const r = await tgSend(txt); $('dCopied').textContent = r === 'sent' ? 'Sent to Telegram' : 'Sent (unconfirmed)'; }
   catch(e){ $('dCopied').textContent = e.message; } setTimeout(() => $('dCopied').textContent = '', 3500); };
 tgLoad();
-for (const id of ['tgToken','tgChat','tgOn','tgPlan','tgQuiet','tgQFrom','tgQTo']) $(id).onchange = () => { tgSave();
+for (const id of ['tgToken','tgChat','tgOn','tgPlan','tgImg','tgQuiet','tgQFrom','tgQTo']) $(id).onchange = () => { tgSave();
   if (id === 'tgOn' && $('tgOn').checked){
     const m = [];
     if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); m.push('Auto-refresh set to 2m so new setups are caught.'); }
@@ -4190,7 +4234,8 @@ for (const id of ['tgToken','tgChat','tgOn','tgPlan','tgQuiet','tgQFrom','tgQTo'
     toast(['Telegram alerts on for ' + S.tf.toUpperCase() + '. Keep this page open (it can be in the background).'].concat(m).join(' '));
   } };
 $('tgTest').onclick = async () => { tgSave(); $('tgStatus').textContent = 'Sending…';
-  try { const r = await tgSend('✅ <b>Onslaught Screener</b> is connected. Alerts will arrive here.'); $('tgStatus').textContent = r === 'sent' ? 'Sent. Check Telegram.' : 'Sent, but the browser could not confirm. Check Telegram.'; }
+  try { const r = await tgSend('✅ <b>Onslaught Screener</b> is connected. Alerts will arrive here.'); $('tgStatus').textContent = r === 'sent' ? 'Sent. Check Telegram.' : 'Sent, but the browser could not confirm. Check Telegram.';
+    if ($('tgImg').checked){ const t = S.rows.find(x => x.sym === 'BTCUSDT') || S.rows[0]; if (t){ const bl = await tgChartBlob(t.sym, 1).catch(() => null); if (bl) await tgSendPhoto(bl, `Sample chart image (${esc(t.sym.replace('USDT', ''))}, example only)`); } } }
   catch(e){ $('tgStatus').textContent = e.message; } };
 /* Share link: #t=tab&c=PAIR&tf=timeframe&d=1|-1 opens that coin's trade plan for whoever follows it */
 const shareLink = () => `${location.origin}${location.pathname}#t=${S.view}&c=${D.sym}&tf=${D.tf}&d=${D.dir}`;
