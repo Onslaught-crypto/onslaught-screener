@@ -248,7 +248,8 @@ a.abtn{display:inline-block;background:var(--panel2);border:1px solid var(--line
 .quad{background:var(--panel);border:1px solid var(--line);border-top:2px solid;border-radius:10px;padding:10px;display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start}
 .quad.lead{border-top-color:var(--bull)} .quad.imp{border-top-color:var(--info)} .quad.lag{border-top-color:var(--bear)} .quad.weak{border-top-color:var(--warn)}
 .quad .qh{width:100%;font-size:12.5px;margin-bottom:4px;position:relative}
-.qh:has(.qnav)>.mu{display:inline-block;max-width:calc(100% - 175px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.qh:has(.whatif{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px}.whatif label{width:auto;flex:none;display:flex;gap:6px;align-items:center;cursor:pointer;font-size:13px}.lossnote{font-size:13px;line-height:1.5;margin:6px 0}.lossnote b{font-weight:600}
+.qnav)>.mu{display:inline-block;max-width:calc(100% - 175px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .qnav{position:absolute;right:0;top:-2px;display:flex;align-items:center;gap:4px;font:600 11px var(--mono)}.qnav button{background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);width:22px;height:20px;padding:0;line-height:1;font-size:14px}.qnav button:hover:not(:disabled){border-color:var(--accent)}.qnav button:disabled{opacity:.3;cursor:default}
 .qchip{font:600 11.5px var(--mono);padding:3px 7px;display:inline-flex;gap:4px;align-items:center}
 .qchip .gr{min-width:0;font-size:10px;padding:0 4px}
@@ -805,6 +806,20 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="rot-head"><b>Where is the edge?</b> <span class="mu">Simulated trade per signal: entry at the signal close, stop 1.5 ATR away (1R), target 1.5R, closed after 24 candles. Groups with fewer than 10 completed signals are dimmed: too few to trust.</span></div>
       <div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Signals</th><th>Win rate</th><th>Avg R</th><th class="l">Expectancy</th><th>Avg +12</th><th>Avg MFE</th><th>Avg MAE</th></tr></thead><tbody id="jEdge"></tbody></table></div>
     </div>
+    <div class="panel" id="jLossPanel">
+      <div class="rot-head"><b>Loss review</b> <span class="mu">What the stopped-out signals have in common. Simulated results, so use it to spot patterns to test, not as proof.</span></div>
+      <div id="jLoss"></div>
+      <div class="rot-head" style="margin-top:14px"><b>What if I had skipped…</b> <span class="mu">Tick filters to replay the completed signals without them (nothing is changed in your alerts).</span></div>
+      <div class="whatif" id="jWhat2">
+        <label><input type="checkbox" data-wi="grade"> Grade C</label>
+        <label><input type="checkbox" data-wi="regime"> Against regime</label>
+        <label><input type="checkbox" data-wi="mtf"> All 3 timeframes against</label>
+        <label><input type="checkbox" data-wi="ext"> Stretched (3+ ATR)</label>
+        <label><input type="checkbox" data-wi="fund"> Crowded funding</label>
+        <label><input type="checkbox" data-wi="aligned"> Aligned (no trigger)</label>
+      </div>
+      <div id="jWhatOut" class="mu" style="margin-top:8px"></div>
+    </div>
     <div class="tablewrap">
       <table class="jlog"><thead><tr><th class="l">Signal time</th><th class="l">Pair</th><th class="c">TF</th><th class="c">Side</th><th class="l">Kind</th><th>Score</th><th class="l">Triggers</th><th class="l">Context</th><th>Entry</th><th>+4</th><th>+12</th><th>+24</th><th>MFE</th><th>MAE</th><th class="l">Result</th><th></th></tr></thead>
       <tbody id="jBody"></tbody></table>
@@ -1135,8 +1150,14 @@ function outcome(e, candles){
       if (hitS){ res = 'loss'; rr = -1; hitBar = j; } else if (hitT){ res = 'win'; rr = J_TGT_R; hitBar = j; }
     }
   }
+  let peakR = null, rec = null;
+  if (res === 'loss'){                                           // how far it went my way before the stop, and did it reach the target soon after the stop
+    let pk = 0; for (let j = 1; j < hitBar; j++){ const k = candles[i + j]; pk = Math.max(pk, e.dir > 0 ? k[2] - e.price : e.price - k[3]); }
+    peakR = pk / Rv;
+    if (n >= hitBar + 12){ rec = false; for (let j = hitBar; j <= hitBar + 12; j++){ const k = candles[i + j]; if (e.dir > 0 ? k[2] >= tgt : k[3] <= tgt){ rec = true; break; } } }
+  }
   if (res == null && n >= J_HOR){ res = 'time'; rr = e.dir * (candles[i + J_HOR][4] - e.price) / Rv; hitBar = J_HOR; }
-  return {r4: ret(4), r12: ret(12), r24: ret(24), mfe, mae, res, rr, hitBar, bars: n, done: n >= J_HOR};
+  return {r4: ret(4), r12: ret(12), r24: ret(24), mfe, mae, res, rr, hitBar, peakR, rec, bars: n, done: n >= (res === 'loss' ? Math.max(J_HOR, hitBar + 12) : J_HOR)};
 }
 function jStats(list){
   const d = list.filter(e => e.out && e.out.res);
@@ -1693,18 +1714,19 @@ async function getUniverse(){
   }).sort((a, b) => b.qv - a.qv);
 }
 
+let MC_RANK = {};                                            // base symbol → CoinGecko market cap rank
 async function getMcaps(){
-  const k = 'mcap:v1', c = await Cache.get(k);
-  if (c && Date.now() - c.t < 6 * 36e5) return c.m;
-  const m = {};
+  const k = 'mcap:v2', c = await Cache.get(k);
+  if (c && Date.now() - c.t < 6 * 36e5){ MC_RANK = c.r || {}; return c.m; }
+  const m = {}, rk = {}; let n = 0;
   try {
     for (let p = 1; p <= 4; p++){
       let j; try { j = await cgJSON(`/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${p}`, 2); } catch { break; }
       if (p === 1) await Cache.set('cg:p1', {t: Date.now(), v: j.map(x => ({symbol: x.symbol, market_cap: x.market_cap, current_price: x.current_price}))});
-      for (const x of j){ const s = x.symbol.toUpperCase(); if (!(s in m) && x.market_cap) m[s] = x.market_cap; }
+      for (const x of j){ n++; const s = x.symbol.toUpperCase(); if (!(s in m) && x.market_cap){ m[s] = x.market_cap; rk[s] = x.market_cap_rank || n; } }
     }
   } catch {}
-  if (Object.keys(m).length) await Cache.set(k, {t: Date.now(), m});
+  if (Object.keys(m).length){ MC_RANK = rk; await Cache.set(k, {t: Date.now(), m, r: rk}); }
   return m;
 }
 
@@ -2069,7 +2091,7 @@ async function scan(){
     S.total = uni.length;
     const n = +$('universe').value, mcapMin = +$('mcap').value;
     let list = n ? uni.slice(0, n) : uni;
-    for (const u of list) u.mcap = mcaps[u.base];
+    for (const u of list){ u.mcap = mcaps[u.base]; u.rank = MC_RANK[u.base]; }
     try {
       const [b4, b1] = await Promise.all([getKlines('BTCUSDT', '4h', true), getKlines('BTCUSDT', '1d', true)]);
       const st = k => { const e = evaluate(k, c); return e.incomplete ? null : {dir: e.bull >= 3 ? 1 : e.bear >= 3 ? -1 : 0, e}; };
@@ -2328,6 +2350,36 @@ function edgeGroups(es){
   for (const [t, label] of Object.entries(TRIG_SHORT)) { const l = es.filter(e => e.trig.includes(t)); if (l.length) add('Trigger', label, l); }
   return g;
 }
+
+const LOSS_COND = [
+  ['Grade C', e => e.grade === 'C'], ['Against regime', e => e.regime === -e.dir], ['All 3 timeframes against', e => e.mtf === 'against'],
+  ['Stretched (3+ ATR)', e => e.ext != null && e.ext * e.dir >= 3], ['Crowded funding', e => e.fFlag === e.dir], ['Aligned (no trigger)', e => e.kind === 'aligned'],
+  ['Long', e => e.dir > 0], ['Short', e => e.dir < 0], ['Leader against its side (RS)', e => e.rs7 != null && e.rs7 * e.dir <= -2]
+];
+const WI = {grade: e => e.grade === 'C', regime: e => e.regime === -e.dir, mtf: e => e.mtf === 'against', ext: e => e.ext != null && e.ext * e.dir >= 3, fund: e => e.fFlag === e.dir, aligned: e => e.kind === 'aligned'};
+function renderLoss(es){
+  const done = es.filter(e => e.out && e.out.res), L = done.filter(e => e.out.res === 'loss'), box = $('jLoss');
+  if (!box) return;
+  if (done.length < 10 || L.length < 3){ box.innerHTML = `<div class="mu" style="padding:6px 0">Needs at least 10 completed signals with 3 or more stop-outs (now ${done.length} completed, ${L.length} stopped).</div>`; $('jWhatOut').textContent = ''; return; }
+  const pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '—';
+  const fast = L.filter(e => e.out.hitBar <= 3).length, pk = L.filter(e => e.out.peakR != null), near = pk.filter(e => e.out.peakR >= 0.7).length, rc = L.filter(e => e.out.rec != null), back = rc.filter(e => e.out.rec).length;
+  const hits = L.map(e => e.out.hitBar).sort((a, b) => a - b), med = hits[Math.floor(hits.length / 2)];
+  let notes = `<div class="lossnote"><b>${L.length}</b> of ${done.length} completed signals hit the stop (${pct(L.length, done.length)}). Median time to stop: <b>${med}</b> candles; <b>${pct(fast, L.length)}</b> were stopped within 3 candles.</div>`;
+  if (pk.length >= 5) notes += `<div class="lossnote"><b>${pct(near, pk.length)}</b> of stopped signals had first moved at least 0.7R my way (${near} of ${pk.length}): the idea worked, then reversed.</div>`;
+  if (rc.length >= 5) notes += `<div class="lossnote"><b>${pct(back, rc.length)}</b> of stopped signals still reached the target within 12 candles after the stop (${back} of ${rc.length}). ${back / rc.length >= 0.3 ? 'High: the stop may be too tight for these coins, test a wider one.' : 'Low: most stops were real failures, not shake-outs.'}</div>`;
+  const rows = LOSS_COND.map(([n, f]) => { const w = done.filter(f), wo = done.filter(e => !f(e)); if (w.length < 5 || wo.length < 5) return null;
+    const a = 100 * w.filter(e => e.out.res === 'loss').length / w.length, b = 100 * wo.filter(e => e.out.res === 'loss').length / wo.length; return {n, k: w.length, a, b, d: a - b}; }).filter(Boolean).sort((x, y) => y.d - x.d);
+  notes += rows.length ? `<div class="tablewrap" style="border:0;margin-top:8px"><table class="jedge"><thead><tr><th class="l">Condition</th><th>Signals</th><th>Stopped with it</th><th>Stopped without</th><th>Difference</th><th class="l">Reading</th></tr></thead><tbody>${rows.map(r => `<tr class="${r.k < 10 ? 'low' : ''}"><td class="l">${r.n}</td><td>${r.k}</td><td>${r.a.toFixed(0)}%</td><td>${r.b.toFixed(0)}%</td><td class="${r.d >= 10 ? 'dn' : r.d <= -10 ? 'up' : 'mu'}">${r.d > 0 ? '+' : ''}${r.d.toFixed(0)} pp</td><td class="l mu">${r.k < 10 ? 'too few' : r.d >= 10 ? 'loses more often' : r.d <= -10 ? 'loses less often' : 'no clear difference'}</td></tr>`).join('')}</tbody></table></div>` : '';
+  box.innerHTML = notes;
+  renderWhatIf(es);
+}
+function renderWhatIf(es){
+  const done = es.filter(e => e.out && e.out.res), on = [...document.querySelectorAll('#jWhat2 [data-wi]')].filter(c => c.checked).map(c => WI[c.dataset.wi]), out = $('jWhatOut');
+  if (!on.length || !done.length){ out.textContent = on.length ? '' : 'Nothing ticked: showing all completed signals would give the same numbers as the table above.'; return; }
+  const kept = done.filter(e => !on.some(f => f(e))), a = jStats(done), b = jStats(kept), sum = l => l.reduce((t, e) => t + (e.out.rr || 0), 0);
+  const f = v => v == null ? '—' : fR(v), w = v => v == null ? '—' : v.toFixed(0) + '%';
+  out.innerHTML = `Kept <b>${kept.length}</b> of ${done.length} signals · win rate ${w(a.win)} → <b>${w(b.win)}</b> · average ${f(a.avgR)} → <b class="${cls(b.avgR)}">${f(b.avgR)}</b> · total ${fR(sum(done))} → <b class="${cls(sum(kept))}">${fR(sum(kept))}</b>${kept.length < 30 ? '<br><span class="dn">Fewer than 30 signals kept: this can easily be luck. Wait for more data before changing any rule.</span>' : ''}`;
+}
 function jEquity(es){
   const d = es.filter(e => e.out && e.out.res && Number.isFinite(e.out.rr)).sort((a, b) => (a.ct + (a.out.hitBar || 0) * TF_MS[a.tf]) - (b.ct + (b.out.hitBar || 0) * TF_MS[b.tf]));
   const box = $('jEq');
@@ -2349,7 +2401,7 @@ function renderJournal(){
     + card('Win rate', st.win == null ? '—' : st.win.toFixed(0) + '%', 'target before stop', st.win >= 50 ? 'bull' : '')
     + card('Expectancy', st.avgR == null ? '—' : fR(st.avgR), 'average R per signal', st.avgR > 0 ? 'bull' : st.avgR < 0 ? 'bear' : '')
     + card('Avg +12 candles', st.r12 == null ? '—' : fmtPct(st.r12), 'return in your favour', st.r12 > 0 ? 'bull' : st.r12 < 0 ? 'bear' : '');
-  jEquity(es);
+  jEquity(es); renderLoss(es);
   const groups = edgeGroups(es), maxR = Math.max(0.5, ...groups.map(g => Math.abs(g.avgR || 0)));
   let lastG = '';
   $('jEdge').innerHTML = groups.length ? groups.map(g => { const first = g.group !== lastG; lastG = g.group; const w = 50 * Math.abs(g.avgR || 0) / maxR;
@@ -2484,6 +2536,7 @@ async function tgAlertParts(items){
   for (const e of items.slice(0, 6)){
     const lines = [], base = S.rows.find(r => r.sym === e.sym), x = base ? derive(base, c) : null;
     lines.push(`<b>${esc(e.sym.replace('USDT', ''))} ${e.dir > 0 ? 'LONG 🟢' : 'SHORT 🔴'}</b> · ${x ? (e.dir > 0 ? x.bull : x.bear) + '/5' : ''}${x && x.G ? ' · <b>Grade ' + x.G.grade + '</b>' : ''} · ${e.kind === 'setup' ? 'triggered' : 'aligned'}`);
+    if (base && base.mcap > 0) lines.push(`Mkt cap $${fmtBig(base.mcap)}${base.rank ? ' · rank #' + base.rank : ''}`);
     if (x && x.rs && x.rs.b7 != null) lines.push(`RS 7d: vs BTC ${ppf(x.rs.b7)} pp · vs ETH ${ppf(x.rs.e7)} pp`);
     if (x && x.G && x.G.flags.length) lines.push('⚠️ ' + esc(x.G.flags.join(', ')));
     if (x){
@@ -3948,7 +4001,7 @@ function anaRender(){
   else { const sup = f.max || f.tot;
     facts = `<div class="anaf">${rowf('Mkt cap', fmtBig(f.mc))}${f.rank ? rowf('Rank', '#' + f.rank) : ''}${f.fdv && f.mc ? rowf('FDV / MCap', (f.fdv / f.mc).toFixed(2) + '×') : ''}${sup && f.circ ? rowf('Circulating', Math.min(100, f.circ / sup * 100).toFixed(0) + '%') : ''}${f.ath != null ? rowf('From ATH', `<span class="${cls(f.ath)}">${f.ath.toFixed(0)}%</span>`) : ''}${info ? rowf('Vol 24h', fmtBig(info.qv)) : ''}</div>`; }
   const b = info ? info.base.replace(/^(1000000|1000|1M)/, '') : '', cg = f && f.id ? `https://www.coingecko.com/en/coins/${f.id}` : `https://www.coingecko.com/en/search?query=${encodeURIComponent(b)}`;
-  body.innerHTML = `<div class="panel anaverdict"><b>Short analysis.</b> ${anaSummary(L, row, ANA.tf)}<span class="mu">Rule-based summary of the screener's own data and the levels below, not a prediction.</span></div>
+  body.innerHTML = `<div class="panel anaverdict"><b>Technical analysis.</b> ${anaSummary(L, row, ANA.tf)}<span class="mu">Rule-based summary of the screener's own data and the levels below, not a prediction.</span></div>
   ${anaMtfStrip(L)}
   <div class="anagrid">
     <div class="panel"><div class="row anatog" id="anaTog">
@@ -4079,6 +4132,7 @@ $('secLoad').onclick = loadSectors;
 loadJournal();
 $('jUpdate').onclick = () => updateOutcomes(true);
 $('jCsv').onclick = journalCSV;
+$('jWhat2').addEventListener('change', () => renderWhatIf(J.entries.filter(e => e.kind !== 'div')));
 $('jBackup').onclick = () => downloadText(JSON.stringify({v: 1, entries: J.entries}), `onslaught-journal-${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
 $('jRestore').onchange = async e => { const f = e.target.files[0]; if (!f) return;
   try { const d = JSON.parse(await f.text()), add = Array.isArray(d.entries) ? d.entries : [], ids = new Set(J.entries.map(x => x.id)); let n = 0;
