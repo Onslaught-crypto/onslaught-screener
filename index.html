@@ -191,7 +191,7 @@ td.trigs{white-space:nowrap}
 .anagrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;margin-bottom:12px;align-items:stretch}.anagrid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;align-items:start}
 .anaside{display:grid;gap:12px}.card2{background:var(--panel);border-radius:10px;padding:12px 14px}.card2 h4{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .card2 .lv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:12.5px}.card2 h4+.lv{border-top:0}.card2 .anapr{border-top:2px solid var(--accent)}
-.mono{font-family:var(--mono)}.wr{color:var(--warn)}.anatog{margin-bottom:8px;gap:6px}.anazoom{display:inline-flex;gap:6px;margin-left:4px}.anazoom .tachip{min-width:30px;text-align:center}#anaChartBox{touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}#anaChartBox.drag{cursor:grabbing}.anahov{margin-left:auto;font:11px var(--mono)}
+.mono{font-family:var(--mono)}.wr{color:var(--warn)}.anatog{margin-bottom:8px;gap:6px}.anazoom{display:inline-flex;gap:6px;margin-left:4px}.anazoom .tachip{min-width:30px;text-align:center}#anaChartBox{touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}#anaChartBox.drag{cursor:grabbing}.anahov{margin-left:auto;font:11px var(--mono)}.anaavi{font-size:12px;margin:0 0 8px;line-height:1.5}
 .anaf{display:flex;gap:18px;flex-wrap:wrap}.anaf .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}.anaf .v{font:600 15px var(--mono)}
 a.abtn{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 11px;color:var(--text);text-decoration:none}a.abtn:hover{border-color:var(--accent)}
 @media (max-width:900px){.anagrid,.anagrid2{grid-template-columns:minmax(0,1fr)}#anaIn{width:100%}.anapick{flex:1;min-width:150px}}
@@ -804,6 +804,11 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
     <div class="stats" id="jCards"></div>
     <div class="panel"><div class="rot-head"><b>Equity curve</b> <span class="mu" id="jEqNote">Running total of R over completed signals, oldest to newest (setups only, 1R each).</span></div><div id="jEq"></div></div>
+    <div class="panel" id="jRunPanel">
+      <div class="rot-head"><b>Runner results</b> <span class="mu">What the runner really alerted you, followed with its own plan (three targets, stop to entry after TP1). Load trades.csv from the runner folder; the numbers are kept in this browser.</span></div>
+      <div class="row"><label class="filebtn">Load trades.csv<input id="jRunFile" type="file" accept=".csv,text/csv" hidden></label><button id="jRunClear">Clear</button><span class="mu" id="jRunStatus" style="font-size:12px"></span></div>
+      <div id="jRunOut"></div>
+    </div>
     <div class="panel">
       <div class="rot-head"><b>Where is the edge?</b> <span class="mu">Simulated trade per signal: entry at the signal close, stop 1.5 ATR away (1R), target 1.5R, closed after 24 candles. Groups with fewer than 10 completed signals are dimmed: too few to trust.</span></div>
       <div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Signals</th><th>Win rate</th><th>Avg R</th><th class="l">Expectancy</th><th>Avg +12</th><th>Avg MFE</th><th>Avg MAE</th></tr></thead><tbody id="jEdge"></tbody></table></div>
@@ -2415,7 +2420,7 @@ function renderJournal(){
     + card('Win rate', st.win == null ? '—' : st.win.toFixed(0) + '%', 'target before stop', st.win >= 50 ? 'bull' : '')
     + card('Expectancy', st.avgR == null ? '—' : fR(st.avgR), 'average R per signal', st.avgR > 0 ? 'bull' : st.avgR < 0 ? 'bear' : '')
     + card('Avg +12 candles', st.r12 == null ? '—' : fmtPct(st.r12), 'return in your favour', st.r12 > 0 ? 'bull' : st.r12 < 0 ? 'bear' : '');
-  jEquity(es); renderLoss(es);
+  jEquity(es); renderLoss(es); renderRun();
   const groups = edgeGroups(es), maxR = Math.max(0.5, ...groups.map(g => Math.abs(g.avgR || 0)));
   let lastG = '';
   $('jEdge').innerHTML = groups.length ? groups.map(g => { const first = g.group !== lastG; lastG = g.group; const w = 50 * Math.abs(g.avgR || 0) / maxR;
@@ -2440,9 +2445,33 @@ function renderJournal(){
     : '<tr><td class="empty" colspan="16">The log is empty.</td></tr>';
   $('jPager').innerHTML = pages > 1 ? `<span class="pinfo">${list.length} signals</span>` + Array.from({length: pages}, (_, i) => `<button data-jp="${i}" class="${i === J.page ? 'on' : ''}">${i * size + 1}–${Math.min((i + 1) * size, list.length)}</button>`).join('') : '';
 }
+/* Runner results: the runner's own trades.csv (what it alerted and followed with the real plan), loaded by hand because the runner lives on another machine. */
+const RUN = {rows: []};
+async function runLoad(){ const v = await Cache.get('runnerTrades'); RUN.rows = Array.isArray(v) ? v : []; renderRun(); }
+function runParse(text){
+  const L = text.split(/\r?\n/).filter(Boolean), h = (L.shift() || '').split(','), ix = n => h.indexOf(n);
+  if (ix('r_multiple') < 0 || ix('pair') < 0) throw new Error("That does not look like the runner's trades.csv.");
+  return L.map(l => { const c = l.split(','); return {open: c[ix('opened')], close: c[ix('closed')], sym: c[ix('pair')], tf: c[ix('tf')], side: c[ix('side')], grade: c[ix('grade')] || '?', res: c[ix('result')], hit: +c[ix('targets_hit')], r: +c[ix('r_multiple')], bars: +c[ix('candles')]}; }).filter(r => Number.isFinite(r.r) && r.open);
+}
+function renderRun(){
+  const box = $('jRunOut'); if (!box) return; const d = RUN.rows;
+  if (!d.length){ box.innerHTML = '<div class="mu" style="padding:6px 0">Nothing loaded yet. On the server the file is ~/onslaught-runner/trades.csv; copy it to your PC with scp and load it here.</div>'; return; }
+  const sum = l => l.reduce((t, r) => t + r.r, 0), st = l => ({n: l.length, win: l.length ? 100 * l.filter(r => r.r > 0).length / l.length : null, avg: l.length ? sum(l) / l.length : null, tot: sum(l)});
+  const mom = new Set(d.map(r => r.tf + '|' + r.open + '|' + r.side)).size, byClose = d.slice().sort((a, b) => a.close < b.close ? -1 : 1);
+  let run = 0, pk = 0, dd = 0; for (const r of byClose){ run += r.r; pk = Math.max(pk, run); dd = Math.max(dd, pk - run); }
+  const a = st(d), grp = [['All alerts', d]];
+  for (const g of ['A', 'B', 'C']){ const l = d.filter(r => r.grade === g); if (l.length) grp.push(['Grade ' + g, l]); }
+  for (const sd of ['long', 'short']){ const l = d.filter(r => r.side === sd); if (l.length) grp.push([sd === 'long' ? 'Long' : 'Short', l]); }
+  for (const tf of TFS){ const l = d.filter(r => r.tf === tf); if (l.length) grp.push(['Timeframe ' + tf.toUpperCase(), l]); }
+  for (const [k, t] of [['stop', 'Stopped'], ['breakeven', 'Back to entry after TP1'], ['target', 'All 3 targets'], ['time', 'Closed on time']]){ const l = d.filter(r => r.res === k); if (l.length) grp.push(['Ended: ' + t, l]); }
+  const f = v => v == null ? '—' : fR(v);
+  box.innerHTML = `<div class="lossnote"><b>${a.n}</b> completed alerts from <b>${mom}</b> separate moments · win rate ${a.win.toFixed(0)}% (any profit) · average ${f(a.avg)} · total <b class="${cls(a.tot)}">${fR(a.tot)}</b> · deepest drawdown <b class="dn">−${dd.toFixed(1)}R</b>${a.n < 30 ? '<br><span class="dn">Fewer than 30 completed alerts: this can easily be luck.</span>' : ''}</div>
+    <div class="tablewrap" style="border:0;margin-top:8px"><table class="jedge"><thead><tr><th class="l">Group</th><th>Alerts</th><th>Win rate</th><th>Avg R</th><th>Total R</th></tr></thead><tbody>${grp.map(([n, l]) => { const s2 = st(l); return `<tr class="${l.length < 10 ? 'low' : ''}"><td class="l">${n}</td><td>${s2.n}</td><td>${s2.win.toFixed(0)}%</td><td class="${cls(s2.avg)}">${f(s2.avg)}</td><td class="${cls(s2.tot)}">${fR(s2.tot)}</td></tr>`; }).join('')}</tbody></table></div>`;
+}
 function journalCSV(){
   const head = ['signal_time','pair','tf','side','kind','score','triggers','regime','mtf','ext_atr','positioning','funding_crowded','entry','atr','r4_pct','r12_pct','r24_pct','mfe_pct','mae_pct','result','r_multiple','bars_to_result','grade','grade_pts','rs7_vs_btc_pp','wave_size','peak_r_before_stop','target_hit_after_stop'];
-  const lines = [head.join(',')].concat(J.entries.map(e => { const o = e.out || {}; return [new Date(e.ct + TF_MS[e.tf]).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.kind, e.score, e.trig.join('|'), e.regime, e.mtf ?? '', e.ext?.toFixed(2) ?? '', e.pos ?? '', e.fFlag === e.dir ? 1 : 0, e.price, e.atr, o.r4?.toFixed(3) ?? '', o.r12?.toFixed(3) ?? '', o.r24?.toFixed(3) ?? '', o.mfe?.toFixed(3) ?? '', o.mae?.toFixed(3) ?? '', o.expired ? 'expired' : o.res ?? 'open', o.rr?.toFixed(3) ?? '', o.hitBar ?? '', e.grade ?? '', e.pts ?? '', e.rs7 != null ? e.rs7.toFixed(2) : '', e.wave ?? '', o.peakR != null ? o.peakR.toFixed(2) : '', o.rec == null ? '' : o.rec ? 1 : 0].join(','); }));
+  const wv = new Map(); for (const e of J.entries) if (e.kind !== 'div'){ const k = e.tf + '|' + e.ct + '|' + e.kind + '|' + e.dir; wv.set(k, (wv.get(k) || 0) + 1); }   // older entries get their wave size counted from the log
+  const lines = [head.join(',')].concat(J.entries.map(e => { const o = e.out || {}; return [new Date(e.ct + TF_MS[e.tf]).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.kind, e.score, e.trig.join('|'), e.regime, e.mtf ?? '', e.ext?.toFixed(2) ?? '', e.pos ?? '', e.fFlag === e.dir ? 1 : 0, e.price, e.atr, o.r4?.toFixed(3) ?? '', o.r12?.toFixed(3) ?? '', o.r24?.toFixed(3) ?? '', o.mfe?.toFixed(3) ?? '', o.mae?.toFixed(3) ?? '', o.expired ? 'expired' : o.res ?? 'open', o.rr?.toFixed(3) ?? '', o.hitBar ?? '', e.grade ?? '', e.pts ?? '', e.rs7 != null ? e.rs7.toFixed(2) : '', e.wave ?? wv.get(e.tf + '|' + e.ct + '|' + e.kind + '|' + e.dir) ?? '', o.peakR != null ? o.peakR.toFixed(2) : '', o.rec == null ? '' : o.rec ? 1 : 0].join(','); }));
   downloadText(lines.join('\n'), `signal-journal-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
 }
 function downloadText(text, name, type){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
@@ -3785,9 +3814,9 @@ function dvBanner(x){
 /* ---------- Analysis tab: one coin, its structure and key levels, a rule-based summary, token facts ---------- */
 const ANA_KEY = 'onslaught-ana', ANA_TFS = ['15m', '1h', '4h', '1d', '1w'];
 const ANA = {sym: null, tf: '4h', cd: null, L: null, row: null, info: null, facts: null, err: '', busy: false, tok: 0, uni: null, vis: null,
-  show: {sr: true, srp: false, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], deriv: null, mtf: null, btc: null, sel: null, anchorT: null, avm: 'major', view: {N: null, off: 0}, chartH: 430};
-(function(){ try { const o = JSON.parse(localStorage.getItem(ANA_KEY) || '{}'); if (o.show) Object.assign(ANA.show, o.show); if (Array.isArray(o.recent)) ANA.recent = o.recent.slice(0, 6); if (ANA_TFS.includes(o.tf)) ANA.tf = o.tf; if (o.avm === 'latest') ANA.avm = 'latest'; } catch {} })();
-const anaSave = () => { try { localStorage.setItem(ANA_KEY, JSON.stringify({show: ANA.show, recent: ANA.recent, tf: ANA.tf, avm: ANA.avm})); } catch {} };
+  show: {sr: true, srp: false, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], deriv: null, mtf: null, btc: null, sel: null, anchorT: null, avm: 'auto', avInfo: '', view: {N: null, off: 0}, chartH: 430};
+(function(){ try { const o = JSON.parse(localStorage.getItem(ANA_KEY) || '{}'); if (o.show) Object.assign(ANA.show, o.show); if (Array.isArray(o.recent)) ANA.recent = o.recent.slice(0, 6); if (ANA_TFS.includes(o.tf)) ANA.tf = o.tf; if (['auto', 'major', 'latest'].includes(o.av3)) ANA.avm = o.av3; } catch {} })();
+const anaSave = () => { try { localStorage.setItem(ANA_KEY, JSON.stringify({show: ANA.show, recent: ANA.recent, tf: ANA.tf, av3: ANA.avm})); } catch {} };
 const ANA_NAMES = {EQH: 'Equal highs', EQL: 'Equal lows', PDH: 'Prev day high', PDL: 'Prev day low', PWH: 'Prev week high', PWL: 'Prev week low'};
 async function anaUniverse(){
   if (ANA.uni && Date.now() - ANA.uni.t < 6e4) return ANA.uni.list;
@@ -3868,7 +3897,9 @@ function anaChart(L, cd, w, h){
   const o = [`<svg id="anaSvg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Candlestick chart with key levels"><defs><clipPath id="anaClip"><rect x="${pad.l}" y="${pad.t}" width="${pw}" height="${ph}"/></clipPath></defs><rect width="${w}" height="${h}" fill="#0e0f14" rx="8"/>`];
   const gridLbl = [];                                           // scale numbers are drawn after the price tags and skipped where a tag already sits
   for (let k = 0; k <= 4; k++){ const p = lo + (hi - lo) * k / 4; o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(p).toFixed(1)}" y2="${Y(p).toFixed(1)}" stroke="rgba(255,255,255,.05)"/>`); gridLbl.push([Y(p), p.toFixed(dec > 4 ? 4 : dec)]); }
-  const txt = (x, y, t, col, anchor) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${col}" font-size="10"${anchor ? ` text-anchor="${anchor}"` : ''}>${esc(t)}</text>`;
+  const used = [];                                               // label boxes already placed, so the AVWAP labels can stay clear of them
+  const txt = (x, y, t, col, anchor) => { const wd = String(t).length * 5.8; used.push({x0: anchor === 'end' ? x - wd : anchor === 'middle' ? x - wd / 2 : x, x1: anchor === 'end' ? x : anchor === 'middle' ? x + wd / 2 : x + wd, y});
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${col}" font-size="10"${anchor ? ` text-anchor="${anchor}"` : ''}>${esc(t)}</text>`; };
   o.push('<g clip-path="url(#anaClip)">');
   const rx0 = Math.max(s0, cd.length - L.range.R), xr = X(rx0) - pw / N / 2;
   if (show.pd){
@@ -3899,20 +3930,27 @@ function anaChart(L, cd, w, h){
   vis.forEach((k, j) => { const i = s0 + j, col = k[4] >= k[1] ? bull : bear;
     o.push(`<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="${Y(k[2]).toFixed(1)}" y2="${Y(k[3]).toFixed(1)}" stroke="${col}"/><rect x="${(X(i) - bw / 2).toFixed(1)}" y="${Y(Math.max(k[1], k[4])).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(Math.abs(Y(k[1]) - Y(k[4])), 1).toFixed(1)}" fill="${col}"/>`); });
   if (show.vw){
-    const mj = ANA.avm !== 'latest', lines = [[mj ? L.avwapH : L.avwapH2, mj ? 'AVWAP · major high' : 'AVWAP · latest high', bear], [mj ? L.avwapL : L.avwapL2, mj ? 'AVWAP · major low' : 'AVWAP · latest low', bull]];
+    const mj = (ANA.avm === 'auto' ? (ANA.tf === '1d' || ANA.tf === '1w' ? 'major' : 'latest') : ANA.avm) === 'major', avi = [], lines = [[mj ? L.avwapH : L.avwapH2, mj ? 'AVWAP · major high' : 'AVWAP · latest high', bear], [mj ? L.avwapL : L.avwapL2, mj ? 'AVWAP · major low' : 'AVWAP · latest low', bull]];
     if (ANA.anchorT != null){ const ci = cd.findIndex(k => k[0] >= ANA.anchorT); if (ci >= 0) lines.push([{i: ci, v: taAvwap(cd, ci)}, 'AVWAP · picked', '#4dd0e1']); }
     const halo = (x, y, t, col) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${col}" font-size="10" font-weight="600" stroke="#0e0f14" stroke-width="3" paint-order="stroke" stroke-linejoin="round">${esc(t)}</text>`;
     for (const [A, label, col] of lines){
       if (!A || A.i >= e1) continue; const ai = A.i, vals = A.v, pts = [], j0 = Math.max(ai, s0);
       for (let i = j0; i < e1; i++) pts.push(`${X(i).toFixed(1)},${Y(vals[i - ai]).toFixed(1)}`);
       if (pts.length > 1){ avTags.push([vals[e1 - 1 - ai], col]);
-        const fp = v => v >= 1 ? v.toFixed(dec > 4 ? 4 : dec) : v.toPrecision(4), low = /low/.test(label), vis0 = ai >= s0,
-          lt = vis0 ? `${label} · ${fp(vals[0])}` : label, jl = (() => { for (let i = j0; i < e1; i++){ const yy = Y(vals[i - ai]); if (yy > pad.t + 12 && yy < pad.t + ph - 18) return i; } return j0; })(),   // first point of the line that is inside the plot
-          ly0 = Y(vals[jl - ai]) + (low ? 15 : -8), lx = Math.min(Math.max(X(jl) + 7, pad.l + 4), w - pad.r - lt.length * 6 - 8);   // label at the start of the line, with the anchor price when the anchor is on screen
-        o.push(`<polyline fill="none" stroke="${col}" stroke-width="1.8" points="${pts.join(' ')}"/>${halo(lx, ly0, lt, col)}`); }
-      if (ai >= s0 && ai < e1) o.push(`<circle cx="${X(ai).toFixed(1)}" cy="${Y(vals[0]).toFixed(1)}" r="3.5" fill="${col}"/>`);
+        const low = /low/.test(label), wd = label.length * 6.1,
+          jl = (() => { for (let i = j0; i < e1; i++){ const yy = Y(vals[i - ai]); if (yy > pad.t + 12 && yy < pad.t + ph - 18) return i; } return j0; })(),   // first point of the line that is inside the plot
+          by = Y(vals[jl - ai]) + (low ? 15 : -8), xr = Math.min(Math.max(X(jl) + 7, pad.l + 4), w - pad.r - wd - 8), xl = Math.max(pad.l + 4, X(jl) - 7 - wd),
+          cands = X(jl) + wd + 16 < w - pad.r ? [xr, xl] : [xl, xr];   // near the right edge the label goes to the left of the anchor, away from the right-aligned labels
+        let lx = xr, ly = by, found = false;
+        for (const dy of [0, -13, 13, -26, 26, -39, 39]){ for (const cx of cands){ const yy = by + dy; if (yy < pad.t + 10 || yy > pad.t + ph - 4) continue;
+          if (!used.some(u => Math.abs(u.y - yy) < 12 && u.x0 < cx + wd && u.x1 > cx)){ lx = cx; ly = yy; found = true; break; } } if (found) break; }
+        used.push({x0: lx, x1: lx + wd, y: ly});
+        o.push(`<polyline fill="none" stroke="${col}" stroke-width="1.8" points="${pts.join(' ')}"/>${halo(lx, ly, label, col)}`); }
+      avi.push({label, col, i: ai, anchor: vals[0], now: vals[e1 - 1 - ai]});
+      if (ai >= s0 && ai < e1) o.push(`<circle cx="${X(ai).toFixed(1)}" cy="${Y(vals[0]).toFixed(1)}" r="4" fill="${col}" stroke="#0e0f14" stroke-width="1.5"/>`);
     }
-  }
+    ANA.avRows = avi;
+  } else ANA.avRows = [];
   const selI = ANA.sel && L.list.find(x => anaKey(x) === ANA.sel);
   if (selI){ if (selI.lo === selI.hi) o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(selI.mid).toFixed(1)}" y2="${Y(selI.mid).toFixed(1)}" stroke="#fff" stroke-width="2"/>`); else o.push(`<rect x="${pad.l}" y="${Y(selI.hi).toFixed(1)}" width="${(w - pad.l - pad.r).toFixed(1)}" height="${Math.max(Y(selI.lo) - Y(selI.hi), 3).toFixed(1)}" fill="rgba(255,255,255,.07)" stroke="#fff" stroke-width="1.6" stroke-dasharray="5 3"/>`); }
   o.push(`<line id="anaCross" x1="0" x2="0" y1="${pad.t}" y2="${pad.t + ph}" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 3" visibility="hidden"/></g>`);
@@ -3920,16 +3958,23 @@ function anaChart(L, cd, w, h){
   if (show.srp){ const k = show.vw ? 2 : 3, near = (arr, d) => arr.sort((x, y) => d(x) - d(y)).slice(0, k);   // only the edge facing the price: one number per zone
     for (const z of near(srZ.filter(z => z.it.mid > L.price), z => z.it.lo - L.price)) srTags.push([z.it.lo, z.zc]);
     for (const z of near(srZ.filter(z => z.it.mid <= L.price), z => L.price - z.it.hi)) srTags.push([z.it.hi, z.zc]); }
-  if (srTags.length || avTags.length){               // S/R zone edges and the current AVWAP values as tags on the price scale, nudged apart so none overlap
-    const pf = v => v >= 1 ? v.toFixed(dec > 4 ? 4 : dec) : v.toPrecision(4), tg = srTags.concat(show.vw ? avTags : []).filter(t => t[0] >= lo && t[0] <= hi).map(t => ({p: t[0], c: t[1], y: Y(t[0])})).sort((x, y) => x.y - y.y);
-    for (let i = 1; i < tg.length; i++) if (tg[i].y - tg[i - 1].y < 14) tg[i].y = tg[i - 1].y + 14;
-    for (const t of tg) tagYs.push(t.y);
-    for (const t of tg) o.push(`<line x1="${(w - pad.r - 6).toFixed(1)}" x2="${w - pad.r}" y1="${Y(t.p).toFixed(1)}" y2="${t.y.toFixed(1)}" stroke="${t.c}"/><rect x="${w - pad.r}" y="${(t.y - 7).toFixed(1)}" width="${pad.r - 4}" height="14" rx="3" fill="${t.c}" opacity=".92"/><text x="${w - pad.r + 5}" y="${(t.y + 3.5).toFixed(1)}" fill="#0e0f14" font-size="10" font-weight="700">${pf(t.p)}</text>`);
+  if (srTags.length || avTags.length){               // AVWAP values and S/R zone edges as tags on the price scale. The price tag and AVWAP tags come first; an S/R tag that would sit on one of them is left out; the rest are nudged apart
+    const pf = v => v >= 1 ? v.toFixed(dec > 4 ? 4 : dec) : v.toPrecision(4), inR = t => t[0] >= lo && t[0] <= hi, avT = show.vw ? avTags.filter(inR) : [],
+      srK = srTags.filter(inR).filter(t => !avT.some(a => Math.abs(Y(a[0]) - Y(t[0])) < 14) && (off || Math.abs(Y(L.price) - Y(t[0])) >= 14)),
+      tg = srK.concat(avT).map(t => ({p: t[0], c: t[1], y: Y(t[0])})).concat(off ? [] : [{p: L.price, y: Y(L.price), fixed: true}]).sort((x, y) => x.y - y.y);
+    for (let it = 0; it < 3; it++){
+      for (let i = 1; i < tg.length; i++) if (tg[i].y - tg[i - 1].y < 14){ if (tg[i].fixed) tg[i - 1].y = tg[i].y - 14; else tg[i].y = tg[i - 1].y + 14; }
+      for (let i = tg.length - 2; i >= 0; i--) if (tg[i + 1].y - tg[i].y < 14 && !tg[i].fixed) tg[i].y = tg[i + 1].y - 14;
+    }
+    for (const t of tg) if (!t.fixed) tagYs.push(t.y);
+    for (const t of tg) if (!t.fixed) o.push(`<line x1="${(w - pad.r - 6).toFixed(1)}" x2="${w - pad.r}" y1="${Y(t.p).toFixed(1)}" y2="${t.y.toFixed(1)}" stroke="${t.c}"/><rect x="${w - pad.r}" y="${(t.y - 7).toFixed(1)}" width="${pad.r - 4}" height="14" rx="3" fill="${t.c}" opacity=".92"/><text x="${w - pad.r + 5}" y="${(t.y + 3.5).toFixed(1)}" fill="#0e0f14" font-size="10" font-weight="700">${pf(t.p)}</text>`);
   }
   const yl = Y(L.price), taken = tagYs.concat(off ? [] : [yl]);
   for (const [gy, gt] of gridLbl) if (!taken.some(ty => Math.abs(ty - gy) < 13)) o.push(`<text x="${w - pad.r + 6}" y="${(gy + 3).toFixed(1)}" fill="${dim}" font-size="10">${gt}</text>`);
   if (!off) o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${yl.toFixed(1)}" y2="${yl.toFixed(1)}" stroke="${acc}" stroke-dasharray="3 3"/><rect x="${w - pad.r}" y="${(yl - 9).toFixed(1)}" width="${pad.r - 4}" height="18" rx="3" fill="${cssv('--accent')}"/><text x="${w - pad.r + 6}" y="${(yl + 4).toFixed(1)}" fill="#fff" font-size="11" font-weight="600">${L.price.toFixed(dec > 4 ? 4 : dec)}</text>`);
   const fmtT = t => { const d = new Date(t); return ANA.tf === '1d' || ANA.tf === '1w' ? d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) : d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) + ' ' + d.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'}); };
+  { const fv = v => v >= 1 ? v.toFixed(dec > 4 ? 4 : dec) : v.toPrecision(4);   // anchor times and prices live here, not on the chart, so the chart stays readable
+    ANA.avInfo = show.vw && ANA.avRows.length ? ANA.avRows.map(a => `<span style="color:${a.col}">●</span> ${a.label.replace('AVWAP · ', 'AVWAP ')}: anchored ${fmtT(cd[a.i][0])} at <b class="mono">${fv(a.anchor)}</b>, now <b class="mono">${fv(a.now)}</b>`).join(' &nbsp;·&nbsp; ') : ''; }
   for (let q = 0; q < 5; q++){ const i = s0 + Math.round((N - 1) * q / 4); o.push(txt(Math.min(Math.max(X(i), pad.l + 24), w - pad.r - 30), h - 6, fmtT(cd[i][0]), dim, 'middle')); }
   o.push('</svg>'); ANA.vis = {s0, N, e1, pad, pw, w}; return o.join('');
 }
@@ -4072,9 +4117,9 @@ function anaRender(){
   <div class="anagrid">
     <div class="panel"><div class="row anatog" id="anaTog">
       ${[['sr', 'S/R'], ['srp', 'S/R prices'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity'], ['vp', 'Volume profile'], ['vw', 'AVWAP'], ...(sym === 'BTCUSDT' ? [] : [['rel', 'vs BTC']])].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
-      ${ANA.show.vw ? `<button class="tachip" data-av="mode" title="Which swings the two AVWAP lines start from">AVWAP anchor: ${ANA.avm === 'latest' ? 'latest swing' : 'major swing'}</button>${ANA.anchorT != null ? '<button class="tachip" data-av="reset" title="Remove the picked-candle AVWAP">Clear picked</button>' : ''}` : ''}
+      ${ANA.show.vw ? `<button class="tachip" data-av="mode" title="Which swings the two AVWAP lines start from. Auto uses the major swings on 1D and 1W, where the latest ones are only a few candles old, and the latest swings on shorter timeframes.">AVWAP anchor: ${ANA.avm === 'latest' ? 'latest swing' : ANA.avm === 'major' ? 'major swing' : 'auto (' + (ANA.tf === '1d' || ANA.tf === '1w' ? 'major' : 'latest') + ')'}</button>${ANA.anchorT != null ? '<button class="tachip" data-av="reset" title="Remove the picked-candle AVWAP">Clear picked</button>' : ''}` : ''}
       <span class="anazoom"><button class="tachip" data-z="out" title="Zoom out (mouse wheel)" aria-label="Zoom out">−</button><button class="tachip" data-z="in" title="Zoom in (mouse wheel)" aria-label="Zoom in">+</button><button class="tachip" data-z="reset" ${ANA.view && (ANA.view.N || ANA.view.off) ? '' : 'hidden'}>Reset zoom</button></span>
-      <span class="mu anahov" id="anaHov"></span></div><div id="anaChartBox"></div><div id="anaRelBox" class="anarel"></div></div>
+      <span class="mu anahov" id="anaHov"></span></div><div class="mu anaavi" id="anaAvInfo"></div><div id="anaChartBox"></div><div id="anaRelBox" class="anarel"></div></div>
     <div class="anaside">
       <div class="card2"><h4>Key levels (nearest first)</h4>${above.map(x => lrow(x, '▲')).join('')}${at.map(x => lrow(x, '●')).join('')}<div class="lv anapr"><b>● Price</b><b class="mono">${L.price.toFixed(dec > 4 ? 4 : dec)}</b></div>${below.map(x => lrow(x, '▼')).join('')}${above.length + below.length + at.length ? '' : '<p class="mu">No clear levels near price.</p>'}</div>
       <div class="card2"><h4>Checklist</h4>${check}</div>
@@ -4084,7 +4129,7 @@ function anaRender(){
     <div class="card2"><h4>Token and fundamentals</h4>${facts}<div class="note">Source: CoinGecko and Binance. ${tags ? 'Sector: ' + tags : ''}</div></div>
     <div class="card2"><h4>News and research (opens in a new tab)</h4><div class="row"><a class="abtn" href="${cg}" target="_blank" rel="noopener">CoinGecko page</a><a class="abtn" href="https://cryptopanic.com/news/${encodeURIComponent(b.toLowerCase())}/" target="_blank" rel="noopener">CryptoPanic news</a><a class="abtn" href="https://x.com/search?q=%24${encodeURIComponent(b)}&f=live" target="_blank" rel="noopener">X search $${esc(b)}</a><a class="abtn" href="https://www.tradingview.com/symbols/${sym}/ideas/" target="_blank" rel="noopener">TradingView ideas</a></div><div class="note">A live news feed needs a paid key, so the page links out instead.</div></div>
   </div>`;
-  const box = $('anaChartBox'); ANA.chartH = window.innerWidth < 900 ? 340 : 430; box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), ANA.chartH);
+  const box = $('anaChartBox'); ANA.chartH = window.innerWidth < 900 ? 340 : 430; box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), ANA.chartH); anaAvFill();
   const rb = $('anaRelBox'), W0 = Math.max(320, box.clientWidth || 700);
   rb.innerHTML = ''; rb.style.display = 'none';
   if (ANA.show.rel && sym !== 'BTCUSDT'){ rb.style.display = ''; rb.innerHTML = !ANA.btc ? '<div class="mu" style="padding:8px">Loading BTC candles…</div>' : ANA.btc.err ? '<div class="mu" style="padding:8px">BTC candles are not available right now.</div>' : ANA.btc.cd ? anaRelChart(L, ANA.cd, ANA.btc.cd, W0) : ''; }
@@ -4094,9 +4139,10 @@ function anaRender(){
     ANA.chartH = h; box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), h);
   }
 }
+function anaAvFill(){ const el = $('anaAvInfo'); if (el){ el.innerHTML = ANA.avInfo || ''; el.style.display = ANA.avInfo ? '' : 'none'; } }
 function anaDraw(){                                                   // redraw only the chart (zoom / pan), not the whole tab
   const L = ANA.L, box = $('anaChartBox'); if (!L || !box || !ANA.cd) return;
-  const W = Math.max(320, box.clientWidth || 700); box.innerHTML = anaChart(L, ANA.cd, W, ANA.chartH || 430);
+  const W = Math.max(320, box.clientWidth || 700); box.innerHTML = anaChart(L, ANA.cd, W, ANA.chartH || 430); anaAvFill();
   const rb = $('anaRelBox'); if (rb && ANA.show.rel && ANA.btc && ANA.btc.cd) rb.innerHTML = anaRelChart(L, ANA.cd, ANA.btc.cd, W);
   const z = document.querySelector('#anaTog [data-z=reset]'); if (z) z.hidden = !(ANA.view && (ANA.view.N || ANA.view.off));
 }
@@ -4119,7 +4165,7 @@ $('anaTf').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('anaBody').onclick = e => {
   const zb = e.target.closest('[data-z]'); if (zb){ if (zb.dataset.z === 'reset') anaSetView(null, 0); else anaZoom(zb.dataset.z === 'in' ? 1 / 1.4 : 1.4, ANA.vis && ANA.vis.e1 < ANA.cd.length ? 0.5 : 1); return; }
   const t = e.target.closest('.tachip');
-  if (t && t.dataset.av){ if (t.dataset.av === 'mode'){ ANA.avm = ANA.avm === 'latest' ? 'major' : 'latest'; anaSave(); } else ANA.anchorT = null; anaRender(); return; }
+  if (t && t.dataset.av){ if (t.dataset.av === 'mode'){ ANA.avm = ANA.avm === 'auto' ? 'major' : ANA.avm === 'major' ? 'latest' : 'auto'; anaSave(); } else ANA.anchorT = null; anaRender(); return; }
   if (t){ const k = t.dataset.k; ANA.show[k] = !ANA.show[k]; if (k === 'vw' && !ANA.show.vw) ANA.anchorT = null; anaSave();
     if (k === 'rel' && ANA.show.rel && !ANA.btc && ANA.sym) anaBtcLoad(ANA.sym, ANA.tf, ANA.tok); anaRender(); return; }
   const c = e.target.closest('.anacell'); if (c){ ANA.tf = c.dataset.tf; anaSave(); anaTfSync(); anaLoad(ANA.sym); return; }
@@ -4240,7 +4286,7 @@ $('auto').onchange = () => { saveSettings(); setAuto(); };
 $('scanBtn').onclick = scan;
 $('tabs').onclick = e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); };
 $('secLoad').onclick = loadSectors;
-loadJournal();
+loadJournal(); runLoad();
 $('jUpdate').onclick = () => updateOutcomes(true);
 $('jCsv').onclick = journalCSV;
 $('jWhat2').addEventListener('change', () => renderWhatIf(J.entries.filter(e => e.kind !== 'div')));
@@ -4250,6 +4296,10 @@ $('jRestore').onchange = async e => { const f = e.target.files[0]; if (!f) retur
     for (const x of add) if (x && x.id && !ids.has(x.id)){ J.entries.push(x); n++; }
     J.entries.sort((a, b) => a.ct - b.ct); await saveJournal(); renderJournal(); toast(`Restored ${n} new journal entries.`); }
   catch { toast('That file is not a valid journal backup.'); } e.target.value = ''; };
+$('jRunFile').onchange = async e => { const f = e.target.files[0]; if (!f) return;
+  try { RUN.rows = runParse(await f.text()); await Cache.set('runnerTrades', RUN.rows); renderRun(); $('jRunStatus').textContent = `Loaded ${RUN.rows.length} completed alerts.`; }
+  catch (err) { toast(err.message); } e.target.value = ''; };
+$('jRunClear').onclick = async () => { RUN.rows = []; await Cache.set('runnerTrades', []); renderRun(); $('jRunStatus').textContent = ''; };
 $('jClear').onclick = async () => { if (!confirm('Delete all journal entries? Consider a Backup first.')) return; J.entries = []; await saveJournal(); renderJournal(); };
 $('jBody').onclick = async e => { const d = e.target.closest('[data-jdel]'); if (d){ J.entries = J.entries.filter(x => x.id !== d.dataset.jdel); await saveJournal(); renderJournal(); return; }
   const o = e.target.closest('[data-jsym]'); if (o){ if (S.rows.find(r => r.sym === o.dataset.jsym)) openDrawer(o.dataset.jsym); else toast('Scan a universe that includes this pair to open its trade plan.'); } };
