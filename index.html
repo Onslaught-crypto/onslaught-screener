@@ -791,6 +791,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="panel">
       <div class="row">
         <label title="Log triggered setups and new alignments after each Crypto Scanner scan (closed candles only)"><input id="jOn" type="checkbox" checked> Log signals</label>
+        <label title="What the Journal counts. 'Only signals my alert settings send' follows your own min grade, market cap range, starred filter and wave guard; the plan view follows each alerted signal with the plan shown in its alert."><select id="jShow"><option value="all">Count: all signals (simple test)</option><option value="alerted">Count: only signals my alerts send</option><option value="plan">Count: alerted, with the alert plan</option></select></label>
         <label><select id="jWhat"><option value="both">Setups + new alignments</option><option value="setup">Triggered setups only</option></select></label>
         <span class="sep"></span>
         <button id="jUpdate" class="primary">Update outcomes</button>
@@ -802,15 +803,16 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <button id="jClear">Clear journal</button>
       </div>
     </div>
+    <div class="mu" id="jShowNote" style="font-size:12px;margin:-4px 2px 8px"></div>
     <div class="stats" id="jCards"></div>
     <div class="panel"><div class="rot-head"><b>Equity curve</b> <span class="mu" id="jEqNote">Running total of R over completed signals, oldest to newest (setups only, 1R each).</span></div><div id="jEq"></div></div>
-    <div class="panel" id="jRunPanel">
-      <div class="rot-head"><b>Runner results</b> <span class="mu">What the runner really alerted you, followed with its own plan (three targets, stop to entry after TP1). Load trades.csv from the runner folder; the numbers are kept in this browser.</span></div>
-      <div class="row"><label class="filebtn">Load trades.csv<input id="jRunFile" type="file" accept=".csv,text/csv" hidden></label><button id="jRunClear">Clear</button><span class="mu" id="jRunStatus" style="font-size:12px"></span></div>
+    <details class="panel" id="jRunPanel">
+      <summary style="cursor:pointer"><b>Advanced: runner results</b> <span class="mu">What the runner really alerted you, followed with its own plan (three targets, stop to entry after TP1). Load trades.csv from the runner folder; the numbers are kept in this browser.</span></summary>
+      <div class="row" style="margin-top:8px"><label class="filebtn">Load trades.csv<input id="jRunFile" type="file" accept=".csv,text/csv" hidden></label><button id="jRunClear">Clear</button><span class="mu" id="jRunStatus" style="font-size:12px"></span></div>
       <div id="jRunOut"></div>
-    </div>
+    </details>
     <div class="panel">
-      <div class="rot-head"><b>Where is the edge?</b> <span class="mu">Simulated trade per signal: entry at the signal close, stop 1.5 ATR away (1R), target 1.5R, closed after 24 candles. Groups with fewer than 10 completed signals are dimmed: too few to trust.</span></div>
+      <div class="rot-head"><b>Where is the edge?</b> <span class="mu" id="jEdgeNote">Simulated trade per signal: entry at the signal close, stop 1.5 ATR away (1R), target 1.5R, closed after 24 candles. Groups with fewer than 10 completed signals are dimmed: too few to trust.</span></div>
       <div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Signals</th><th>Win rate</th><th>Avg R</th><th class="l">Expectancy</th><th>Avg +12</th><th>Avg MFE</th><th>Avg MAE</th></tr></thead><tbody id="jEdge"></tbody></table></div>
     </div>
     <div class="panel" id="jLossPanel">
@@ -1142,6 +1144,24 @@ function sectorFlow(coins, o = {}){
  e: {dir, ct (open time of the signal candle), price, atr}. Simulated trade: stop 1.5 ATR (= 1R), target 1.5R, 24-candle limit.
  Same-bar stop and target counts as a loss (conservative). */
 const J_HOR = 24, J_STOP_ATR = 1.5, J_TGT_R = 1.5;
+/* The alert's own plan followed on the candles after the signal, the way the runner follows it: a third of the position at each target, stop to entry after TP1, closed after 48 candles. */
+const PLAN_MAX = 48;
+function planOutcome(e, candles){
+  const p = e.plan; if (!p || !p.tps || !p.tps.length) return null;
+  const i = candles.findIndex(k => k[0] === e.ct); if (i < 0) return null;
+  const up = e.dir > 0, R = Math.abs(p.entry - p.sl), n = p.tps.length, hit = new Array(n).fill(false);
+  if (!(R > 0)) return null;
+  let sl = p.sl, left = 1, real = 0, res = null, bars = 0;
+  for (let j = i + 1; j < candles.length; j++){
+    const k = candles[j]; bars++;
+    if (up ? k[3] <= sl : k[2] >= sl){ const be = sl === p.entry; real += left * (be ? 0 : -1); left = 0; res = be ? 'breakeven' : 'stop'; break; }
+    for (let t = 0; t < n; t++){ if (hit[t]) continue;
+      if (up ? k[2] >= p.tps[t].price : k[3] <= p.tps[t].price){ hit[t] = true; real += p.tps[t].r / n; left = Math.max(0, left - 1 / n); if (t === 0) sl = p.entry; } else break; }
+    if (hit.every(Boolean)){ res = 'target'; left = 0; break; }
+    if (bars >= PLAN_MAX){ real += left * e.dir * (k[4] - p.entry) / R; left = 0; res = 'time'; break; }
+  }
+  return res ? {res, r: real, hits: hit.filter(Boolean).length, bars, done: true} : {res: null, r: null, hits: hit.filter(Boolean).length, bars, done: false};
+}
 function outcome(e, candles){
   const i = candles.findIndex(k => k[0] === e.ct);
   if (i < 0) return null;
@@ -2315,13 +2335,16 @@ async function journalLog(tf){
       J.entries.push({id, key, sym: r.sym, tf, kind, dir, ct: x.d.lastTime, price: x.d.lastClose, atr: x.d.atr,
         score: dir > 0 ? x.bull : x.bear, rs7: x.rs?.b7 ?? null, pts: x.G ? x.G.pts : null, grade: x.G && (x.setup === dir || (!x.setup && (dir > 0 ? x.bull : x.bear) >= 4)) ? x.G.grade : null, trig: x.trig.filter(t => t.dir === dir).map(t => t.t),
         regime: S.regimeDir || 0, mtf: r.mtf ? (x.mtfAll === dir ? 'all' : x.mtfAll === -dir ? 'against' : 'mixed') : null,
-        ext: x.ext, pos: x.pos, fFlag: x.fFlag, out: null}); fresh.push(J.entries.at(-1));
+        ext: x.ext, pos: x.pos, fFlag: x.fFlag, macro: S.macro && S.macro.reg ? S.macro.reg.name : null, out: null}); fresh.push(J.entries.at(-1));
       seen.add(id); lastBy.set(key, x.d.lastTime); added++;
     }
   }
   if (added){                                                    // wave size: how many signals of the same kind and side were logged on this scan (a big wave is one market move, not many bets)
     const cnt = new Map(); for (const e of fresh){ const k = e.kind + '|' + e.dir; cnt.set(k, (cnt.get(k) || 0) + 1); }
     for (const e of fresh) e.wave = cnt.get(e.kind + '|' + e.dir);
+    const kept = new Set(waveGuard(fresh.filter(alertPass)).items);   // the signals your alert settings (filters + wave guard) would have sent, with the plan shown in the alert
+    for (const e of fresh){ e.al = kept.has(e) ? 1 : 0;
+      if (e.al){ try { const P = await planFor(e.sym, e.dir); if (P && P.tps.length) e.plan = {entry: P.entry, sl: P.sl, tps: P.tps.map(t => ({price: t.price, r: t.r}))}; } catch {} } }
     await saveJournal(); if (S.view === 'journal') renderJournal(); }
 }
 async function updateOutcomes(manual){
@@ -2329,7 +2352,7 @@ async function updateOutcomes(manual){
   const st = t => $('jStatus').textContent = t;
   try {
     const now = Date.now(), c = cfg();
-    const pend = J.entries.filter(e => !(e.out && (e.out.done || e.out.expired)) && now >= e.ct + TF_MS[e.tf] * 5);
+    const pend = J.entries.filter(e => (!(e.out && (e.out.done || e.out.expired)) || (e.plan && !(e.out && e.out.plan && e.out.plan.done))) && now >= e.ct + TF_MS[e.tf] * 5);
     const groups = new Map(); for (const e of pend){ const k = e.sym + '|' + e.tf; (groups.get(k) || groups.set(k, []).get(k)).push(e); }
     let n = 0; const cap = manual ? 200 : 60;
     for (const [k, es] of groups){
@@ -2337,12 +2360,23 @@ async function updateOutcomes(manual){
       const [sym, tf] = k.split('|');
       if (manual) st(`Updating ${n}/${Math.min(groups.size, cap)}…`);
       let cd; try { cd = await getKlines(sym, tf, true); } catch(e){ if (/418|banned/.test(e.message)) throw e; continue; }
-      for (const e of es){ const o = outcome(e, cd); e.out = o || {expired: true}; }
+      for (const e of es){ const o = outcome(e, cd), prev = e.out && e.out.plan;
+        if (o) e.out = {...o, plan: prev}; else if (!(e.out && e.out.done)) e.out = {expired: true};
+        if (e.plan && e.out && !e.out.expired){ const po = planOutcome(e, cd); if (po) e.out.plan = po; } }
     }
     await saveJournal();
     if (manual) st(`Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}${groups.size > cap ? ` · ${groups.size - cap} pairs left, run again` : ''}`);
   } catch(e){ st(e.message); }
   finally { J.busy = false; if (S.view === 'journal') renderJournal(); if (S.view === 'div') dvRecord(); }
+}
+const JSH = {show: 'all'}; try { const v = localStorage.getItem('onslaught-jshow'); if (['all', 'alerted', 'plan'].includes(v)) JSH.show = v; } catch {}
+/* What the Journal counts: every logged signal, only those your alert settings would have sent, or those followed with the alert's own plan. */
+function jBasis(es){
+  if (JSH.show === 'all') return es;
+  const al = es.filter(e => e.al);
+  if (JSH.show === 'alerted') return al;
+  return al.filter(e => e.plan && e.out && e.out.plan && e.out.plan.done).map(e => { const p = e.out.plan;
+    return {...e, out: {...e.out, res: p.res === 'stop' ? 'loss' : p.r > 0 ? 'win' : 'time', rr: p.r, hitBar: p.bars, peakR: null, rec: null, planRes: p.res, planHits: p.hits}}; });
 }
 const fR = v => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + 'R';
 const RES = {win: ['Win', 'up'], loss: ['Loss', 'dn'], time: ['Time', 'mu']};
@@ -2356,6 +2390,7 @@ function edgeGroups(es){
   add('Score', '5/5', es.filter(e => e.score >= 5)); add('Score', '4/5', es.filter(e => e.score === 4));
   for (const tf of TFS) { const l = es.filter(e => e.tf === tf); if (l.length) add('Timeframe', tf.toUpperCase(), l); }
   add('Regime', 'With regime', es.filter(e => e.regime === e.dir)); add('Regime', 'Mixed', es.filter(e => !e.regime)); add('Regime', 'Against regime', es.filter(e => e.regime === -e.dir));
+  { const names = [...new Set(es.map(e => e.macro).filter(Boolean))]; for (const nm of names) add('Macro', nm, es.filter(e => e.macro === nm)); }
   add('MTF', 'All 3 agree', es.filter(e => e.mtf === 'all')); add('MTF', 'Mixed', es.filter(e => e.mtf === 'mixed')); add('MTF', 'All 3 against', es.filter(e => e.mtf === 'against'));
   add('Extension', 'Under 3 ATR', es.filter(e => e.ext != null && e.ext * e.dir < 3)); add('Extension', 'Stretched (3+ ATR)', es.filter(e => e.ext != null && e.ext * e.dir >= 3));
   for (const [k, [t]] of Object.entries(POS)) { const l = es.filter(e => e.pos === k); if (l.length) add('Positioning', t, l); }
@@ -2414,7 +2449,11 @@ function jEquity(es){
     <div class="mu" style="font-size:12px;margin-top:4px">${d.length} completed · total <b class="${up ? 'up' : 'dn'}">${fR(run)}</b> · deepest drawdown <b class="dn">−${dd.toFixed(1)}R</b></div>`;
 }
 function renderJournal(){
-  const es = J.entries.filter(e => e.kind !== 'div'), st = jStats(es), pending = es.filter(e => !e.out || !e.out.res).length;
+  const all = J.entries.filter(e => e.kind !== 'div'), es = jBasis(all), st = jStats(es), pending = es.filter(e => !e.out || !e.out.res).length;
+  if ($('jShow')) $('jShow').value = JSH.show;
+  { const nA = all.filter(e => e.al).length, nP = all.filter(e => e.plan && e.out && e.out.plan && e.out.plan.done).length;
+    $('jShowNote').textContent = JSH.show === 'all' ? '' : JSH.show === 'alerted' ? `${nA} of ${all.length} logged signals passed your alert settings (signals logged before v1.54 carry no alert flag and are left out).` : `${nP} alerted signals have finished their plan (stop, 3 targets, stop to entry after TP1, closed after 48 candles); the rest are still open or have no stored plan.`;
+    const en = $('jEdgeNote'); if (en) en.textContent = JSH.show === 'plan' ? 'The alert plan followed on the candles after each signal: a third of the position at each of the 3 targets, stop to entry after TP1, closed after 48 candles. R is measured against the plan stop. Groups with fewer than 10 completed signals are dimmed: too few to trust.' : 'Simulated trade per signal: entry at the signal close, stop 1.5 ATR away (1R), target 1.5R, closed after 24 candles. Groups with fewer than 10 completed signals are dimmed: too few to trust.'; }
   const card = (k, v, sub, c2) => `<div class="stat ${c2 || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
   $('jCards').innerHTML = card('Signals logged', es.length, `${pending} awaiting outcome`) + card('Completed', st.n, 'with a trade result')
     + card('Win rate', st.win == null ? '—' : st.win.toFixed(0) + '%', 'target before stop', st.win >= 50 ? 'bull' : '')
@@ -2436,7 +2475,7 @@ function renderJournal(){
     const pc = v => v == null ? '<span class="mu">…</span>' : `<span class="${cls(v)}">${fmtPct(v)}</span>`;
     return `<tr><td class="l mu">${new Date(e.ct + TF_MS[e.tf]).toLocaleString([], {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})}</td>
       <td class="l pair"><span class="jopen" data-jsym="${e.sym}">${e.sym.replace('USDT', '')}</span></td><td class="c">${e.tf.toUpperCase()}</td>
-      <td class="c"><span class="setup ${e.dir > 0 ? 'b' : 's'}">${e.dir > 0 ? 'LONG' : 'SHORT'}</span></td><td class="l">${e.kind === 'setup' ? 'Setup ⚡' : 'Aligned'}</td><td>${e.score}/5</td>
+      <td class="c"><span class="setup ${e.dir > 0 ? 'b' : 's'}">${e.dir > 0 ? 'LONG' : 'SHORT'}</span></td><td class="l">${e.kind === 'setup' ? 'Setup ⚡' : 'Aligned'}${e.al ? ' <span title="Passed your alert settings" style="cursor:help">🔔</span>' : ''}</td><td>${e.score}/5</td>
       <td class="l">${e.trig.map(t => `<span class="tg ${e.dir > 0 ? 'b' : 's'}">${TRIG_SHORT[t] || t}</span>`).join('') || '<span class="mu">—</span>'}</td>
       <td class="l mu" style="font-size:11.5px">${ctx || '—'}</td><td>${fp(e.price, dec)}</td><td>${pc(o.r4)}</td><td>${pc(o.r12)}</td><td>${pc(o.r24)}</td>
       <td class="up">${o.mfe != null ? o.mfe.toFixed(2) + '%' : '—'}</td><td class="dn">${o.mae != null ? o.mae.toFixed(2) + '%' : '—'}</td>
@@ -2469,9 +2508,9 @@ function renderRun(){
     <div class="tablewrap" style="border:0;margin-top:8px"><table class="jedge"><thead><tr><th class="l">Group</th><th>Alerts</th><th>Win rate</th><th>Avg R</th><th>Total R</th></tr></thead><tbody>${grp.map(([n, l]) => { const s2 = st(l); return `<tr class="${l.length < 10 ? 'low' : ''}"><td class="l">${n}</td><td>${s2.n}</td><td>${s2.win.toFixed(0)}%</td><td class="${cls(s2.avg)}">${f(s2.avg)}</td><td class="${cls(s2.tot)}">${fR(s2.tot)}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 function journalCSV(){
-  const head = ['signal_time','pair','tf','side','kind','score','triggers','regime','mtf','ext_atr','positioning','funding_crowded','entry','atr','r4_pct','r12_pct','r24_pct','mfe_pct','mae_pct','result','r_multiple','bars_to_result','grade','grade_pts','rs7_vs_btc_pp','wave_size','peak_r_before_stop','target_hit_after_stop'];
+  const head = ['signal_time','pair','tf','side','kind','score','triggers','regime','mtf','ext_atr','positioning','funding_crowded','entry','atr','r4_pct','r12_pct','r24_pct','mfe_pct','mae_pct','result','r_multiple','bars_to_result','grade','grade_pts','rs7_vs_btc_pp','wave_size','peak_r_before_stop','target_hit_after_stop','macro','alerted','plan_result','plan_r'];
   const wv = new Map(); for (const e of J.entries) if (e.kind !== 'div'){ const k = e.tf + '|' + e.ct + '|' + e.kind + '|' + e.dir; wv.set(k, (wv.get(k) || 0) + 1); }   // older entries get their wave size counted from the log
-  const lines = [head.join(',')].concat(J.entries.map(e => { const o = e.out || {}; return [new Date(e.ct + TF_MS[e.tf]).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.kind, e.score, e.trig.join('|'), e.regime, e.mtf ?? '', e.ext?.toFixed(2) ?? '', e.pos ?? '', e.fFlag === e.dir ? 1 : 0, e.price, e.atr, o.r4?.toFixed(3) ?? '', o.r12?.toFixed(3) ?? '', o.r24?.toFixed(3) ?? '', o.mfe?.toFixed(3) ?? '', o.mae?.toFixed(3) ?? '', o.expired ? 'expired' : o.res ?? 'open', o.rr?.toFixed(3) ?? '', o.hitBar ?? '', e.grade ?? '', e.pts ?? '', e.rs7 != null ? e.rs7.toFixed(2) : '', e.wave ?? wv.get(e.tf + '|' + e.ct + '|' + e.kind + '|' + e.dir) ?? '', o.peakR != null ? o.peakR.toFixed(2) : '', o.rec == null ? '' : o.rec ? 1 : 0].join(','); }));
+  const lines = [head.join(',')].concat(J.entries.map(e => { const o = e.out || {}; return [new Date(e.ct + TF_MS[e.tf]).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.kind, e.score, e.trig.join('|'), e.regime, e.mtf ?? '', e.ext?.toFixed(2) ?? '', e.pos ?? '', e.fFlag === e.dir ? 1 : 0, e.price, e.atr, o.r4?.toFixed(3) ?? '', o.r12?.toFixed(3) ?? '', o.r24?.toFixed(3) ?? '', o.mfe?.toFixed(3) ?? '', o.mae?.toFixed(3) ?? '', o.expired ? 'expired' : o.res ?? 'open', o.rr?.toFixed(3) ?? '', o.hitBar ?? '', e.grade ?? '', e.pts ?? '', e.rs7 != null ? e.rs7.toFixed(2) : '', e.wave ?? wv.get(e.tf + '|' + e.ct + '|' + e.kind + '|' + e.dir) ?? '', o.peakR != null ? o.peakR.toFixed(2) : '', o.rec == null ? '' : o.rec ? 1 : 0, e.macro ? '"' + e.macro + '"' : '', e.al == null ? '' : e.al, o.plan && o.plan.done ? o.plan.res : '', o.plan && o.plan.done ? o.plan.r.toFixed(3) : ''].join(','); }));
   downloadText(lines.join('\n'), `signal-journal-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
 }
 function downloadText(text, name, type){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
@@ -2671,24 +2710,32 @@ function tgQuiet(){
   if (a == null || b == null || a === b) return false;
   return a < b ? t >= a && t < b : t >= a || t < b;
 }
+/* Would this signal be alerted under the alert settings on screen? (also used by the journal to flag the signals you were really alerted on) */
+function alertPass(e){
+  if ($('alertWhat').value !== 'aligned' && e.kind !== 'setup') return false;
+  if ($('alertStar').checked && !WATCH.has(e.sym)) return false;
+  const b = S.rows.find(r => r.sym === e.sym), mcLo = +$('alertMcapMin').value || 0, mcHi = +$('alertMcapMax').value || Infinity;
+  if (mcLo || mcHi < Infinity){ const m = b && b.mcap; if (!(m >= mcLo && m <= mcHi)) return false; }
+  const minG = GRADE_RANK[$('alertGrade').value] || 0;
+  if (minG){ const x = b && derive(b, cfg()); if (!(x && x.G && GRADE_RANK[x.G.grade] >= minG)) return false; }
+  return true;
+}
+/* Wave guard: many same-side setups at once are one bet, keep the best few per side. Returns {items, notes}. */
+function waveGuard(items){
+  const cap = +$('alertCap').value || 0, notes = [];
+  if (!cap) return {items, notes};
+  const c = cfg(), q = e => { const b = S.rows.find(r => r.sym === e.sym), x = b && derive(b, c); return x && x.G ? (GRADE_RANK[x.G.grade] || 0) * 1000 + (x.G.pts || 0) * 10 + (e.dir > 0 ? x.bull : x.bear) : 0; }, keep = new Set();
+  for (const dir of [1, -1]){ const l = items.filter(e => e.dir === dir);
+    if (l.length <= cap){ l.forEach(e => keep.add(e)); continue; }
+    l.sort((a, b) => q(b) - q(a)).slice(0, cap).forEach(e => keep.add(e));
+    notes.push(`🌊 Market-wide wave: ${l.length} ${dir > 0 ? 'LONG' : 'SHORT'} setups fired on this candle. It is really one bet repeated, so only the best ${cap} are shown.`); }
+  return {items: notes.length ? items.filter(e => keep.has(e)) : items, notes};
+}
 function fireAlerts(entered){
   if (!(ALERT.on || tgActive()) || !entered.length) return;
-  let items = entered.filter(e => $('alertWhat').value === 'aligned' || e.kind === 'setup');
-  if ($('alertStar').checked) items = items.filter(e => WATCH.has(e.sym));
-  const mcLo = +$('alertMcapMin').value || 0, mcHi = +$('alertMcapMax').value || Infinity;
-  if (mcLo || mcHi < Infinity) items = items.filter(e => { const b = S.rows.find(r => r.sym === e.sym), m = b && b.mcap; return m >= mcLo && m <= mcHi; });
-  const minG = GRADE_RANK[$('alertGrade').value] || 0;
-  if (minG){ const c = cfg(); items = items.filter(e => { const b = S.rows.find(r => r.sym === e.sym), x = b && derive(b, c); return x && x.G && GRADE_RANK[x.G.grade] >= minG; }); }
+  let items = entered.filter(alertPass);
   if (!items.length) return;
-  const waveNotes = [], cap = +$('alertCap').value || 0;
-  if (cap){                                                      // wave guard: many same-side setups at once are one bet, keep the best few per side
-    const c = cfg(), q = e => { const b = S.rows.find(r => r.sym === e.sym), x = b && derive(b, c); return x && x.G ? (GRADE_RANK[x.G.grade] || 0) * 1000 + (x.G.pts || 0) * 10 + (e.dir > 0 ? x.bull : x.bear) : 0; }, keep = new Set();
-    for (const dir of [1, -1]){ const l = items.filter(e => e.dir === dir);
-      if (l.length <= cap){ l.forEach(e => keep.add(e)); continue; }
-      l.sort((a, b) => q(b) - q(a)).slice(0, cap).forEach(e => keep.add(e));
-      waveNotes.push(`🌊 Market-wide wave: ${l.length} ${dir > 0 ? 'LONG' : 'SHORT'} setups fired on this candle. It is really one bet repeated, so only the best ${cap} are shown.`); }
-    if (waveNotes.length) items = items.filter(e => keep.has(e));
-  }
+  const wg = waveGuard(items), waveNotes = wg.notes; items = wg.items;
   const line = e => `${e.sym.replace('USDT', '')} ${e.dir > 0 ? 'LONG' : 'SHORT'}${e.kind === 'setup' ? ' (triggered)' : ' (aligned)'}`;
   const title = `Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} on ${S.tf.toUpperCase()}${waveNotes.length ? ' · wave guard on' : ''}`;
   const body = items.slice(0, 6).map(line).join('\n') + (items.length > 6 ? `\n+${items.length - 6} more` : '');
@@ -4288,8 +4335,9 @@ $('tabs').onclick = e => { const b = e.target.closest('[data-view]'); if (b) set
 $('secLoad').onclick = loadSectors;
 loadJournal(); runLoad();
 $('jUpdate').onclick = () => updateOutcomes(true);
+$('jShow').onchange = () => { JSH.show = $('jShow').value; try { localStorage.setItem('onslaught-jshow', JSH.show); } catch {} renderJournal(); };
 $('jCsv').onclick = journalCSV;
-$('jWhat2').addEventListener('change', () => renderWhatIf(J.entries.filter(e => e.kind !== 'div')));
+$('jWhat2').addEventListener('change', () => renderWhatIf(jBasis(J.entries.filter(e => e.kind !== 'div'))));
 $('jBackup').onclick = () => downloadText(JSON.stringify({v: 1, entries: J.entries}), `onslaught-journal-${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
 $('jRestore').onchange = async e => { const f = e.target.files[0]; if (!f) return;
   try { const d = JSON.parse(await f.text()), add = Array.isArray(d.entries) ? d.entries : [], ids = new Set(J.entries.map(x => x.id)); let n = 0;
