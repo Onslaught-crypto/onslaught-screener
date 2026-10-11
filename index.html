@@ -250,6 +250,7 @@ a.abtn{display:inline-block;background:var(--panel2);border:1px solid var(--line
 .quad .qh{width:100%;font-size:12.5px;margin-bottom:4px;position:relative}
 .qh:has(.whatif{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px}.whatif label{width:auto;flex:none;display:flex;gap:6px;align-items:center;cursor:pointer;font-size:13px}.lossnote{font-size:13px;line-height:1.5;margin:6px 0}.lossnote b{font-weight:600}
 .qnav)>.mu{display:inline-block;max-width:calc(100% - 175px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.hlang{margin:2px 0 8px;width:max-content}.hlang button{padding:3px 10px;font-size:12px}
 .qnav{position:absolute;right:0;top:-2px;display:flex;align-items:center;gap:4px;font:600 11px var(--mono)}.qnav button{background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);width:22px;height:20px;padding:0;line-height:1;font-size:14px}.qnav button:hover:not(:disabled){border-color:var(--accent)}.qnav button:disabled{opacity:.3;cursor:default}
 .qchip{font:600 11.5px var(--mono);padding:3px 7px;display:inline-flex;gap:4px;align-items:center}
 .qchip .gr{min-width:0;font-size:10px;padding:0 4px}
@@ -545,7 +546,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div class="pagerow"><div class="pager" id="pager"></div><label class="rowsel">Rows per page <select id="pageSize"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="0">All</option></select></label></div>
 
   <div class="panel" style="margin-top:12px">
-    <details>
+    <details data-help="scan">
       <summary>How to read this</summary>
       <ul>
         <li><b>DMI</b>: ▲ when +DI &gt; −DI and ADX ≥ threshold (trend has strength), ▼ when −DI &gt; +DI and ADX ≥ threshold, · when ADX is below threshold.</li>
@@ -627,7 +628,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
     <div class="panel mapwrap"><div id="mapBox"></div><div class="maptip" id="mapTip" hidden></div></div>
     <div class="quads" id="mapQuads"></div>
-    <div class="panel" style="margin-top:12px"><details><summary>How to read the Market Map</summary><ul>
+    <div class="panel" style="margin-top:12px"><details data-help="map"><summary>How to read the Market Map</summary><ul>
       <li><b>Across</b>: relative strength over 7 days. Right of centre = the coin beat BTC (or ETH) this week.</li>
       <li><b>Up and down</b>: relative strength over the last 24 hours, the recent momentum of that strength.</li>
       <li><b>Leading</b> (top right): strong and still gaining. <b>Weakening</b> (bottom right): strong but fading, often taking profit. <b>Lagging</b> (bottom left): weak and still losing. <b>Improving</b> (top left): weak but turning up, where early rotations show first.</li>
@@ -667,7 +668,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       </table>
     </div>
     <div class="panel" style="margin-top:12px">
-      <details>
+      <details data-help="sector">
         <summary>How to read this</summary>
         <ul>
           <li><b>vs Week / vs Month</b>: today's 24h volume divided by the sector's average day over the last 7 / 30 closed days. 1.0 is normal, 2.0 is double. Both high = a real move with fuel. Month high but week flat = it has been hot all week, you may be late. Week high but month flat = something just started.</li>
@@ -697,7 +698,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="panel"><div class="lqfh"><b>Macro regimes</b> <span class="mu">how the four indices combine · current one highlighted</span></div><div id="macMatrix"></div></div>
       <div class="panel macchart"><div class="row" style="margin-bottom:8px"><b>TradingView</b><div class="seg" id="macTv"><button data-v="CRYPTOCAP:BTC.D" class="on">BTC.D</button><button data-v="CRYPTOCAP:USDT.D+CRYPTOCAP:USDC.D">USDT.D+USDC.D</button><button data-v="CRYPTOCAP:USDT.D">USDT.D</button><button data-v="CRYPTOCAP:USDC.D">USDC.D</button><button data-v="CRYPTOCAP:TOTAL3ES">TOTAL3ES</button><button data-v="CRYPTOCAP:OTHERS.D">OTHERS.D</button><button data-v="CRYPTOCAP:TOTAL">TOTAL</button></div><span class="mu">official indices, draw your own levels</span></div><div id="macTvBox" class="mactv"></div></div>
     </div>
-    <div class="panel"><details><summary>How the macro read works</summary><ul>
+    <div class="panel"><details data-help="macro"><summary>How the macro read works</summary><ul>
       <li><b>BTC.D</b>: Bitcoin's share of the crypto market. Rising = money concentrating in BTC (or alts bleeding); falling = rotation into alts.</li>
       <li><b>USDT.D + USDC.D</b>: share held in the two big stablecoins, the market's cash. Rising = risk-off, money to the sidelines; falling = cash being deployed.</li>
       <li><b>TOTAL3ES</b>: value of all alts excluding BTC, ETH and stablecoins. Rising = real money flowing into alts.</li>
@@ -731,7 +732,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <p class="mu" style="margin:8px 0">Every confirmed 1H, 4H or 1D divergence of strength 50+ that this scanner sees is logged in this browser (if the Journal is on) and followed for 24 candles with the same simulated trade as the Journal: entry at the confirmation close, stop 1.5 ATR away (1R), target 1.5R. Rows with fewer than 10 completed signals are dimmed: too few to trust.</p>
       <div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Signals</th><th>Win rate</th><th>Avg R</th><th>Avg +12 candles</th></tr></thead><tbody id="dvRec"></tbody></table></div>
     </details></div>
-    <div class="panel"><details><summary>How to read divergences</summary><ul>
+    <div class="panel"><details data-help="div"><summary>How to read divergences</summary><ul>
       <li><b>Bullish divergence:</b> price makes a lower low but the indicator makes a higher low, so selling momentum is fading. <b>Bearish:</b> price makes a higher high but the indicator makes a lower high, so buying momentum is fading. Both are early warnings that a move may turn, not entries on their own.</li>
       <li><b>RSI</b> compares the two RSI(14) lows or highs. <b>MACD</b> compares the two swings of the MACD histogram, which must be separate waves (the histogram crosses zero between them). <b>RSI + MACD</b> means both disagree with price on the same two swings, and is the most reliable kind.</li>
       <li>Swings are found with 5 candles on each side, so a divergence is <b>confirmed</b> five candles after the second swing. <b>Forming</b> ones (shown when "Confirmed only" is off) can disappear with the next candle.</li>
@@ -776,7 +777,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="maptip" id="lqTip" hidden></div>
     </div>
     <div class="lqbottom">
-      <div class="panel"><details open><summary>How to read the liquidation map</summary><ul>
+      <div class="panel"><details open data-help="liq"><summary>How to read the liquidation map</summary><ul>
         <li><b>It's an estimate.</b> Binance doesn't publish where positions get liquidated. The map assumes that every rise in open interest is new positions opened at that candle's price, split between longs and shorts by who was buying or selling aggressively, and spread across the leverage levels you tick. Each one gets a liquidation price, and the band stays lit until price trades through it.</li>
         <li><b>Brighter = more estimated liquidations</b> at that price. Bands <b class="up">above</b> price are short liquidations (forced buying that can fuel a squeeze up); bands <b class="dn">below</b> are long liquidations (forced selling that can fuel a flush down).</li>
         <li>Price is often drawn toward big nearby clusters (liquidity "magnets"), and the move frequently reverses once a cluster has been swept. Use it for timing and for placing stops away from obvious clusters, not as a signal on its own.</li>
@@ -825,7 +826,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <tbody id="jBody"></tbody></table>
     </div>
     <div class="pager" id="jPager"></div>
-    <div class="panel" style="margin-top:12px"><details><summary>How the journal works</summary><ul>
+    <div class="panel" style="margin-top:12px"><details data-help="journal"><summary>How the journal works</summary><ul>
       <li>After each Crypto Scanner scan with closed candles, it logs every <b>triggered setup</b> (cooldown 6 candles per pair, side and timeframe) and every <b>new alignment</b> (aligned on the latest candle only). It records the context at that moment: score, triggers, regime, MTF, extension, positioning and funding.</li>
       <li><b>Outcomes</b> update after each scan, or with Update outcomes: returns after 4, 12 and 24 candles (in your favour = positive), maximum favourable and adverse excursion, and a simulated trade result: <b>Win</b> = +1.5R target hit first, <b>Loss</b> = −1R stop hit first (both in the same candle counts as a loss), <b>Time</b> = neither within 24 candles, closed at market.</li>
       <li><b>Avg R</b> is the expectancy per trade in risk units: above 0 means the signal paid over this sample, before fees and slippage.</li>
@@ -1566,9 +1567,9 @@ function taLevels(cd, o = {}){
   const vp = taProfile(cd.slice(from), 48);
   if (vp){ add('Point of control (POC)', 'vp', vp.poc, vp.poc, {pool: 'POC'}); add('Value area high (VAH)', 'vp', vp.vah, vp.vah, {pool: 'VAH'}); add('Value area low (VAL)', 'vp', vp.val, vp.val, {pool: 'VAL'}); }
   list.sort((x, y) => x.distAtr - y.distAtr);
-  // anchored VWAPs: one from the last swing high candle, one from the last swing low candle
+  // anchored VWAPs: one from the last swing high candle (built from highs, starts exactly at the high), one from the last swing low candle (built from lows)
   const aH = sh.at(-1), aL = sl.at(-1);
-  const avwapH = aH != null ? {i: aH, v: taAvwap(cd, aH)} : null, avwapL = aL != null ? {i: aL, v: taAvwap(cd, aL)} : null;
+  const avwapH = aH != null ? {i: aH, v: taAvwap(cd, aH, 2)} : null, avwapL = aL != null ? {i: aL, v: taAvwap(cd, aL, 3)} : null;
   // where price sits right now: inside or within half an ATR of a block, gap or zone (used by the scanner)
   let loc = null;
   { const near = list.filter(x => (x.side === 'at' || x.distAtr <= (x.kind === 'sr' ? 0.3 : 0.5)) && ['ob', 'breaker', 'fvg', 'sr'].includes(x.kind));
@@ -1596,9 +1597,9 @@ function taProfile(cd, nb){
   }
   return {lo, hi, step, bins: v, max: v[pi], poc: lo + (pi + 0.5) * step, vah: lo + (u + 1) * step, val: lo + d * step};
 }
-function taAvwap(cd, i0){
+function taAvwap(cd, i0, src){                                        // src: 2 = highs, 3 = lows, omitted = typical price
   const out = []; let pv = 0, vv = 0;
-  for (let i = i0; i < cd.length; i++){ const k = cd[i], tp = (k[2] + k[3] + k[4]) / 3, vol = k[5] || 0; pv += tp * vol; vv += vol; out.push(vv > 0 ? pv / vv : tp); }
+  for (let i = i0; i < cd.length; i++){ const k = cd[i], tp = src ? k[src] : (k[2] + k[3] + k[4]) / 3, vol = k[5] || 0; pv += tp * vol; vv += vol; out.push(vv > 0 ? pv / vv : tp); }
   return out;
 }
 // ==ENGINE END==
@@ -3835,12 +3836,13 @@ function anaChart(L, cd, w, h){
   }
   const zone = (it, x0, col, label, op, dash) => { const y1 = Y(it.hi), y2 = Y(it.lo), hh = Math.max(y2 - y1, 3);
     o.push(`<rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="${col}" opacity="${op}"/><rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="none" stroke="${col}" stroke-opacity=".75"${dash ? ' stroke-dasharray="4 3"' : ''}/>${txt(x0 + 4, y1 + 11, label, col)}`); };
+  const srTags = [];
   for (const it of anaPick(L, show)){
     if (it.kind === 'liq'){ const y = Y(it.mid); o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${warn}" stroke-dasharray="5 4"/>${txt(w - pad.r - 4, y - 4, ANA_NAMES[it.pool], warn, 'end')}`); continue; }
     const x0 = it.i != null ? Math.max(pad.l, X(Math.max(it.i, s0)) - pw / N / 2) : pad.l;
     if (it.kind === 'sr'){ const zc = it.side === 'above' ? bear : it.side === 'below' ? bull : mu;
       zone(it, pad.l, zc, it.side === 'above' ? 'Resistance' : it.side === 'below' ? 'Support' : 'S/R', .14);
-      if (show.srp){ const pf = v => v.toFixed(dec > 4 ? 4 : dec); o.push(txt(w - pad.r - 4, Y(it.hi) - 3, pf(it.hi), zc, 'end'), txt(w - pad.r - 4, Y(it.lo) + 10, pf(it.lo), zc, 'end')); } }
+      srTags.push([it.hi, zc], [it.lo, zc]); }
     else if (it.kind === 'fvg') zone(it, x0, acc, (it.dir > 0 ? 'Bull' : 'Bear') + ' FVG', .22);
     else zone(it, x0, it.kind === 'breaker' ? warn : info, it.kind === 'breaker' ? (it.dir > 0 ? 'Bull breaker' : 'Bear breaker') : (it.dir > 0 ? 'Bull OB' : 'Bear OB'), .2, it.kind === 'breaker');
   }
@@ -3868,6 +3870,11 @@ function anaChart(L, cd, w, h){
   const selI = ANA.sel && L.list.find(x => anaKey(x) === ANA.sel);
   if (selI){ if (selI.lo === selI.hi) o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(selI.mid).toFixed(1)}" y2="${Y(selI.mid).toFixed(1)}" stroke="#fff" stroke-width="2"/>`); else o.push(`<rect x="${pad.l}" y="${Y(selI.hi).toFixed(1)}" width="${(w - pad.l - pad.r).toFixed(1)}" height="${Math.max(Y(selI.lo) - Y(selI.hi), 3).toFixed(1)}" fill="rgba(255,255,255,.07)" stroke="#fff" stroke-width="1.6" stroke-dasharray="5 3"/>`); }
   o.push(`<line id="anaCross" x1="0" x2="0" y1="${pad.t}" y2="${pad.t + ph}" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 3" visibility="hidden"/></g>`);
+  if (show.srp && srTags.length){                                  // S/R zone edges as tags on the price scale, nudged apart so none overlap
+    const pf = v => v >= 1 ? v.toFixed(dec > 4 ? 4 : dec) : v.toPrecision(4), tg = srTags.filter(t => t[0] >= lo && t[0] <= hi).map(t => ({p: t[0], c: t[1], y: Y(t[0])})).sort((x, y) => x.y - y.y);
+    for (let i = 1; i < tg.length; i++) if (tg[i].y - tg[i - 1].y < 14) tg[i].y = tg[i - 1].y + 14;
+    for (const t of tg) o.push(`<line x1="${(w - pad.r - 6).toFixed(1)}" x2="${w - pad.r}" y1="${Y(t.p).toFixed(1)}" y2="${t.y.toFixed(1)}" stroke="${t.c}"/><rect x="${w - pad.r}" y="${(t.y - 7).toFixed(1)}" width="${pad.r - 4}" height="14" rx="3" fill="${t.c}" opacity=".92"/><text x="${w - pad.r + 5}" y="${(t.y + 3.5).toFixed(1)}" fill="#0e0f14" font-size="10" font-weight="700">${pf(t.p)}</text>`);
+  }
   const yl = Y(L.price);
   o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${yl.toFixed(1)}" y2="${yl.toFixed(1)}" stroke="${acc}" stroke-dasharray="3 3"/><rect x="${w - pad.r}" y="${(yl - 9).toFixed(1)}" width="${pad.r - 4}" height="18" rx="3" fill="${cssv('--accent')}"/><text x="${w - pad.r + 6}" y="${(yl + 4).toFixed(1)}" fill="#fff" font-size="11" font-weight="600">${L.price.toFixed(dec > 4 ? 4 : dec)}</text>`);
   const fmtT = t => { const d = new Date(t); return ANA.tf === '1d' || ANA.tf === '1w' ? d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) : d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) + ' ' + d.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'}); };
@@ -4385,6 +4392,97 @@ for (const id of ['tgDiv', 'tgDivE']) $(id).onchange = () => {
 dvSync();
 render(); setAuto();
 applyHash();
+
+/* ---------- "How to read" sections: EN / PT switch (help text only) ---------- */
+const HELP_KEY = 'onslaught-helplang';
+const HELP_PT = {
+scan: ['Como ler isto', `<ul>
+<li><b>DMI</b>: ▲ quando +DI &gt; −DI e ADX ≥ limite (a tendência tem força), ▼ quando −DI &gt; +DI e ADX ≥ limite, · quando o ADX está abaixo do limite.</li>
+<li><b>RSI &gt; EMA</b>: o RSI(14) acima da sua própria EMA indica que o momentum está a melhorar. <b>RSI &gt; 50</b>: regime de momentum.</li>
+<li><b>OBV &gt; EMA50</b>: o fluxo de volume confirma o preço.</li>
+<li><b>OI rising</b>: o open interest cresceu pelo menos o limite definido ao longo de N velas. Novas posições alimentam o movimento, por isso conta para a pontuação de compra <i>e</i> para a de venda.</li>
+<li><b>MTF</b>: direção da tendência em 1D, 4H e 1H (3 ou mais das 4 verificações TA). Se os três concordam com um setup alinhado, a sua classificação sobe.</li>
+<li><b>Triggers</b> são eventos nas últimas N velas (subscrito = há quantas velas): cruzamento DMI (ADX ≥ limite − 5), RSI a cruzar 50, RSI a cruzar a sua EMA, OBV a cruzar a sua EMA, squeeze disparado (Bollinger 20/2 a sair do Keltner 20/1,5 ATR), Coil (squeeze ainda ativo), RVOL (volume ≥ 2× a média de 20 velas) e divergências RSI regulares ou ocultas a partir de pivôs de 3 velas. Verde = bullish, vermelho = bearish.</li>
+<li><b>★ Watchlist</b>: marca um par com estrela para o fixar no topo (Pin ★) ou para filtrar só esses (★ only, ou o cartão Watchlist). As estrelas ficam guardadas no teu browser.</li>
+<li><b>Since last scan</b>: pares que ficaram alinhados ou com trigger (⚡) desde o scan anterior no mesmo timeframe, e pares que perderam o alinhamento. As novas entradas ganham um selo IN e uma borda roxa na tabela. Clica num chip para abrir o respetivo plano de trade.</li>
+<li><b>Telegram</b>: cria um bot com o @BotFather, cola o token e o teu chat ID em Settings, carrega em Send test e depois marca Send alerts to Telegram. Cada alerta lista os pares com triggers, contexto e (opcionalmente) entrada, stop e alvos. O token fica apenas neste browser. O painel lateral tem também um botão Send to Telegram para qualquer plano.</li>
+<li><b>Alerts</b>: ativa com 🔔 (o browser pede permissão). Após cada scan, os novos setups com trigger (ou também os novos alinhamentos, em Settings) geram uma notificação no ambiente de trabalho, um aviso na página e um som; o título do separador mostra uma contagem enquanto estiveres ausente. O auto-refresh tem de estar ligado e o separador aberto; com os alertas ativos, os scans continuam a correr num separador em segundo plano.</li>
+<li><b>RS 7D</b>: força relativa nos últimos 7 dias em pontos percentuais: ₿ = vs BTC, Ξ = vs ETH (passa o cursor para ver as 24h). Verde = a liderar por 2+ pontos, vermelho = a ficar para trás por 2+. Os líderes dão as melhores longs num mercado risk-on, os retardatários as melhores shorts. A barra de regime mostra também ETH vs BTC: o ETH a liderar costuma anteceder a subida das altcoins. A RS é mostrada, filtrada e registada no Journal, mas ainda não faz parte do grade, para que o Journal mostre primeiro se acrescenta vantagem.</li>
+<li><b>Grade A / B / C</b> avalia o lado alinhado: +1 pontuação 5/5 · +2 todos os timeframes concordam (+1 se só o 1D, −2 se o 1D estiver contra) · +1 a favor do regime (−2 contra) · +1 a menos de 1,5 ATR da sua média (−2 se esticado 3+) · +1 novas posições do seu lado (−1 em subidas por short covering ou quedas por liquidação de longs) · +1 quando o outro lado está crowded (−1 quando é o próprio lado) · +1 por 2+ triggers · +1 quando uma divergência confirmada recente (RSI + MACD, ou Strong) apoia o lado (−1 quando se opõe). A = 5+, B = 2–4, C = abaixo. Novas listagens, funding extremo e liquidez fraca limitam-no a C (mostrado com !). Passa o cursor sobre qualquer grade para ver o detalhe.</li>
+<li><b>Selo LONG / SHORT</b> = um setup com trigger: 4–5/5 alinhado mais um trigger na mesma direção. Ficam em primeiro lugar e têm o seu próprio cartão de estatísticas.</li>
+<li><b>Positioning</b> compara a variação do preço e do OI nas mesmas N velas: <b>New longs</b> (preço ↑ OI ↑), <b>New shorts</b> (preço ↓ OI ↑), <b>Short covering</b> (preço ↑ OI ↓, um squeeze que costuma desvanecer quando o fecho de posições acaba), <b>Long liquidation</b> (preço ↓ OI ↓). Movimentos abaixo de 0,5% contam como planos.</li>
+<li><b>Funding</b>: a última taxa de funding. 🔥 marca extremos: igual ou acima do limite hot os longs estão crowded, igual ou abaixo do limite cold os shorts estão crowded. Os lados crowded são combustível para squeezes contra eles.</li>
+<li><b>Regime bar</b>: tendência do BTC em 4H e 1D (3+ das 4 verificações TA), amplitude (breadth) nos pares analisados, e funding e OI medianos. Os setups alinhados contra o regime ganham um contorno tracejado na pontuação.</li>
+<li><b>Ext (ATR)</b>: a que distância o fecho está da EMA20, medida em ATR. Acima de +3 ou abaixo de −3 (⚠) o movimento está esticado. A tendência pode ser real, mas as entradas aí têm mau risco/retorno, por isso espera por um pullback.</li>
+<li><b>Aligned</b> = 4 ou 5 de 5 verificações na mesma direção. <b>NEW</b> = o alinhamento surgiu na última vela (não estava alinhado na anterior).</li>
+<li>Passa o cursor sobre qualquer verificação para ver os valores. Clica numa linha para abrir o plano de trade (gráfico, entrada, stop, alvos, dimensionamento). O ↗ ao lado de um par abre o TradingView.</li>
+</ul>`],
+map: ['Como ler o Market Map', `<ul>
+<li><b>Horizontal</b>: força relativa a 7 dias. À direita do centro = a moeda superou o BTC (ou o ETH) esta semana.</li>
+<li><b>Vertical</b>: força relativa nas últimas 24 horas, o momentum recente dessa força.</li>
+<li><b>Leading</b> (topo direito): forte e ainda a ganhar. <b>Weakening</b> (baixo direito): forte mas a perder fôlego, muitas vezes com realização de lucros. <b>Lagging</b> (baixo esquerdo): fraca e ainda a perder. <b>Improving</b> (topo esquerdo): fraca mas a virar para cima, onde as rotações iniciais aparecem primeiro.</li>
+<li>As moedas tendem a rodar no sentido dos ponteiros do relógio: Improving → Leading → Weakening → Lagging. Moedas Improving com um setup long A ou B são candidatas precoces; moedas Weakening com um setup short são candidatas precoces a fade.</li>
+<li>Clica em qualquer ponto ou nome para abrir o plano de trade. Arrasta uma caixa no gráfico para ampliar; duplo clique ou <b>Reset zoom</b> para voltar.</li><li>A escala <b>Spread</b> usa raiz quadrada para abrir o meio congestionado; <b>Linear</b> mostra as distâncias reais. Os valores fora do gráfico ficam presos à borda, com contorno tracejado e o valor na etiqueta.</li><li>Um brilho suave assinala setups com trigger de grade A.</li>
+</ul>`],
+sector: ['Como ler isto', `<ul>
+<li><b>vs Week / vs Month</b>: o volume de 24h de hoje a dividir pelo dia médio do setor nos últimos 7 / 30 dias fechados. 1,0 é normal, 2,0 é o dobro. Ambos altos = um movimento real com combustível. Mês alto mas semana normal = está quente há uma semana, podes chegar tarde. Semana alta mas mês normal = algo acabou de começar.</li>
+<li><b>Share Δ</b>: a fatia do setor no volume total mostrado hoje menos a sua fatia média nos últimos 7 dias, em pontos percentuais. É o sinal de rotação.</li>
+<li><b>Participation</b>: percentagem das moedas do setor cujo próprio volume é pelo menos 1,5× o normal semanal. Volume alto com participação baixa significa que uma moeda está a disparar, não o setor. Esta coluna elimina a maioria dos falsos alarmes.</li>
+<li><b>Price (VW)</b>: a variação de preço de 24h ponderada pelo volume. O volume sozinho nunca diz quem está a comprar; com o preço, volume forte e preço a subir = dinheiro a entrar, volume forte e preço a descer = dinheiro a sair.</li>
+<li><b>Trend</b>: quantas moedas do setor estão alinhadas bullish ou bearish no teu último scan do Crypto Scanner (faz scan primeiro para preencher).</li>
+<li>As moedas têm várias etiquetas, por isso o volume de uma moeda conta para cada um dos seus setores; as quotas são normalizadas entre os setores mostrados. O volume mostra onde está a atenção, não para onde vai o preço. Confirma no gráfico.</li>
+</ul>`],
+macro: ['Como funciona a leitura macro', `<ul>
+<li><b>BTC.D</b>: quota do Bitcoin no mercado cripto. A subir = dinheiro a concentrar-se no BTC (ou alts a sangrar); a descer = rotação para as alts.</li>
+<li><b>USDT.D + USDC.D</b>: quota detida nas duas grandes stablecoins, o dinheiro do mercado. A subir = risk-off, dinheiro para o lado; a descer = dinheiro a ser investido.</li>
+<li><b>TOTAL3ES</b>: valor de todas as alts excluindo BTC, ETH e stablecoins. A subir = dinheiro real a entrar nas alts.</li>
+<li><b>OTHERS.D</b>: quota de tudo o que está fora do top 10. A subir = especulação em small caps; um salto de 15%+ em 30 dias é sinalizado como froth (euforia).</li>
+<li>Cada índice recebe uma direção a partir da variação a 7 dias mais a estrutura das médias de 20/50 dias. As quatro direções correspondem a um regime (tabela acima).</li>
+<li>O regime soma ou retira pontos ao grade: por exemplo −2 para alt longs em Risk-off, +1 em Alt season. Os pontos aparecem no tooltip de cada grade e no plano de trade.</li>
+<li>Os números são reconstruídos a partir do CoinGecko (capitalizações atuais e histórico de BTC, ETH, USDT e USDC) e dos preços diários da Binance (tudo o resto, assumindo oferta constante na janela). Ficam algumas décimas afastados dos índices do TradingView porque o universo de moedas difere; o que conta é a direção. O gráfico do TradingView mostra os oficiais.</li>
+</ul>`],
+div: ['Como ler as divergências', `<ul>
+<li><b>Divergência bullish:</b> o preço faz um mínimo mais baixo mas o indicador faz um mínimo mais alto, logo o momentum vendedor está a perder força. <b>Bearish:</b> o preço faz um máximo mais alto mas o indicador faz um máximo mais baixo, logo o momentum comprador está a perder força. Ambas são avisos precoces de que o movimento pode virar, não são entradas por si só.</li>
+<li><b>RSI</b> compara os dois mínimos ou máximos do RSI(14). <b>MACD</b> compara as duas oscilações do histograma do MACD, que têm de ser ondas separadas (o histograma cruza o zero entre elas). <b>RSI + MACD</b> significa que ambos discordam do preço nas mesmas duas oscilações, e é o tipo mais fiável.</li>
+<li>As oscilações são encontradas com 5 velas de cada lado, por isso uma divergência fica <b>confirmada</b> cinco velas depois da segunda oscilação. As que estão a <b>formar-se</b> (mostradas com "Confirmed only" desligado) podem desaparecer na vela seguinte.</li>
+<li><b>Strength</b> (0 a 100) soma: quantos indicadores concordam, quão fundo está o RSI em sobrevenda ou sobrecompra, quanto o indicador discorda, quanto o preço avançou, a confirmação e a frescura. 70 ou mais é Strong.</li>
+<li><b>With trend</b> significa que a divergência aponta na mesma direção da tendência EMA20 / EMA50 (um pullback ou ressalto pode estar a terminar). <b>Against trend</b> é uma tentativa de reversão: falha mais vezes, por isso reduz o tamanho e espera por confirmação.</li>
+<li>O mini gráfico mostra as últimas 100 velas. A linha branca une as duas oscilações no preço e em cada indicador. Clica num cartão para abrir o plano de trade, já definido na direção da divergência.</li>
+<li>O scan cobre os 100 principais pares por volume em 15m, 1H, 4H e 1D, com velas fechadas. As divergências falham muitas vezes em tendências fortes. O 15m tem ruído; o 4H e o 1D são mais lentos mas mais fiáveis.</li>
+<li><b>Telegram:</b> com "Divergence alerts" ativo em Settings, recebes uma mensagem quando RSI + MACD divergem ambos numa oscilação confirmada, com força Strong, em 1H, 4H ou 1D. A página tem de ficar aberta e com auto-refresh (o runner no PC faz o mesmo sem browser).</li>
+</ul>`],
+liq: ['Como ler o mapa de liquidações', `<ul>
+<li><b>É uma estimativa.</b> A Binance não publica onde as posições são liquidadas. O mapa assume que cada subida do open interest são novas posições abertas ao preço dessa vela, divididas entre longs e shorts consoante quem comprava ou vendia agressivamente, e distribuídas pelos níveis de alavancagem que marcares. Cada uma recebe um preço de liquidação, e a banda fica acesa até o preço a atravessar.</li>
+<li><b>Mais brilhante = mais liquidações estimadas</b> nesse preço. As bandas <b class="up">acima</b> do preço são liquidações de shorts (compra forçada que pode alimentar um squeeze para cima); as bandas <b class="dn">abaixo</b> são liquidações de longs (venda forçada que pode alimentar uma queda).</li>
+<li>O preço é muitas vezes atraído para grandes aglomerados próximos ("ímanes" de liquidez), e o movimento reverte com frequência depois de um aglomerado ser varrido. Usa-o para timing e para colocar stops longe de aglomerados óbvios, não como sinal isolado.</li>
+<li>Open interest a cair retira liquidez em todo o mapa (posições fechadas). O perfil do lado direito mostra o que ainda está ativo agora.</li>
+</ul>`],
+journal: ['Como funciona o journal', `<ul>
+<li>Após cada scan do Crypto Scanner com velas fechadas, regista cada <b>setup com trigger</b> (cooldown de 6 velas por par, lado e timeframe) e cada <b>novo alinhamento</b> (alinhado apenas na última vela). Guarda o contexto nesse momento: pontuação, triggers, regime, MTF, extensão, positioning e funding.</li>
+<li>Os <b>resultados</b> atualizam após cada scan, ou com Update outcomes: retornos às 4, 12 e 24 velas (a teu favor = positivo), excursão máxima favorável e adversa, e um resultado de trade simulado: <b>Win</b> = alvo de +1,5R atingido primeiro, <b>Loss</b> = stop de −1R atingido primeiro (ambos na mesma vela conta como perda), <b>Time</b> = nenhum dos dois em 24 velas, fechado a mercado.</li>
+<li><b>Avg R</b> é a expectativa por trade em unidades de risco: acima de 0 significa que o sinal compensou nesta amostra, antes de comissões e slippage.</li>
+<li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
+</ul>`]
+};
+function helpApply(lang){
+  document.querySelectorAll('details[data-help]').forEach(d => {
+    const sum = d.querySelector('summary'), ul = d.querySelector('ul'), en = d._en, pt = HELP_PT[d.dataset.help];
+    if (!en) return;
+    sum.textContent = lang === 'pt' ? pt[0] : en.t; ul.innerHTML = lang === 'pt' ? pt[1] : en.h;
+    d.querySelectorAll('.hlang button').forEach(b => b.classList.toggle('on', b.dataset.hl === lang));
+  });
+}
+(function helpInit(){
+  let lang = 'en'; try { lang = localStorage.getItem(HELP_KEY) === 'pt' ? 'pt' : 'en'; } catch {}
+  document.querySelectorAll('details[data-help]').forEach(d => {
+    const sum = d.querySelector('summary'), ul = d.querySelector('ul'); d._en = {t: sum.textContent, h: ul.innerHTML};
+    const bar = document.createElement('div'); bar.className = 'seg hlang'; bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Language of this help text');
+    bar.innerHTML = '<button type="button" data-hl="en">EN</button><button type="button" data-hl="pt">PT</button>'; d.insertBefore(bar, ul);
+  });
+  document.addEventListener('click', e => { const b = e.target.closest('.hlang button'); if (!b) return; lang = b.dataset.hl; try { localStorage.setItem(HELP_KEY, lang); } catch {} helpApply(lang); });
+  helpApply(lang);
+})();
+
 </script>
 </body>
 </html>
