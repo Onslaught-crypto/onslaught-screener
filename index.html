@@ -2567,10 +2567,10 @@ async function tgAlertText(items){ const P = await tgAlertParts(items); return [
 
 
 /* Chart picture for a Telegram alert: the signal candle sits in the middle, 50 candles of history on the left, empty room on the right for entry, stop and targets. */
-async function tgChartBlob(sym, dir){
-  const P = await planFor(sym, dir); if (!P) return null;
-  let cd = await Cache.get(`k:${sym}:${S.tf}`); if (!cd) return null;
-  const cur = Math.floor(Date.now() / TF_MS[S.tf]) * TF_MS[S.tf]; cd = cd.filter(k => k[0] < cur);
+async function tgChartBlob(sym, dir, tf = S.tf, own = false){          // own = true: a divergence on its own timeframe (plan from divPlan, no scanner row needed)
+  const P = own ? await divPlan(sym, tf, dir) : await planFor(sym, dir); if (!P) return null;
+  let cd = await Cache.get(`k:${sym}:${tf}`); if (!cd) return null;
+  const cur = Math.floor(Date.now() / TF_MS[tf]) * TF_MS[tf]; cd = cd.filter(k => k[0] < cur);
   const BEF = 50, AFT = 28, seg = cd.slice(-(BEF + 1)); if (seg.length < 20) return null;
   const cs = getComputedStyle(document.documentElement), col = (n, d) => (cs.getPropertyValue(n) || '').trim() || d;
   const UP = col('--bull', '#9eff00'), DN = col('--bear', '#e94c2a'), BG = '#0e0f14', GRID = 'rgba(255,255,255,.07)', TXT = '#c9c9d1', MU = '#8b8b90';
@@ -2595,7 +2595,7 @@ async function tgChartBlob(sym, dir){
   const dc = dir > 0 ? UP : DN;
   g.textAlign = 'left'; g.font = 'bold 20px sans-serif'; g.fillStyle = TXT; g.fillText(sym.replace('USDT', ''), m.l, 24);
   const w = g.measureText(sym.replace('USDT', '')).width; g.fillStyle = dc; g.fillText(`  ${dir > 0 ? 'LONG' : 'SHORT'}`, m.l + w, 24);
-  g.font = '12px monospace'; g.fillStyle = MU; g.fillText(`${S.tf.toUpperCase()} · ${new Date(seg.at(-1)[0]).toLocaleString([], {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})} candle · Onslaught Screener`, m.l, 44);
+  g.font = '12px monospace'; g.fillStyle = MU; g.fillText(`${tf.toUpperCase()} · ${new Date(seg.at(-1)[0]).toLocaleString([], {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})} candle · Onslaught Screener`, m.l, 44);
   return new Promise(res => cv.toBlob(res, 'image/png'));
 }
 async function tgSendPhoto(blob, caption){
@@ -3690,14 +3690,16 @@ async function divPlan(sym, tf, dir){
   let slMode = 'swing', atrMult = 1.5; try { const o = JSON.parse(localStorage.getItem(PLAN_KEY) || '{}'); slMode = o.slMode || slMode; atrMult = parseFloat(o.atrMult) || atrMult; } catch {}
   return tradePlan(cd, dir, {slMode, atrMult, entry: null});
 }
-async function divAlertText(items, early){
-  const lines = [early ? `⚡ <b>Onslaught · ${items.length} early divergence${items.length > 1 ? 's' : ''}</b>` : `🔀 <b>Onslaught · ${items.length} new divergence${items.length > 1 ? 's' : ''}</b>`];
-  if (S.macro && S.macro.reg) lines.push(`🌐 Macro: ${esc(S.macro.reg.name)}${S.macro.reg.froth ? ' 🔥' : ''}`);
+async function divAlertParts(items, early){
+  const head = [early ? `⚡ <b>Onslaught · ${items.length} early divergence${items.length > 1 ? 's' : ''}</b>` : `🔀 <b>Onslaught · ${items.length} new divergence${items.length > 1 ? 's' : ''}</b>`], blocks = [], tail = [];
+  if (S.macro && S.macro.reg) head.push(`🌐 Macro: ${esc(S.macro.reg.name)}${S.macro.reg.froth ? ' 🔥' : ''}`);
   for (const x of items.slice(0, 6)){
+    const lines = [];
     const bull = x.side > 0, dec = decFor(x.pB), mc = dvMacd(x), ctx = dvCtx(x);
-    lines.push('', `<b>${esc(x.sym.replace('USDT', ''))} ${DV_LBL[x.tf]} · ${bull ? 'BULLISH 🟢' : 'BEARISH 🔴'}</b> · ${dvIndLbl(x)} · ${x.level} (${x.score})`,
+    lines.push(`<b>${esc(x.sym.replace('USDT', ''))} ${DV_LBL[x.tf]} · ${bull ? 'BULLISH 🟢' : 'BEARISH 🔴'}</b> · ${dvIndLbl(x)} · ${x.level} (${x.score})`,
       `Price ${fp(x.pA, dec)} → ${fp(x.pB, dec)} (${bull ? 'lower low' : 'higher high'}) · RSI ${x.rsiA.toFixed(0)} → ${x.rsiB.toFixed(0)}${mc != null ? ` · MACD hist −${mc}%` : ''}`,
       `${dvAge(x)}${ctx ? ' · ' + ctx[0].toLowerCase() + (x.side * x.trend < 0 ? ' ⚠️' : '') : ''}`);
+    { const rw = S.rows.find(r => r.sym === x.sym); if (rw && rw.mcap) lines.splice(lines.length - 2, 0, `Mkt cap $${fmtBig(rw.mcap)}${rw.rank ? ' · rank #' + rw.rank : ''}`); }     // market cap and rank under the title, as in setup alerts
     if ($('tgPlan').checked){
       const P = await divPlan(x.sym, x.tf, x.side);
       if (P){ const pc = v => fmtPct((v / P.entry - 1) * 100);
@@ -3706,9 +3708,24 @@ async function divAlertText(items, early){
     }
     if (early) lines.push('⚠️ Early: only 2 candles after the swing, can still fail. Confirm on the chart.');
     lines.push(`<a href="https://www.tradingview.com/chart/?symbol=BINANCE:${x.sym}.P">Chart</a>`);
+    blocks.push({x, lines});
   }
-  if (items.length > 6) lines.push('', `+${items.length - 6} more in the Divergences tab`);
-  return lines.join('\n');
+  if (items.length > 6) tail.push(`+${items.length - 6} more in the Divergences tab`);
+  return {head, blocks, tail};
+}
+async function divAlertText(items, early){ const P = await divAlertParts(items, early); return [...P.head, ...P.blocks.flatMap(b => ['', ...b.lines]), ...(P.tail.length ? ['', ...P.tail] : [])].join('\n'); }
+/* A divergence alert with a chart under each coin (same picture as the setup alerts, drawn on the divergence's own timeframe): header, then one picture per coin with the coin's text as caption. Without the picture checkbox it is one text message. */
+async function divDeliver(items, early){
+  if (!$('tgImg').checked) return tgSend(await divAlertText(items, early));
+  const P = await divAlertParts(items, early), wait = ms => new Promise(z => setTimeout(z, ms)), vis = h => h.replace(/<[^>]+>/g, '').replace(/&amp;|&lt;|&gt;/g, '_').length;
+  await tgSend(P.head.join('\n'));
+  for (const b of P.blocks){
+    await wait(1100);
+    const text = b.lines.join('\n'); let ok = false, sentText = false;
+    try { const bl = $('tgPlan').checked ? await tgChartBlob(b.x.sym, b.x.side, b.x.tf, true) : null; if (bl){ const long = vis(text) > 1000; ok = await tgSendPhoto(bl, long ? b.lines[0] : text); sentText = !!ok && !long; } } catch {}
+    if (!sentText){ if (ok) await wait(1100); await tgSend(text); }
+  }
+  if (P.tail.length) await tgSend(P.tail.join('\n').trim());
 }
 /* Alerts: RSI + MACD on the same swings, confirmed, strong, on 1H / 4H / 1D. The first run only records what already exists.
    Early alerts (⚡): the same, but 2 candles after the swing, strength 60+, with the last candle already turning. They have their own switch and baseline. */
@@ -3726,7 +3743,7 @@ async function divAlertRun(rows, early){
   const fresh = cand.filter(x => !sent[id(x)] && !sent[dvId(x)]).sort((a, b) => b.score - a.score);
   if (!fresh.length){ dvSentSave(sent); return; }
   if (tgQuiet()){ for (const x of fresh) mark(x); dvSentSave(sent); return; }          // quiet hours: noted, not sent
-  try { await tgSend(await divAlertText(fresh, early)); for (const x of fresh) mark(x); dvSentSave(sent); DIV.errShown = false; }
+  try { await divDeliver(fresh, early); for (const x of fresh) mark(x); dvSentSave(sent); DIV.errShown = false; }
   catch(e){ dvSentSave(sent); if (!DIV.errShown){ DIV.errShown = true; toast('Divergence alert not sent: ' + e.message); } }
 }
 
