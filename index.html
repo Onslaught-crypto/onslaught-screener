@@ -1568,8 +1568,11 @@ function taLevels(cd, o = {}){
   if (vp){ add('Point of control (POC)', 'vp', vp.poc, vp.poc, {pool: 'POC'}); add('Value area high (VAH)', 'vp', vp.vah, vp.vah, {pool: 'VAH'}); add('Value area low (VAL)', 'vp', vp.val, vp.val, {pool: 'VAL'}); }
   list.sort((x, y) => x.distAtr - y.distAtr);
   // anchored VWAPs: one from the last swing high candle (built from highs, starts exactly at the high), one from the last swing low candle (built from lows)
-  const aH = sh.at(-1), aL = sl.at(-1);
-  const avwapH = aH != null ? {i: aH, v: taAvwap(cd, aH, 2)} : null, avwapL = aL != null ? {i: aL, v: taAvwap(cd, aL, 3)} : null;
+  // major swing = the highest confirmed swing high / lowest confirmed swing low of the last 250 candles (at least 4 candles old so the line has length); latest = the most recent swing
+  const pickMajor = (arr, src, better) => { let b = null; for (const i of arr) if (i >= from && i <= n - 4 && (b == null || better(cd[i][src], cd[b][src]))) b = i; return b != null ? b : arr.at(-1); };
+  const aH2 = sh.at(-1), aL2 = sl.at(-1), aH = pickMajor(sh, 2, (x, y) => x > y), aL = pickMajor(sl, 3, (x, y) => x < y);
+  const mk = (i, src) => i != null ? {i, v: taAvwap(cd, i, src)} : null;
+  const avwapH = mk(aH, 2), avwapL = mk(aL, 3), avwapH2 = mk(aH2, 2), avwapL2 = mk(aL2, 3);
   // where price sits right now: inside or within half an ATR of a block, gap or zone (used by the scanner)
   let loc = null;
   { const near = list.filter(x => (x.side === 'at' || x.distAtr <= (x.kind === 'sr' ? 0.3 : 0.5)) && ['ob', 'breaker', 'fvg', 'sr'].includes(x.kind));
@@ -1578,7 +1581,7 @@ function taLevels(cd, o = {}){
     const q = near[0];
     if (q){ const dirv = q.kind === 'sr' ? (q.side === 'below' ? 1 : q.side === 'above' ? -1 : (price >= q.mid ? 1 : -1)) : q.dir;
       loc = {k: (dirv > 0 ? 'bull' : 'bear') + '-' + (q.kind === 'sr' ? 'sr' : q.kind === 'fvg' ? 'fvg' : 'ob'), name: q.name, atr: q.distAtr, inside: q.side === 'at'}; } }
-  return {n, price, atr: a, trend: trendS, event, range, fib, sr, fvg, ob, liq, vp, avwapH, avwapL, loc, list, swings: {h: sh, l: sl}, t0: t[0], tN: t[n - 1]};
+  return {n, price, atr: a, trend: trendS, event, range, fib, sr, fvg, ob, liq, vp, avwapH, avwapL, avwapH2, avwapL2, loc, list, swings: {h: sh, l: sl}, t0: t[0], tN: t[n - 1]};
 }
 function taProfile(cd, nb){
   if (!cd || cd.length < 30) return null;
@@ -3745,9 +3748,9 @@ function dvBanner(x){
 /* ---------- Analysis tab: one coin, its structure and key levels, a rule-based summary, token facts ---------- */
 const ANA_KEY = 'onslaught-ana', ANA_TFS = ['15m', '1h', '4h', '1d', '1w'];
 const ANA = {sym: null, tf: '4h', cd: null, L: null, row: null, info: null, facts: null, err: '', busy: false, tok: 0, uni: null, vis: null,
-  show: {sr: true, srp: false, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], deriv: null, mtf: null, btc: null, sel: null, anchorT: null};
-(function(){ try { const o = JSON.parse(localStorage.getItem(ANA_KEY) || '{}'); if (o.show) Object.assign(ANA.show, o.show); if (Array.isArray(o.recent)) ANA.recent = o.recent.slice(0, 6); if (ANA_TFS.includes(o.tf)) ANA.tf = o.tf; } catch {} })();
-const anaSave = () => { try { localStorage.setItem(ANA_KEY, JSON.stringify({show: ANA.show, recent: ANA.recent, tf: ANA.tf})); } catch {} };
+  show: {sr: true, srp: false, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], deriv: null, mtf: null, btc: null, sel: null, anchorT: null, avm: 'major'};
+(function(){ try { const o = JSON.parse(localStorage.getItem(ANA_KEY) || '{}'); if (o.show) Object.assign(ANA.show, o.show); if (Array.isArray(o.recent)) ANA.recent = o.recent.slice(0, 6); if (ANA_TFS.includes(o.tf)) ANA.tf = o.tf; if (o.avm === 'latest') ANA.avm = 'latest'; } catch {} })();
+const anaSave = () => { try { localStorage.setItem(ANA_KEY, JSON.stringify({show: ANA.show, recent: ANA.recent, tf: ANA.tf, avm: ANA.avm})); } catch {} };
 const ANA_NAMES = {EQH: 'Equal highs', EQL: 'Equal lows', PDH: 'Prev day high', PDL: 'Prev day low', PWH: 'Prev week high', PWL: 'Prev week low'};
 async function anaUniverse(){
   if (ANA.uni && Date.now() - ANA.uni.t < 6e4) return ANA.uni.list;
@@ -3856,8 +3859,8 @@ function anaChart(L, cd, w, h){
   vis.forEach((k, j) => { const i = s0 + j, col = k[4] >= k[1] ? bull : bear;
     o.push(`<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="${Y(k[2]).toFixed(1)}" y2="${Y(k[3]).toFixed(1)}" stroke="${col}"/><rect x="${(X(i) - bw / 2).toFixed(1)}" y="${Y(Math.max(k[1], k[4])).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(Math.abs(Y(k[1]) - Y(k[4])), 1).toFixed(1)}" fill="${col}"/>`); });
   if (show.vw){
-    const lines = [[L.avwapH, 'AVWAP · swing high', bear], [L.avwapL, 'AVWAP · swing low', bull]];
-    if (ANA.anchorT != null){ const ci = cd.findIndex(k => k[0] >= ANA.anchorT); if (ci >= 0) lines.push([{i: ci, v: taAvwap(cd, ci)}, 'AVWAP · picked candle', '#4dd0e1']); }
+    const mj = ANA.avm !== 'latest', lines = [[mj ? L.avwapH : L.avwapH2, mj ? 'AVWAP · major high' : 'AVWAP · latest high', bear], [mj ? L.avwapL : L.avwapL2, mj ? 'AVWAP · major low' : 'AVWAP · latest low', bull]];
+    if (ANA.anchorT != null){ const ci = cd.findIndex(k => k[0] >= ANA.anchorT); if (ci >= 0) lines.push([{i: ci, v: taAvwap(cd, ci)}, 'AVWAP · picked', '#4dd0e1']); }
     let lastY = null;
     for (const [A, label, col] of lines){
       if (!A) continue; const ai = A.i, vals = A.v, pts = [];
@@ -4020,6 +4023,7 @@ function anaRender(){
   <div class="anagrid">
     <div class="panel"><div class="row anatog" id="anaTog">
       ${[['sr', 'S/R'], ['srp', 'S/R prices'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity'], ['vp', 'Volume profile'], ['vw', 'AVWAP'], ...(sym === 'BTCUSDT' ? [] : [['rel', 'vs BTC']])].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
+      ${ANA.show.vw ? `<button class="tachip" data-av="mode" title="Which swings the two AVWAP lines start from">AVWAP anchor: ${ANA.avm === 'latest' ? 'latest swing' : 'major swing'}</button>${ANA.anchorT != null ? '<button class="tachip" data-av="reset" title="Remove the picked-candle AVWAP">Clear picked</button>' : ''}` : ''}
       <span class="mu anahov" id="anaHov"></span></div><div id="anaChartBox"></div><div id="anaRelBox" class="anarel"></div></div>
     <div class="anaside">
       <div class="card2"><h4>Key levels (nearest first)</h4>${above.map(x => lrow(x, '▲')).join('')}${at.map(x => lrow(x, '●')).join('')}<div class="lv anapr"><b>● Price</b><b class="mono">${L.price.toFixed(dec > 4 ? 4 : dec)}</b></div>${below.map(x => lrow(x, '▼')).join('')}${above.length + below.length + at.length ? '' : '<p class="mu">No clear levels near price.</p>'}</div>
@@ -4058,6 +4062,7 @@ function anaHover(e){
 $('anaTf').onclick = e => { const b = e.target.closest('button'); if (!b) return; ANA.tf = b.dataset.v; anaSave(); anaTfSync(); if (ANA.sym) anaLoad(ANA.sym); };
 $('anaBody').onclick = e => {
   const t = e.target.closest('.tachip');
+  if (t && t.dataset.av){ if (t.dataset.av === 'mode'){ ANA.avm = ANA.avm === 'latest' ? 'major' : 'latest'; anaSave(); } else ANA.anchorT = null; anaRender(); return; }
   if (t){ const k = t.dataset.k; ANA.show[k] = !ANA.show[k]; if (k === 'vw' && !ANA.show.vw) ANA.anchorT = null; anaSave();
     if (k === 'rel' && ANA.show.rel && !ANA.btc && ANA.sym) anaBtcLoad(ANA.sym, ANA.tf, ANA.tok); anaRender(); return; }
   const c = e.target.closest('.anacell'); if (c){ ANA.tf = c.dataset.tf; anaSave(); anaTfSync(); anaLoad(ANA.sym); return; }
