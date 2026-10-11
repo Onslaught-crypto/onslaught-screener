@@ -419,6 +419,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 .dvs{border-radius:4px;padding:1px 6px;font:700 11px var(--mono);cursor:help} .dvs.strong{background:var(--accent-dk);color:#fff} .dvs.medium{background:var(--panel2);color:var(--text)} .dvs.weak{background:transparent;color:var(--muted);border:1px solid var(--line)}
 .ddiv{margin:0 0 10px;padding:8px 10px;border-left:3px solid var(--accent);background:var(--panel2);border-radius:6px;font-size:12.5px;line-height:1.5}
 .ddiv.bull{border-left-color:var(--bull)} .ddiv.bear{border-left-color:var(--bear)} .ddiv[hidden]{display:none}
+.jfold>summary{cursor:pointer;font-size:14px;padding:2px 0}
+.jfold[open]>summary{margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -589,7 +591,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="row">
         <label>Alert on <select id="alertWhat"><option value="setup">Triggered setups</option><option value="aligned">Setups + new alignments</option></select></label>
         <label title="Only alert on setups of at least this grade">Min grade <select id="alertGrade"><option value="">Any</option><option value="B">B or better</option><option value="A">A only</option></select></label>
-        <label title="When many setups fire on the same side in one scan (a market-wide move), they are really one bet repeated. Only the best few by grade are sent, with a note.">Wave guard <select id="alertCap"><option value="5">Best 5 per side</option><option value="3">Best 3 per side</option><option value="10">Best 10 per side</option><option value="0">Off (send all)</option></select></label>
+        <label title="When many setups fire on the same side in one scan (a market-wide move), they are really one bet repeated. Only the best few by grade are sent, with a note.">Wave guard <select id="alertCap"><option value="3">Best 3 per side</option><option value="5" selected>Best 5 per side</option><option value="10">Best 10 per side</option><option value="0">Off (send all)</option></select></label>
         <label title="Only alert on pairs whose market cap is inside this range. Pairs with no market cap data are skipped while a range is set.">Market cap <select id="alertMcapMin"><option value="0">Any</option><option value="1e7">$10M</option><option value="5e7">$50M</option><option value="1e8">$100M</option><option value="5e8">$500M</option><option value="1e9">$1B</option><option value="5e9">$5B</option><option value="1e10">$10B</option></select> to <select id="alertMcapMax"><option value="0">Any</option><option value="5e7">$50M</option><option value="1e8">$100M</option><option value="5e8">$500M</option><option value="1e9">$1B</option><option value="5e9">$5B</option><option value="1e10">$10B</option></select></label>
         <label><input id="alertStar" type="checkbox"> Starred pairs only</label>
         <label><input id="alertSound" type="checkbox" checked> Sound</label>
@@ -791,7 +793,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="panel">
       <div class="row">
         <label title="Log triggered setups and new alignments after each Crypto Scanner scan (closed candles only)"><input id="jOn" type="checkbox" checked> Log signals</label>
-        <label title="What the Journal counts. 'Only signals my alert settings send' follows your own min grade, market cap range, starred filter and wave guard; the plan view follows each alerted signal with the plan shown in its alert."><select id="jShow"><option value="all">Count: all signals (simple test)</option><option value="alerted">Count: only signals my alerts send</option><option value="plan">Count: alerted, with the alert plan</option></select></label>
+        <label title="What the Journal counts. 'Only signals my alert settings send' follows your own min grade, market cap range, starred filter and wave guard; the plan view follows each alerted signal with the plan shown in its alert."><select id="jShow"><option value="all">Count: every logged signal</option><option value="alerted">Count: only signals I was alerted to</option><option value="plan">Count: alerted, traded with the alert plan</option></select></label>
         <label><select id="jWhat"><option value="both">Setups + new alignments</option><option value="setup">Triggered setups only</option></select></label>
         <span class="sep"></span>
         <button id="jUpdate" class="primary">Update outcomes</button>
@@ -806,17 +808,14 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="mu" id="jShowNote" style="font-size:12px;margin:-4px 2px 8px"></div>
     <div class="stats" id="jCards"></div>
     <div class="panel"><div class="rot-head"><b>Equity curve</b> <span class="mu" id="jEqNote">Running total of R over completed signals, oldest to newest (setups only, 1R each).</span></div><div id="jEq"></div></div>
-    <details class="panel" id="jRunPanel">
-      <summary style="cursor:pointer"><b>Advanced: runner results</b> <span class="mu">What the runner really alerted you, followed with its own plan (three targets, stop to entry after TP1). Load trades.csv from the runner folder; the numbers are kept in this browser.</span></summary>
-      <div class="row" style="margin-top:8px"><label class="filebtn">Load trades.csv<input id="jRunFile" type="file" accept=".csv,text/csv" hidden></label><button id="jRunClear">Clear</button><span class="mu" id="jRunStatus" style="font-size:12px"></span></div>
-      <div id="jRunOut"></div>
-    </details>
-    <div class="panel">
-      <div class="rot-head"><b>Where is the edge?</b> <span class="mu" id="jEdgeNote">Simulated trade per signal: entry at the signal close, stop 1.5 ATR away (1R), target 1.5R, closed after 24 candles. Groups with fewer than 10 completed signals are dimmed: too few to trust.</span></div>
+    <details class="panel jfold" data-fold="edge" open>
+      <summary><b>Where is the edge?</b></summary>
+      <div class="rot-head"><span class="mu" id="jEdgeNote">Simulated trade per signal: entry at the signal close, stop 1.5 ATR away (1R), target 1.5R, closed after 24 candles. Groups with fewer than 10 completed signals are dimmed: too few to trust.</span></div>
       <div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Signals</th><th>Win rate</th><th>Avg R</th><th class="l">Expectancy</th><th>Avg +12</th><th>Avg MFE</th><th>Avg MAE</th></tr></thead><tbody id="jEdge"></tbody></table></div>
-    </div>
-    <div class="panel" id="jLossPanel">
-      <div class="rot-head"><b>Loss review</b> <span class="mu">What the stopped-out signals have in common. Simulated results, so use it to spot patterns to test, not as proof.</span></div>
+    </details>
+    <details class="panel jfold" id="jLossPanel" data-fold="loss" open>
+      <summary><b>Loss review</b></summary>
+      <div class="rot-head"><span class="mu">What the stopped-out signals have in common. Simulated results, so use it to spot patterns to test, not as proof.</span></div>
       <div id="jLoss"></div>
       <div class="rot-head" style="margin-top:14px"><b>What if I had skipped…</b> <span class="mu">Tick filters to replay the completed signals without them (nothing is changed in your alerts).</span></div>
       <div class="whatif" id="jWhat2">
@@ -828,18 +827,31 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input type="checkbox" data-wi="aligned"> Aligned (no trigger)</label>
       </div>
       <div id="jWhatOut" class="mu" style="margin-top:8px"></div>
-    </div>
+    </details>
+    <details class="panel jfold" data-fold="log" open>
+    <summary><b>Signal log</b></summary>
     <div class="tablewrap">
       <table class="jlog"><thead><tr><th class="l">Signal time</th><th class="l">Pair</th><th class="c">TF</th><th class="c">Side</th><th class="l">Kind</th><th>Score</th><th class="l">Triggers</th><th class="l">Context</th><th>Entry</th><th>+4</th><th>+12</th><th>+24</th><th>MFE</th><th>MAE</th><th class="l">Result</th><th></th></tr></thead>
       <tbody id="jBody"></tbody></table>
     </div>
     <div class="pager" id="jPager"></div>
+    </details>
     <div class="panel" style="margin-top:12px"><details data-help="journal"><summary>How the journal works</summary><ul>
       <li>After each Crypto Scanner scan with closed candles, it logs every <b>triggered setup</b> (cooldown 6 candles per pair, side and timeframe) and every <b>new alignment</b> (aligned on the latest candle only). It records the context at that moment: score, triggers, regime, MTF, extension, positioning and funding.</li>
       <li><b>Outcomes</b> update after each scan, or with Update outcomes: returns after 4, 12 and 24 candles (in your favour = positive), maximum favourable and adverse excursion, and a simulated trade result: <b>Win</b> = +1.5R target hit first, <b>Loss</b> = −1R stop hit first (both in the same candle counts as a loss), <b>Time</b> = neither within 24 candles, closed at market.</li>
       <li><b>Avg R</b> is the expectancy per trade in risk units: above 0 means the signal paid over this sample, before fees and slippage.</li>
+      <li><b>Count</b> chooses which signals the cards, equity curve, edge table and loss review use. <b>Every logged signal</b>: all of them, the simple test above. <b>Only signals I was alerted to</b>: only those that passed your alert settings (min grade, market cap range, starred filter, wave guard), marked 🔔 in the log; signals logged before v1.54 have no mark. <b>Alerted, traded with the alert plan</b>: the same alerted signals, but followed with the plan in the alert: stop and up to 3 targets stored at alert time, a third closed at each target, stop moved to entry after TP1, closed after 48 candles; only finished plans count.</li>
+      <li>Each signal also stores the <b>macro regime</b> at that time; the edge table has a Macro group to show whether a regime helps. Macro only adjusts the grade, nothing is blocked because of it.</li>
+      <li><b>Where is the edge?</b>, <b>Loss review</b> and the <b>Signal log</b> can be collapsed by clicking their titles (remembered in this browser). Clustered signals count as one market bet, so judge filters only after several weeks of data.</li>
+      <li>The <b>Advanced: Onslaught server check</b> box at the bottom is only for assessing the Onslaught runner server (load its trades.csv); it is not needed to use the Journal.</li>
       <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
     </ul></details></div>
+    <details class="panel" style="margin-top:12px" id="jRunPanel">
+      <summary style="cursor:pointer"><b>Advanced: Onslaught server check</b> <span class="mu">Only for assessing the Onslaught web-based runner server: how successful its alerted signals were. Not needed for normal use.</span></summary>
+      <div class="mu" style="font-size:12px;margin-top:8px">Load the <code>trades.csv</code> from the runner folder to see what the runner really alerted and followed with its own plan (three targets, stop to entry after TP1). The numbers are kept in this browser; Clear removes them.</div>
+      <div class="row" style="margin-top:8px"><label class="filebtn">Load trades.csv<input id="jRunFile" type="file" accept=".csv,text/csv" hidden></label><button id="jRunClear">Clear</button><span class="mu" id="jRunStatus" style="font-size:12px"></span></div>
+      <div id="jRunOut"></div>
+    </details>
   </div><!-- /viewJournal -->
 
   <footer>Data: <code>fapi.binance.com</code> klines (cached in your browser, topped up incrementally) · OI from <code>openInterestHist</code> · market cap from CoinGecko. Requests come from your own browser, no keys or backend. Not financial advice. Confirm on the chart.</footer>
@@ -2452,7 +2464,7 @@ function renderJournal(){
   const all = J.entries.filter(e => e.kind !== 'div'), es = jBasis(all), st = jStats(es), pending = es.filter(e => !e.out || !e.out.res).length;
   if ($('jShow')) $('jShow').value = JSH.show;
   { const nA = all.filter(e => e.al).length, nP = all.filter(e => e.plan && e.out && e.out.plan && e.out.plan.done).length;
-    $('jShowNote').textContent = JSH.show === 'all' ? '' : JSH.show === 'alerted' ? `${nA} of ${all.length} logged signals passed your alert settings (signals logged before v1.54 carry no alert flag and are left out).` : `${nP} alerted signals have finished their plan (stop, 3 targets, stop to entry after TP1, closed after 48 candles); the rest are still open or have no stored plan.`;
+    $('jShowNote').textContent = JSH.show === 'all' ? `Counting all ${all.length} logged signals, whether or not they passed your alert settings. Each is a simple test: entry at the signal close, stop 1.5 ATR, one target at 1.5R, 24 candles.` : JSH.show === 'alerted' ? `${nA} of ${all.length} logged signals passed your alert settings and the wave guard, so you would have been alerted. Same simple test as above (stop 1.5 ATR, target 1.5R, 24 candles). Signals logged before v1.54 carry no alert flag and are left out.` : `${nP} alerted signals have finished their plan (stop, 3 targets, stop to entry after TP1, closed after 48 candles); the rest are still open or have no stored plan.`;
     const en = $('jEdgeNote'); if (en) en.textContent = JSH.show === 'plan' ? 'The alert plan followed on the candles after each signal: a third of the position at each of the 3 targets, stop to entry after TP1, closed after 48 candles. R is measured against the plan stop. Groups with fewer than 10 completed signals are dimmed: too few to trust.' : 'Simulated trade per signal: entry at the signal close, stop 1.5 ATR away (1R), target 1.5R, closed after 24 candles. Groups with fewer than 10 completed signals are dimmed: too few to trust.'; }
   const card = (k, v, sub, c2) => `<div class="stat ${c2 || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
   $('jCards').innerHTML = card('Signals logged', es.length, `${pending} awaiting outcome`) + card('Completed', st.n, 'with a trade result')
@@ -4656,6 +4668,10 @@ journal: ['Como funciona o journal', `<ul>
 <li>Após cada scan do Crypto Scanner com velas fechadas, regista cada <b>setup com trigger</b> (cooldown de 6 velas por par, lado e timeframe) e cada <b>novo alinhamento</b> (alinhado apenas na última vela). Guarda o contexto nesse momento: pontuação, triggers, regime, MTF, extensão, positioning e funding.</li>
 <li>Os <b>resultados</b> atualizam após cada scan, ou com Update outcomes: retornos às 4, 12 e 24 velas (a teu favor = positivo), excursão máxima favorável e adversa, e um resultado de trade simulado: <b>Win</b> = alvo de +1,5R atingido primeiro, <b>Loss</b> = stop de −1R atingido primeiro (ambos na mesma vela conta como perda), <b>Time</b> = nenhum dos dois em 24 velas, fechado a mercado.</li>
 <li><b>Avg R</b> é a expectativa por trade em unidades de risco: acima de 0 significa que o sinal compensou nesta amostra, antes de comissões e slippage.</li>
+<li><b>Count</b> escolhe que sinais entram nos cartões, na curva de equity, na tabela do edge e na loss review. <b>Every logged signal</b>: todos, o teste simples acima. <b>Only signals I was alerted to</b>: só os que passaram as tuas definições de alerta (grade mínima, market cap, favoritos, wave guard), marcados com 🔔 no registo; os sinais anteriores à v1.54 não têm marca. <b>Alerted, traded with the alert plan</b>: os mesmos sinais alertados, seguidos com o plano do alerta: stop e até 3 alvos guardados no momento do alerta, um terço fechado em cada alvo, stop para a entrada depois do TP1, fecho às 48 velas; só contam planos terminados.</li>
+<li>Cada sinal guarda também o <b>regime macro</b> desse momento; a tabela do edge tem um grupo Macro para ver se um regime ajuda. O macro só ajusta a grade, nada é bloqueado por causa dele.</li>
+<li><b>Where is the edge?</b>, <b>Loss review</b> e o <b>Signal log</b> recolhem-se ao clicar no título (fica guardado neste browser). Sinais agrupados contam como uma só aposta de mercado, por isso só avalia filtros após várias semanas de dados.</li>
+<li>A caixa <b>Advanced: Onslaught server check</b> no fim serve apenas para avaliar o servidor runner da Onslaught (carregar o trades.csv); não é preciso para usar o Journal.</li>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
 </ul>`]
 };
@@ -4676,6 +4692,13 @@ function helpApply(lang){
   });
   document.addEventListener('click', e => { const b = e.target.closest('.hlang button'); if (!b) return; lang = b.dataset.hl; try { localStorage.setItem(HELP_KEY, lang); } catch {} helpApply(lang); });
   helpApply(lang);
+})();
+(function foldInit(){
+  let st = {}; try { st = JSON.parse(localStorage.getItem('onslaught-jfold') || '{}'); } catch {}
+  document.querySelectorAll('details.jfold').forEach(d => {
+    if (st[d.dataset.fold] === 0) d.open = false;
+    d.addEventListener('toggle', () => { st[d.dataset.fold] = d.open ? 1 : 0; try { localStorage.setItem('onslaught-jfold', JSON.stringify(st)); } catch {} });
+  });
 })();
 
 </script>
