@@ -191,7 +191,7 @@ td.trigs{white-space:nowrap}
 .anagrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;margin-bottom:12px;align-items:stretch}.anagrid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;align-items:start}
 .anaside{display:grid;gap:12px}.card2{background:var(--panel);border-radius:10px;padding:12px 14px}.card2 h4{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .card2 .lv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:12.5px}.card2 h4+.lv{border-top:0}.card2 .anapr{border-top:2px solid var(--accent)}
-.mono{font-family:var(--mono)}.wr{color:var(--warn)}.anatog{margin-bottom:8px;gap:6px}.anahov{margin-left:auto;font:11px var(--mono)}
+.mono{font-family:var(--mono)}.wr{color:var(--warn)}.anatog{margin-bottom:8px;gap:6px}.anazoom{display:inline-flex;gap:6px;margin-left:4px}.anazoom .tachip{min-width:30px;text-align:center}#anaChartBox{touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}#anaChartBox.drag{cursor:grabbing}.anahov{margin-left:auto;font:11px var(--mono)}
 .anaf{display:flex;gap:18px;flex-wrap:wrap}.anaf .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}.anaf .v{font:600 15px var(--mono)}
 a.abtn{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 11px;color:var(--text);text-decoration:none}a.abtn:hover{border-color:var(--accent)}
 @media (max-width:900px){.anagrid,.anagrid2{grid-template-columns:minmax(0,1fr)}#anaIn{width:100%}.anapick{flex:1;min-width:150px}}
@@ -1614,7 +1614,7 @@ const MTF_TFS = ['1d','4h','1h'];
 const TF_MS = {'5m':3e5,'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5,'1w':6048e5};
 /* Open time of the candle containing t. Binance weekly candles open on Monday 00:00 UTC, 4 days after the epoch (a Thursday). */
 const tfOpen = (tf, t) => { const ms = TF_MS[tf], off = tf === '1w' ? 3456e5 : 0; return Math.floor((t - off) / ms) * ms + off; };
-const KLIMIT = 300;           // weight 2 per full request
+const KLIMIT = 300, KDEEP = 1000;           // weight 2 per full request
 const CONCURRENCY = 8;
 const OI_POINTS = 11;         // enough for N up to 10
 
@@ -1734,15 +1734,15 @@ async function getMcaps(){
   return m;
 }
 
-async function getKlines(sym, tf, closedOnly){
+async function getKlines(sym, tf, closedOnly, LIM = KLIMIT){   // LIM = KDEEP gives the long history the Technical Analysis chart uses (own cache key)
   const ms = TF_MS[tf], now = Date.now(), cur = tfOpen(tf, now); // open time of forming candle
-  const key = `k:${sym}:${tf}`;
+  const key = LIM === KLIMIT ? `k:${sym}:${tf}` : `k${LIM}:${sym}:${tf}`;
   let c = (await Cache.get(key)) || [];
   const last = c.length ? c[c.length - 1][0] : 0;
   const gap = last ? Math.round((cur - last) / ms) : Infinity;
   let fresh = null;
-  if (!c.length || c.length < KLIMIT * 0.9 || gap > KLIMIT){
-    fresh = await getJSON(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=${tf}&limit=${KLIMIT}`, WEIGHT, klineWeight(KLIMIT));
+  if (!c.length || (LIM === KLIMIT && c.length < LIM * 0.9) || gap > LIM){      // a long series of a young coin is simply shorter, so only the 300 series is refetched for being short
+    fresh = await getJSON(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=${tf}&limit=${LIM}`, WEIGHT, klineWeight(LIM));
     c = [];
   } else if (last < cur || !closedOnly){
     // re-fetch from the last cached candle (it may have been the forming one)
@@ -1752,7 +1752,7 @@ async function getKlines(sym, tf, closedOnly){
   if (fresh){
     const parsed = fresh.map(k => [k[0], +k[1], +k[2], +k[3], +k[4], +k[5]]);
     if (parsed.length){ const from = parsed[0][0]; c = c.filter(k => k[0] < from).concat(parsed); }
-    if (c.length > KLIMIT) c = c.slice(-KLIMIT);
+    if (c.length > LIM) c = c.slice(-LIM);
     await Cache.set(key, c);
   }
   return closedOnly ? c.filter(k => k[0] < cur) : c;
@@ -3748,7 +3748,7 @@ function dvBanner(x){
 /* ---------- Analysis tab: one coin, its structure and key levels, a rule-based summary, token facts ---------- */
 const ANA_KEY = 'onslaught-ana', ANA_TFS = ['15m', '1h', '4h', '1d', '1w'];
 const ANA = {sym: null, tf: '4h', cd: null, L: null, row: null, info: null, facts: null, err: '', busy: false, tok: 0, uni: null, vis: null,
-  show: {sr: true, srp: false, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], deriv: null, mtf: null, btc: null, sel: null, anchorT: null, avm: 'major'};
+  show: {sr: true, srp: false, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], deriv: null, mtf: null, btc: null, sel: null, anchorT: null, avm: 'major', view: {N: null, off: 0}, chartH: 430};
 (function(){ try { const o = JSON.parse(localStorage.getItem(ANA_KEY) || '{}'); if (o.show) Object.assign(ANA.show, o.show); if (Array.isArray(o.recent)) ANA.recent = o.recent.slice(0, 6); if (ANA_TFS.includes(o.tf)) ANA.tf = o.tf; if (o.avm === 'latest') ANA.avm = 'latest'; } catch {} })();
 const anaSave = () => { try { localStorage.setItem(ANA_KEY, JSON.stringify({show: ANA.show, recent: ANA.recent, tf: ANA.tf, avm: ANA.avm})); } catch {} };
 const ANA_NAMES = {EQH: 'Equal highs', EQL: 'Equal lows', PDH: 'Prev day high', PDL: 'Prev day low', PWH: 'Prev week high', PWL: 'Prev week low'};
@@ -3768,13 +3768,13 @@ function anaEnter(){
 function anaTfSync(){ [...$('anaTf').children].forEach(b => b.classList.toggle('on', b.dataset.v === ANA.tf)); }
 async function anaLoad(sym){
   const tok = ++ANA.tok, tf = ANA.tf, c = cfg();
-  Object.assign(ANA, {sym, cd: null, L: null, row: null, facts: null, err: '', busy: true, loadedSym: sym, mtf: null, btc: null, sel: null, anchorT: null, deriv: null});
+  Object.assign(ANA, {sym, cd: null, L: null, row: null, facts: null, err: '', busy: true, loadedSym: sym, mtf: null, btc: null, sel: null, anchorT: null, deriv: null, view: {N: null, off: 0}});
   anaTfSync(); anaRender();
   try {
     const info = (await anaUniverse()).find(u => u.sym === sym);
     if (!info) throw new Error(`${sym} was not found in the Binance USDT-M list.`);
     ANA.info = info; anaRender();
-    const cd = await getKlines(sym, tf, true);
+    const cd = await getKlines(sym, tf, true, KDEEP);
     if (tok !== ANA.tok) return;
     const live = LIVE.q.get(sym);
     ANA.cd = cd; ANA.L = taLevels(cd, {price: live ? live[0] : info.price}); if (ANA.L) ANA.L.tf = tf;
@@ -3823,8 +3823,8 @@ function anaPick(L, show){
   return out;
 }
 function anaChart(L, cd, w, h){
-  const show = ANA.show, N = Math.min(cd.length, w < 600 ? 70 : 120), s0 = cd.length - N, vis = cd.slice(s0), pad = {l: 8, r: 70, t: 8, b: 22}, pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
-  let lo = Math.min(...vis.map(k => k[3]), L.price), hi = Math.max(...vis.map(k => k[2]), L.price); const m = (hi - lo) * 0.04; lo -= m; hi += m;
+  const show = ANA.show, V0 = ANA.view || {}, N = Math.max(Math.min(20, cd.length), Math.min(cd.length, V0.N || (w < 600 ? 70 : 120))), off = Math.max(0, Math.min(V0.off || 0, cd.length - N)), e1 = cd.length - off, s0 = e1 - N, vis = cd.slice(s0, e1), pad = {l: 8, r: 70, t: 8, b: 22}, pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  let lo = Math.min(...vis.map(k => k[3]), ...(off ? [] : [L.price])), hi = Math.max(...vis.map(k => k[2]), ...(off ? [] : [L.price]));   // scrolled back in time: scale to the candles on screen only const m = (hi - lo) * 0.04; lo -= m; hi += m;
   const X = i => pad.l + pw * (i - s0 + 0.5) / N, Y = p => pad.t + ph * (1 - (p - lo) / (hi - lo)), dec = decFor(L.price);
   const bull = cssv('--bull'), bear = cssv('--bear'), acc = cssv('--accent-lt'), info = cssv('--info'), warn = cssv('--warn'), mu = cssv('--muted'), dim = cssv('--dim');
   const o = [`<svg id="anaSvg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Candlestick chart with key levels"><defs><clipPath id="anaClip"><rect x="${pad.l}" y="${pad.t}" width="${pw}" height="${ph}"/></clipPath></defs><rect width="${w}" height="${h}" fill="#0e0f14" rx="8"/>`];
@@ -3842,6 +3842,7 @@ function anaChart(L, cd, w, h){
   const srZ = [], avTags = [];
   for (const it of anaPick(L, show)){
     if (it.kind === 'liq'){ const y = Y(it.mid); o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${warn}" stroke-dasharray="5 4"/>${txt(w - pad.r - 4, y - 4, ANA_NAMES[it.pool], warn, 'end')}`); continue; }
+    if (it.i != null && it.i >= e1) continue;
     const x0 = it.i != null ? Math.max(pad.l, X(Math.max(it.i, s0)) - pw / N / 2) : pad.l;
     if (it.kind === 'sr'){ const zc = it.side === 'above' ? bear : it.side === 'below' ? bull : mu;
       zone(it, pad.l, zc, it.side === 'above' ? 'Resistance' : it.side === 'below' ? 'Support' : 'S/R', .14);
@@ -3863,14 +3864,14 @@ function anaChart(L, cd, w, h){
     if (ANA.anchorT != null){ const ci = cd.findIndex(k => k[0] >= ANA.anchorT); if (ci >= 0) lines.push([{i: ci, v: taAvwap(cd, ci)}, 'AVWAP · picked', '#4dd0e1']); }
     const halo = (x, y, t, col) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${col}" font-size="10" font-weight="600" stroke="#0e0f14" stroke-width="3" paint-order="stroke" stroke-linejoin="round">${esc(t)}</text>`;
     for (const [A, label, col] of lines){
-      if (!A) continue; const ai = A.i, vals = A.v, pts = [], j0 = Math.max(ai, s0);
-      for (let i = j0; i < cd.length; i++) pts.push(`${X(i).toFixed(1)},${Y(vals[i - ai]).toFixed(1)}`);
-      if (pts.length > 1){ avTags.push([vals[vals.length - 1], col]);
+      if (!A || A.i >= e1) continue; const ai = A.i, vals = A.v, pts = [], j0 = Math.max(ai, s0);
+      for (let i = j0; i < e1; i++) pts.push(`${X(i).toFixed(1)},${Y(vals[i - ai]).toFixed(1)}`);
+      if (pts.length > 1){ avTags.push([vals[e1 - 1 - ai], col]);
         const fp = v => v >= 1 ? v.toFixed(dec > 4 ? 4 : dec) : v.toPrecision(4), low = /low/.test(label), vis0 = ai >= s0,
-          lt = vis0 ? `${label} · ${fp(vals[0])}` : label, jl = (() => { for (let i = j0; i < cd.length; i++){ const yy = Y(vals[i - ai]); if (yy > pad.t + 12 && yy < pad.t + ph - 18) return i; } return j0; })(),   // first point of the line that is inside the plot
+          lt = vis0 ? `${label} · ${fp(vals[0])}` : label, jl = (() => { for (let i = j0; i < e1; i++){ const yy = Y(vals[i - ai]); if (yy > pad.t + 12 && yy < pad.t + ph - 18) return i; } return j0; })(),   // first point of the line that is inside the plot
           ly0 = Y(vals[jl - ai]) + (low ? 15 : -8), lx = Math.min(Math.max(X(jl) + 7, pad.l + 4), w - pad.r - lt.length * 6 - 8);   // label at the start of the line, with the anchor price when the anchor is on screen
         o.push(`<polyline fill="none" stroke="${col}" stroke-width="1.8" points="${pts.join(' ')}"/>${halo(lx, ly0, lt, col)}`); }
-      if (ai >= s0) o.push(`<circle cx="${X(ai).toFixed(1)}" cy="${Y(vals[0]).toFixed(1)}" r="3.5" fill="${col}"/>`);
+      if (ai >= s0 && ai < e1) o.push(`<circle cx="${X(ai).toFixed(1)}" cy="${Y(vals[0]).toFixed(1)}" r="3.5" fill="${col}"/>`);
     }
   }
   const selI = ANA.sel && L.list.find(x => anaKey(x) === ANA.sel);
@@ -3885,10 +3886,10 @@ function anaChart(L, cd, w, h){
     for (const t of tg) o.push(`<line x1="${(w - pad.r - 6).toFixed(1)}" x2="${w - pad.r}" y1="${Y(t.p).toFixed(1)}" y2="${t.y.toFixed(1)}" stroke="${t.c}"/><rect x="${w - pad.r}" y="${(t.y - 7).toFixed(1)}" width="${pad.r - 4}" height="14" rx="3" fill="${t.c}" opacity=".92"/><text x="${w - pad.r + 5}" y="${(t.y + 3.5).toFixed(1)}" fill="#0e0f14" font-size="10" font-weight="700">${pf(t.p)}</text>`);
   }
   const yl = Y(L.price);
-  o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${yl.toFixed(1)}" y2="${yl.toFixed(1)}" stroke="${acc}" stroke-dasharray="3 3"/><rect x="${w - pad.r}" y="${(yl - 9).toFixed(1)}" width="${pad.r - 4}" height="18" rx="3" fill="${cssv('--accent')}"/><text x="${w - pad.r + 6}" y="${(yl + 4).toFixed(1)}" fill="#fff" font-size="11" font-weight="600">${L.price.toFixed(dec > 4 ? 4 : dec)}</text>`);
+  if (!off) o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${yl.toFixed(1)}" y2="${yl.toFixed(1)}" stroke="${acc}" stroke-dasharray="3 3"/><rect x="${w - pad.r}" y="${(yl - 9).toFixed(1)}" width="${pad.r - 4}" height="18" rx="3" fill="${cssv('--accent')}"/><text x="${w - pad.r + 6}" y="${(yl + 4).toFixed(1)}" fill="#fff" font-size="11" font-weight="600">${L.price.toFixed(dec > 4 ? 4 : dec)}</text>`);
   const fmtT = t => { const d = new Date(t); return ANA.tf === '1d' || ANA.tf === '1w' ? d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) : d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) + ' ' + d.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'}); };
   for (let q = 0; q < 5; q++){ const i = s0 + Math.round((N - 1) * q / 4); o.push(txt(Math.min(Math.max(X(i), pad.l + 24), w - pad.r - 30), h - 6, fmtT(cd[i][0]), dim, 'middle')); }
-  o.push('</svg>'); ANA.vis = {s0, N, pad, pw, w}; return o.join('');
+  o.push('</svg>'); ANA.vis = {s0, N, e1, pad, pw, w}; return o.join('');
 }
 function anaSummary(L, row, tf){
   const T = tf.toUpperCase(), st = L.trend > 0 ? 'bullish' : L.trend < 0 ? 'bearish' : 'ranging', cl = L.trend > 0 ? 'up' : L.trend < 0 ? 'dn' : 'mu';
@@ -3938,12 +3939,12 @@ function anaInvalid(L, tf){
 const ANA_TFL = {'15m': '15M', '1h': '1H', '4h': '4H', '1d': '1D', '1w': '1W'};
 async function anaMtf(sym, tf, tok){
   const out = {[tf]: ANA.L};
-  await Promise.all(ANA_TFS.filter(t => t !== tf).map(async t => { try { const cd = await getKlines(sym, t, true); out[t] = taLevels(cd, {price: ANA.L.price}); } catch { out[t] = null; } }));
+  await Promise.all(ANA_TFS.filter(t => t !== tf).map(async t => { try { const cd = await getKlines(sym, t, true, KDEEP); out[t] = taLevels(cd, {price: ANA.L.price}); } catch { out[t] = null; } }));
   if (tok !== ANA.tok) return; ANA.mtf = out; anaRender();
 }
 async function anaBtcLoad(sym, tf, tok){
   if (sym === 'BTCUSDT'){ ANA.btc = {self: true}; anaRender(); return; }
-  try { const cd = await getKlines('BTCUSDT', tf, true); if (tok !== ANA.tok) return; ANA.btc = {cd}; } catch { if (tok !== ANA.tok) return; ANA.btc = {err: true}; }
+  try { const cd = await getKlines('BTCUSDT', tf, true, KDEEP); if (tok !== ANA.tok) return; ANA.btc = {cd}; } catch { if (tok !== ANA.tok) return; ANA.btc = {err: true}; }
   anaRender();
 }
 function anaKey(x){ return x.kind + '|' + x.name + '|' + x.mid.toPrecision(8); }
@@ -3963,7 +3964,7 @@ function anaExplain(x, L){
   return t;
 }
 function anaRelChart(L, cd, btc, w){
-  const V = ANA.vis, N = V.N, s0 = V.s0, vis = cd.slice(s0), bm = new Map(btc.map(k => [k[0], k[4]]));
+  const V = ANA.vis, N = V.N, s0 = V.s0, vis = cd.slice(s0, V.e1), bm = new Map(btc.map(k => [k[0], k[4]]));
   const pts = vis.map(k => ({t: k[0], c: k[4], b: bm.get(k[0])})).filter(q => q.b != null);
   if (pts.length < 10) return '<div class="mu" style="padding:8px">Not enough BTC candles to compare.</div>';
   const h = 96, pad = V.pad, pw = V.pw, c0 = pts[0].c, b0 = pts[0].b, A = pts.map(q => q.c / c0 * 100), B = pts.map(q => q.b / b0 * 100);
@@ -4030,6 +4031,7 @@ function anaRender(){
     <div class="panel"><div class="row anatog" id="anaTog">
       ${[['sr', 'S/R'], ['srp', 'S/R prices'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity'], ['vp', 'Volume profile'], ['vw', 'AVWAP'], ...(sym === 'BTCUSDT' ? [] : [['rel', 'vs BTC']])].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
       ${ANA.show.vw ? `<button class="tachip" data-av="mode" title="Which swings the two AVWAP lines start from">AVWAP anchor: ${ANA.avm === 'latest' ? 'latest swing' : 'major swing'}</button>${ANA.anchorT != null ? '<button class="tachip" data-av="reset" title="Remove the picked-candle AVWAP">Clear picked</button>' : ''}` : ''}
+      <span class="anazoom"><button class="tachip" data-z="out" title="Zoom out (mouse wheel)" aria-label="Zoom out">−</button><button class="tachip" data-z="in" title="Zoom in (mouse wheel)" aria-label="Zoom in">+</button><button class="tachip" data-z="reset" ${ANA.view && (ANA.view.N || ANA.view.off) ? '' : 'hidden'}>Reset zoom</button></span>
       <span class="mu anahov" id="anaHov"></span></div><div id="anaChartBox"></div><div id="anaRelBox" class="anarel"></div></div>
     <div class="anaside">
       <div class="card2"><h4>Key levels (nearest first)</h4>${above.map(x => lrow(x, '▲')).join('')}${at.map(x => lrow(x, '●')).join('')}<div class="lv anapr"><b>● Price</b><b class="mono">${L.price.toFixed(dec > 4 ? 4 : dec)}</b></div>${below.map(x => lrow(x, '▼')).join('')}${above.length + below.length + at.length ? '' : '<p class="mu">No clear levels near price.</p>'}</div>
@@ -4040,26 +4042,32 @@ function anaRender(){
     <div class="card2"><h4>Token and fundamentals</h4>${facts}<div class="note">Source: CoinGecko and Binance. ${tags ? 'Sector: ' + tags : ''}</div></div>
     <div class="card2"><h4>News and research (opens in a new tab)</h4><div class="row"><a class="abtn" href="${cg}" target="_blank" rel="noopener">CoinGecko page</a><a class="abtn" href="https://cryptopanic.com/news/${encodeURIComponent(b.toLowerCase())}/" target="_blank" rel="noopener">CryptoPanic news</a><a class="abtn" href="https://x.com/search?q=%24${encodeURIComponent(b)}&f=live" target="_blank" rel="noopener">X search $${esc(b)}</a><a class="abtn" href="https://www.tradingview.com/symbols/${sym}/ideas/" target="_blank" rel="noopener">TradingView ideas</a></div><div class="note">A live news feed needs a paid key, so the page links out instead.</div></div>
   </div>`;
-  const box = $('anaChartBox'); box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), window.innerWidth < 900 ? 340 : 430);
+  const box = $('anaChartBox'); ANA.chartH = window.innerWidth < 900 ? 340 : 430; box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), ANA.chartH);
   const rb = $('anaRelBox'), W0 = Math.max(320, box.clientWidth || 700);
   rb.innerHTML = ''; rb.style.display = 'none';
   if (ANA.show.rel && sym !== 'BTCUSDT'){ rb.style.display = ''; rb.innerHTML = !ANA.btc ? '<div class="mu" style="padding:8px">Loading BTC candles…</div>' : ANA.btc.err ? '<div class="mu" style="padding:8px">BTC candles are not available right now.</div>' : ANA.btc.cd ? anaRelChart(L, ANA.cd, ANA.btc.cd, W0) : ''; }
   const side = body.querySelector('.anaside'), pn = box.closest('.panel');
   if (side && pn && window.innerWidth >= 900){                       // line the chart panel up with the right-hand column
     const cs = getComputedStyle(pn), chrome = box.getBoundingClientRect().top - pn.getBoundingClientRect().top + parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth || 0) + (rb.style.display === 'none' ? 0 : rb.offsetHeight + 8), h = Math.max(380, Math.round(side.offsetHeight - chrome));
-    box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), h);
+    ANA.chartH = h; box.innerHTML = anaChart(L, ANA.cd, Math.max(320, box.clientWidth || 700), h);
   }
+}
+function anaDraw(){                                                   // redraw only the chart (zoom / pan), not the whole tab
+  const L = ANA.L, box = $('anaChartBox'); if (!L || !box || !ANA.cd) return;
+  const W = Math.max(320, box.clientWidth || 700); box.innerHTML = anaChart(L, ANA.cd, W, ANA.chartH || 430);
+  const rb = $('anaRelBox'); if (rb && ANA.show.rel && ANA.btc && ANA.btc.cd) rb.innerHTML = anaRelChart(L, ANA.cd, ANA.btc.cd, W);
+  const z = document.querySelector('#anaTog [data-z=reset]'); if (z) z.hidden = !(ANA.view && (ANA.view.N || ANA.view.off));
 }
 function anaIdx(e){
   const svg = $('anaSvg'), V = ANA.vis; if (!svg || !V || !ANA.cd) return null;
   const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) * (V.w / r.width), i = V.s0 + Math.floor((x - V.pad.l) / V.pw * V.N);
-  return i < V.s0 || i >= ANA.cd.length ? null : i;
+  return i < V.s0 || i >= V.e1 ? null : i;
 }
 function anaHover(e){
   const svg = $('anaSvg'), V = ANA.vis; if (!svg || !V || !ANA.cd) return;
   const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) * (V.w / r.width), i = V.s0 + Math.floor((x - V.pad.l) / V.pw * V.N);
   const cr = $('anaCross'), hv = $('anaHov');
-  if (i < V.s0 || i >= ANA.cd.length){ if (cr) cr.setAttribute('visibility', 'hidden'); if (hv) hv.textContent = ''; return; }
+  if (i < V.s0 || i >= V.e1){ if (cr) cr.setAttribute('visibility', 'hidden'); if (hv) hv.textContent = ''; return; }
   const k = ANA.cd[i], xx = V.pad.l + V.pw * (i - V.s0 + 0.5) / V.N, d = decFor(k[4]), t = new Date(k[0]);
   cr.setAttribute('x1', xx); cr.setAttribute('x2', xx); cr.setAttribute('visibility', 'visible');
   hv.textContent = `${t.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'})}${ANA.tf === '1d' ? '' : ' ' + t.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})} · O ${k[1].toFixed(d > 4 ? 4 : d)} H ${k[2].toFixed(d > 4 ? 4 : d)} L ${k[3].toFixed(d > 4 ? 4 : d)} C ${k[4].toFixed(d > 4 ? 4 : d)}`;
@@ -4067,6 +4075,7 @@ function anaHover(e){
 
 $('anaTf').onclick = e => { const b = e.target.closest('button'); if (!b) return; ANA.tf = b.dataset.v; anaSave(); anaTfSync(); if (ANA.sym) anaLoad(ANA.sym); };
 $('anaBody').onclick = e => {
+  const zb = e.target.closest('[data-z]'); if (zb){ if (zb.dataset.z === 'reset') anaSetView(null, 0); else anaZoom(zb.dataset.z === 'in' ? 1 / 1.4 : 1.4, ANA.vis && ANA.vis.e1 < ANA.cd.length ? 0.5 : 1); return; }
   const t = e.target.closest('.tachip');
   if (t && t.dataset.av){ if (t.dataset.av === 'mode'){ ANA.avm = ANA.avm === 'latest' ? 'major' : 'latest'; anaSave(); } else ANA.anchorT = null; anaRender(); return; }
   if (t){ const k = t.dataset.k; ANA.show[k] = !ANA.show[k]; if (k === 'vw' && !ANA.show.vw) ANA.anchorT = null; anaSave();
@@ -4075,6 +4084,41 @@ $('anaBody').onclick = e => {
   const l = e.target.closest('.anal'); if (l){ ANA.sel = ANA.sel === l.dataset.k ? null : l.dataset.k; anaRender(); return; }
   if (e.shiftKey && e.target.closest('#anaSvg')){ const i = anaIdx(e); if (i != null){ ANA.anchorT = ANA.cd[i][0]; ANA.show.vw = true; anaSave(); anaRender(); } }
 };
+/* Chart zoom and pan: mouse wheel zooms around the pointer, drag (or one finger) pans, two fingers pinch, buttons + / - / Reset. The window is ANA.view = {N candles shown, off candles hidden at the right}. */
+function anaSetView(N, off){
+  const len = ANA.cd ? ANA.cd.length : 0; if (!len) return;
+  if (N == null){ ANA.view = {N: null, off: 0}; anaDraw(); return; }
+  N = Math.max(Math.min(20, len), Math.min(len, Math.round(N))); off = Math.max(0, Math.min(Math.round(off), len - N));
+  ANA.view = {N, off}; anaDraw();
+}
+function anaZoom(factor, fx){                                          // factor > 1 zooms out; fx = which part of the chart (0 left to 1 right) stays put
+  const V = ANA.vis; if (!V || !ANA.cd) return;
+  const nN = Math.max(Math.min(20, ANA.cd.length), Math.min(ANA.cd.length, V.N * factor)), cI = V.s0 + fx * V.N, s0 = cI - fx * nN;
+  anaSetView(nN, ANA.cd.length - (s0 + nN));
+}
+(function(){
+  const body = $('anaBody'), ptrs = new Map(); let drag = null, pinch = null, raf = 0;
+  const fxOf = e => { const r = $('anaSvg').getBoundingClientRect(), V = ANA.vis; return Math.max(0, Math.min(1, ((e.clientX - r.left) * (V.w / r.width) - V.pad.l) / V.pw)); };
+  body.addEventListener('wheel', e => { if (!e.target.closest('#anaSvg') || !ANA.vis || !ANA.cd) return; e.preventDefault(); anaZoom(e.deltaY < 0 ? 1 / 1.2 : 1.2, fxOf(e)); }, {passive: false});
+  body.addEventListener('pointerdown', e => {
+    if (!e.target.closest('#anaSvg') || e.shiftKey || !ANA.vis || !ANA.cd || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    ptrs.set(e.pointerId, {x: e.clientX, y: e.clientY}); try { body.setPointerCapture(e.pointerId); } catch {}
+    const V = ANA.vis;
+    if (ptrs.size === 1) drag = {x: e.clientX, e1: V.e1, N: V.N, moved: false};
+    else if (ptrs.size === 2){ const [a, b] = [...ptrs.values()]; drag = null; pinch = {d: Math.hypot(a.x - b.x, a.y - b.y) || 1, N: V.N, e1: V.e1}; }
+  });
+  body.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, {x: e.clientX, y: e.clientY}); const V = ANA.vis; if (!V) return;
+    if (pinch && ptrs.size >= 2){ const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y) || 1; anaSetView(pinch.N * pinch.d / d, ANA.cd.length - pinch.e1); return; }
+    if (!drag) return; const r = $('anaSvg') ? $('anaSvg').getBoundingClientRect() : null; if (!r) return;
+    const dx = e.clientX - drag.x; if (Math.abs(dx) > 3) { drag.moved = true; $('anaChartBox').classList.add('drag'); }
+    if (!drag.moved) return;
+    const dC = dx * (V.w / r.width) / (V.pw / drag.N), e1 = Math.max(drag.N, Math.min(ANA.cd.length, Math.round(drag.e1 - dC)));
+    if (raf) return; raf = requestAnimationFrame(() => { raf = 0; if (drag) anaSetView(drag.N, ANA.cd.length - e1); });
+  });
+  const up = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (!ptrs.size){ drag = null; const b = $('anaChartBox'); if (b) b.classList.remove('drag'); } };
+  body.addEventListener('pointerup', up); body.addEventListener('pointercancel', up);
+})();
 $('anaBody').onmousemove = anaHover;
 $('anaBody').onmouseleave = () => { const c = $('anaCross'); if (c) c.setAttribute('visibility', 'hidden'); };
 $('anaQuick').onclick = e => { const x = e.target.closest('[data-rm]'); if (x){ ANA.recent = ANA.recent.filter(s => s !== x.dataset.rm); anaSave(); if (x.dataset.rm === ANA.sym || !ANA.recent.length) anaCloseCoin(); else anaQuick(); return; } const b = e.target.closest('[data-sym]'); if (b) anaOpen(b.dataset.sym); };
