@@ -589,6 +589,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="row">
         <label>Alert on <select id="alertWhat"><option value="setup">Triggered setups</option><option value="aligned">Setups + new alignments</option></select></label>
         <label title="Only alert on setups of at least this grade">Min grade <select id="alertGrade"><option value="">Any</option><option value="B">B or better</option><option value="A">A only</option></select></label>
+        <label title="When many setups fire on the same side in one scan (a market-wide move), they are really one bet repeated. Only the best few by grade are sent, with a note.">Wave guard <select id="alertCap"><option value="5">Best 5 per side</option><option value="3">Best 3 per side</option><option value="10">Best 10 per side</option><option value="0">Off (send all)</option></select></label>
         <label title="Only alert on pairs whose market cap is inside this range. Pairs with no market cap data are skipped while a range is set.">Market cap <select id="alertMcapMin"><option value="0">Any</option><option value="1e7">$10M</option><option value="5e7">$50M</option><option value="1e8">$100M</option><option value="5e8">$500M</option><option value="1e9">$1B</option><option value="5e9">$5B</option><option value="1e10">$10B</option></select> to <select id="alertMcapMax"><option value="0">Any</option><option value="5e7">$50M</option><option value="1e8">$100M</option><option value="5e8">$500M</option><option value="1e9">$1B</option><option value="5e9">$5B</option><option value="1e10">$10B</option></select></label>
         <label><input id="alertStar" type="checkbox"> Starred pairs only</label>
         <label><input id="alertSound" type="checkbox" checked> Sound</label>
@@ -1797,13 +1798,13 @@ function cfg(){
 }
 function saveSettings(){
   const o = {tf: S.tf, auto: $('auto').value, universe: $('universe').value, mcap: $('mcap').value, oiThr: $('oiThr').value, oiN: $('oiN').value,
-    closed: $('closed').checked, mtfOn: $('mtfOn').checked, jOn: $('jOn').checked, jWhat: $('jWhat').value, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertMcapMin: $('alertMcapMin').value, alertMcapMax: $('alertMcapMax').value, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value, minLiq: $('minLiq').value, extremeFund: $('extremeFund').value, gradeF: $('gradeF').value, rsF: $('rsF').value, alertGrade: $('alertGrade').value};
+    closed: $('closed').checked, mtfOn: $('mtfOn').checked, jOn: $('jOn').checked, jWhat: $('jWhat').value, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertMcapMin: $('alertMcapMin').value, alertMcapMax: $('alertMcapMax').value, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value, minLiq: $('minLiq').value, extremeFund: $('extremeFund').value, gradeF: $('gradeF').value, rsF: $('rsF').value, alertGrade: $('alertGrade').value, alertCap: $('alertCap').value};
   store.set(o);
 }
 function loadSettings(){
   const o = store.get();
   if (o.tf && TFS.includes(o.tf)) S.tf = o.tf;
-  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold','minLiq','extremeFund','gradeF','alertGrade','alertMcapMin','alertMcapMax','rsF']) if (o[k] != null) $(k).value = o[k];
+  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold','minLiq','extremeFund','gradeF','alertGrade','alertCap','alertMcapMin','alertMcapMax','rsF']) if (o[k] != null) $(k).value = o[k];
   if (o.closed != null) $('closed').checked = o.closed;
   if (o.mtfOn != null) $('mtfOn').checked = o.mtfOn;
   for (const k of ['pinStar','alertStar','alertSound']) if (o[k] != null) $(k).checked = o[k];
@@ -2296,7 +2297,7 @@ async function journalLog(tf){
   if (!$('jOn').checked || !c.closed) return;
   const ms = TF_MS[tf], seen = new Set(J.entries.map(e => e.id)), lastBy = new Map();
   for (const e of J.entries) lastBy.set(e.key, e.ct);
-  let added = 0;
+  let added = 0; const fresh = [];
   for (const r of S.rows){
     const x = derive(r, c); if (!x.d || !x.d.atr) continue;
     const cand = [];
@@ -2307,13 +2308,16 @@ async function journalLog(tf){
       if (seen.has(id)) continue;
       if (kind === 'setup' && lastBy.has(key) && x.d.lastTime - lastBy.get(key) < 6 * ms) continue;
       J.entries.push({id, key, sym: r.sym, tf, kind, dir, ct: x.d.lastTime, price: x.d.lastClose, atr: x.d.atr,
-        score: dir > 0 ? x.bull : x.bear, rs7: x.rs?.b7 ?? null, grade: x.G && (x.setup === dir || (!x.setup && (dir > 0 ? x.bull : x.bear) >= 4)) ? x.G.grade : null, trig: x.trig.filter(t => t.dir === dir).map(t => t.t),
+        score: dir > 0 ? x.bull : x.bear, rs7: x.rs?.b7 ?? null, pts: x.G ? x.G.pts : null, grade: x.G && (x.setup === dir || (!x.setup && (dir > 0 ? x.bull : x.bear) >= 4)) ? x.G.grade : null, trig: x.trig.filter(t => t.dir === dir).map(t => t.t),
         regime: S.regimeDir || 0, mtf: r.mtf ? (x.mtfAll === dir ? 'all' : x.mtfAll === -dir ? 'against' : 'mixed') : null,
-        ext: x.ext, pos: x.pos, fFlag: x.fFlag, out: null});
+        ext: x.ext, pos: x.pos, fFlag: x.fFlag, out: null}); fresh.push(J.entries.at(-1));
       seen.add(id); lastBy.set(key, x.d.lastTime); added++;
     }
   }
-  if (added){ await saveJournal(); if (S.view === 'journal') renderJournal(); }
+  if (added){                                                    // wave size: how many signals of the same kind and side were logged on this scan (a big wave is one market move, not many bets)
+    const cnt = new Map(); for (const e of fresh){ const k = e.kind + '|' + e.dir; cnt.set(k, (cnt.get(k) || 0) + 1); }
+    for (const e of fresh) e.wave = cnt.get(e.kind + '|' + e.dir);
+    await saveJournal(); if (S.view === 'journal') renderJournal(); }
 }
 async function updateOutcomes(manual){
   if (J.busy) return; J.busy = true;
@@ -2368,7 +2372,13 @@ function renderLoss(es){
   const pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '—';
   const fast = L.filter(e => e.out.hitBar <= 3).length, pk = L.filter(e => e.out.peakR != null), near = pk.filter(e => e.out.peakR >= 0.7).length, rc = L.filter(e => e.out.rec != null), back = rc.filter(e => e.out.rec).length;
   const hits = L.map(e => e.out.hitBar).sort((a, b) => a - b), med = hits[Math.floor(hits.length / 2)];
-  let notes = `<div class="lossnote"><b>${L.length}</b> of ${done.length} completed signals hit the stop (${pct(L.length, done.length)}). Median time to stop: <b>${med}</b> candles; <b>${pct(fast, L.length)}</b> were stopped within 3 candles.</div>`;
+  const mom = new Map(); for (const e of done){ const k = e.tf + '|' + e.ct + '|' + e.dir; (mom.get(k) || mom.set(k, []).get(k)).push(e); }
+  const moms = [...mom.values()].sort((a, b) => b.length - a.length), big = moms[0], bigR = big.reduce((t, e) => t + (e.out.rr || 0), 0);
+  const q = e => (GRADE_RANK[e.grade] || 0) * 1000 + (e.pts || 0) * 10 + e.score, ddOf = l => { let run = 0, pk = 0, dd = 0; for (const e of l.slice().sort((a, b) => (a.ct + (a.out.hitBar || 0) * TF_MS[a.tf]) - (b.ct + (b.out.hitBar || 0) * TF_MS[b.tf]))){ run += e.out.rr || 0; pk = Math.max(pk, run); dd = Math.max(dd, pk - run); } return dd; };
+  const capKept = n => moms.flatMap(m => m.slice().sort((a, b) => q(b) - q(a)).slice(0, n)), k5 = capKept(5), s5 = jStats(k5), tot = l => l.reduce((t, e) => t + (e.out.rr || 0), 0);
+  let notes = `<div class="lossnote"><b>${done.length}</b> completed signals come from only <b>${moms.length}</b> separate market moments (same timeframe, candle and side). Signals in one moment rise and fall together, so judge the results by ${moms.length}, not ${done.length}. The biggest moment had <b>${big.length}</b> signals and ended <b class="${bigR >= 0 ? 'up' : 'dn'}">${fR(bigR)}</b> in total.</div>`
+    + (moms.some(m => m.length > 5) ? `<div class="lossnote">If only the best 5 per moment had been taken (what the wave guard does): <b>${k5.length}</b> signals · win rate ${s5.win == null ? '—' : s5.win.toFixed(0) + '%'} · average ${fR(s5.avgR)} · total ${fR(tot(k5))} · deepest drawdown <b>−${ddOf(k5).toFixed(1)}R</b> (all signals: ${fR(tot(done))}, drawdown <b>−${ddOf(done).toFixed(1)}R</b>).</div>` : '');
+  notes += `<div class="lossnote"><b>${L.length}</b> of ${done.length} completed signals hit the stop (${pct(L.length, done.length)}). Median time to stop: <b>${med}</b> candles; <b>${pct(fast, L.length)}</b> were stopped within 3 candles.</div>`;
   if (pk.length >= 5) notes += `<div class="lossnote"><b>${pct(near, pk.length)}</b> of stopped signals had first moved at least 0.7R my way (${near} of ${pk.length}): the idea worked, then reversed.</div>`;
   if (rc.length >= 5) notes += `<div class="lossnote"><b>${pct(back, rc.length)}</b> of stopped signals still reached the target within 12 candles after the stop (${back} of ${rc.length}). ${back / rc.length >= 0.3 ? 'High: the stop may be too tight for these coins, test a wider one.' : 'Low: most stops were real failures, not shake-outs.'}</div>`;
   const rows = LOSS_COND.map(([n, f]) => { const w = done.filter(f), wo = done.filter(e => !f(e)); if (w.length < 5 || wo.length < 5) return null;
@@ -2431,8 +2441,8 @@ function renderJournal(){
   $('jPager').innerHTML = pages > 1 ? `<span class="pinfo">${list.length} signals</span>` + Array.from({length: pages}, (_, i) => `<button data-jp="${i}" class="${i === J.page ? 'on' : ''}">${i * size + 1}–${Math.min((i + 1) * size, list.length)}</button>`).join('') : '';
 }
 function journalCSV(){
-  const head = ['signal_time','pair','tf','side','kind','score','triggers','regime','mtf','ext_atr','positioning','funding_crowded','entry','atr','r4_pct','r12_pct','r24_pct','mfe_pct','mae_pct','result','r_multiple','bars_to_result'];
-  const lines = [head.join(',')].concat(J.entries.map(e => { const o = e.out || {}; return [new Date(e.ct + TF_MS[e.tf]).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.kind, e.score, e.trig.join('|'), e.regime, e.mtf ?? '', e.ext?.toFixed(2) ?? '', e.pos ?? '', e.fFlag === e.dir ? 1 : 0, e.price, e.atr, o.r4?.toFixed(3) ?? '', o.r12?.toFixed(3) ?? '', o.r24?.toFixed(3) ?? '', o.mfe?.toFixed(3) ?? '', o.mae?.toFixed(3) ?? '', o.expired ? 'expired' : o.res ?? 'open', o.rr?.toFixed(3) ?? '', o.hitBar ?? ''].join(','); }));
+  const head = ['signal_time','pair','tf','side','kind','score','triggers','regime','mtf','ext_atr','positioning','funding_crowded','entry','atr','r4_pct','r12_pct','r24_pct','mfe_pct','mae_pct','result','r_multiple','bars_to_result','grade','grade_pts','rs7_vs_btc_pp','wave_size','peak_r_before_stop','target_hit_after_stop'];
+  const lines = [head.join(',')].concat(J.entries.map(e => { const o = e.out || {}; return [new Date(e.ct + TF_MS[e.tf]).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.kind, e.score, e.trig.join('|'), e.regime, e.mtf ?? '', e.ext?.toFixed(2) ?? '', e.pos ?? '', e.fFlag === e.dir ? 1 : 0, e.price, e.atr, o.r4?.toFixed(3) ?? '', o.r12?.toFixed(3) ?? '', o.r24?.toFixed(3) ?? '', o.mfe?.toFixed(3) ?? '', o.mae?.toFixed(3) ?? '', o.expired ? 'expired' : o.res ?? 'open', o.rr?.toFixed(3) ?? '', o.hitBar ?? '', e.grade ?? '', e.pts ?? '', e.rs7 != null ? e.rs7.toFixed(2) : '', e.wave ?? '', o.peakR != null ? o.peakR.toFixed(2) : '', o.rec == null ? '' : o.rec ? 1 : 0].join(','); }));
   downloadText(lines.join('\n'), `signal-journal-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
 }
 function downloadText(text, name, type){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
@@ -2533,9 +2543,10 @@ async function planFor(sym, dir){
   let slMode = 'swing', atrMult = 1.5; try { const o = JSON.parse(localStorage.getItem(PLAN_KEY) || '{}'); slMode = o.slMode || slMode; atrMult = parseFloat(o.atrMult) || atrMult; } catch {}
   return tradePlan(cd, dir, {slMode, atrMult, entry: null});
 }
-async function tgAlertParts(items){
+async function tgAlertParts(items, notes = []){
   const c = cfg(), lines = [`⚡ <b>Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} · ${S.tf.toUpperCase()}</b>`];
   if (S.regime) lines.push(`Regime: ${S.regimeDir > 0 ? 'Risk-on 🟢' : S.regimeDir < 0 ? 'Risk-off 🔴' : 'Mixed 🟠'}${S.macro && S.macro.reg ? ` · 🌐 Macro: ${S.macro.reg.name}${S.macro.reg.froth ? ' 🔥' : ''}` : ''}`);
+  lines.push(...notes);
   const head = lines.slice(), blocks = [];
   for (const e of items.slice(0, 6)){
     const lines = [], base = S.rows.find(r => r.sym === e.sym), x = base ? derive(base, c) : null;
@@ -2562,7 +2573,7 @@ async function tgAlertParts(items){
   }
   return {head, blocks, tail: items.length > 6 ? ['', `+${items.length - 6} more in the screener`] : []};
 }
-async function tgAlertText(items){ const P = await tgAlertParts(items); return [...P.head, ...P.blocks.flatMap(b => ['', ...b.lines]), ...P.tail].join('\n'); }
+async function tgAlertText(items, notes){ const P = await tgAlertParts(items, notes); return [...P.head, ...P.blocks.flatMap(b => ['', ...b.lines]), ...P.tail].join('\n'); }
 
 
 
@@ -2610,8 +2621,8 @@ async function tgSendPhoto(blob, caption){
   return false;
 }
 /* One alert with a chart under each coin: the header, then per coin a picture whose caption is that coin's text (or the picture plus the text when it is too long for a caption). */
-async function tgDeliver(items){
-  const P = await tgAlertParts(items), wait = ms => new Promise(z => setTimeout(z, ms));
+async function tgDeliver(items, notes){
+  const P = await tgAlertParts(items, notes), wait = ms => new Promise(z => setTimeout(z, ms));
   await tgSend([...P.head].join('\n'));
   const vis = h => h.replace(/<[^>]+>/g, '').replace(/&amp;|&lt;|&gt;/g, '_').length;
   for (const b of P.blocks){
@@ -2640,10 +2651,19 @@ function fireAlerts(entered){
   const minG = GRADE_RANK[$('alertGrade').value] || 0;
   if (minG){ const c = cfg(); items = items.filter(e => { const b = S.rows.find(r => r.sym === e.sym), x = b && derive(b, c); return x && x.G && GRADE_RANK[x.G.grade] >= minG; }); }
   if (!items.length) return;
+  const waveNotes = [], cap = +$('alertCap').value || 0;
+  if (cap){                                                      // wave guard: many same-side setups at once are one bet, keep the best few per side
+    const c = cfg(), q = e => { const b = S.rows.find(r => r.sym === e.sym), x = b && derive(b, c); return x && x.G ? (GRADE_RANK[x.G.grade] || 0) * 1000 + (x.G.pts || 0) * 10 + (e.dir > 0 ? x.bull : x.bear) : 0; }, keep = new Set();
+    for (const dir of [1, -1]){ const l = items.filter(e => e.dir === dir);
+      if (l.length <= cap){ l.forEach(e => keep.add(e)); continue; }
+      l.sort((a, b) => q(b) - q(a)).slice(0, cap).forEach(e => keep.add(e));
+      waveNotes.push(`🌊 Market-wide wave: ${l.length} ${dir > 0 ? 'LONG' : 'SHORT'} setups fired on this candle. It is really one bet repeated, so only the best ${cap} are shown.`); }
+    if (waveNotes.length) items = items.filter(e => keep.has(e));
+  }
   const line = e => `${e.sym.replace('USDT', '')} ${e.dir > 0 ? 'LONG' : 'SHORT'}${e.kind === 'setup' ? ' (triggered)' : ' (aligned)'}`;
-  const title = `Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} on ${S.tf.toUpperCase()}`;
+  const title = `Onslaught · ${items.length} new ${items.length > 1 ? 'setups' : 'setup'} on ${S.tf.toUpperCase()}${waveNotes.length ? ' · wave guard on' : ''}`;
   const body = items.slice(0, 6).map(line).join('\n') + (items.length > 6 ? `\n+${items.length - 6} more` : '');
-  if (tgActive() && !tgQuiet()) ($('tgImg').checked ? tgDeliver(items) : tgAlertText(items).then(tgSend)).catch(e => toast(e.message));
+  if (tgActive() && !tgQuiet()) ($('tgImg').checked ? tgDeliver(items, waveNotes) : tgAlertText(items, waveNotes).then(tgSend)).catch(e => toast(e.message));
   if (!ALERT.on) return;                                         // Telegram works on its own; page and desktop alerts need 🔔
   if (!!window.Notification && Notification.permission === 'granted'){
     try { const n = new Notification(title, {body, tag: 'onslaught-' + S.tf, renotify: true}); n.onclick = () => { window.focus(); openDrawer(items[0].sym); n.close(); }; } catch {}
@@ -3841,11 +3861,13 @@ function anaPick(L, show){
 }
 function anaChart(L, cd, w, h){
   const show = ANA.show, V0 = ANA.view || {}, N = Math.max(Math.min(20, cd.length), Math.min(cd.length, V0.N || (w < 600 ? 70 : 120))), off = Math.max(0, Math.min(V0.off || 0, cd.length - N)), e1 = cd.length - off, s0 = e1 - N, vis = cd.slice(s0, e1), pad = {l: 8, r: 70, t: 8, b: 22}, pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
-  let lo = Math.min(...vis.map(k => k[3]), ...(off ? [] : [L.price])), hi = Math.max(...vis.map(k => k[2]), ...(off ? [] : [L.price]));   // scrolled back in time: scale to the candles on screen only const m = (hi - lo) * 0.04; lo -= m; hi += m;
+  let lo = Math.min(...vis.map(k => k[3]), ...(off ? [] : [L.price])), hi = Math.max(...vis.map(k => k[2]), ...(off ? [] : [L.price]));   // scrolled back in time: scale to the candles on screen only
+  { const m = (hi - lo) * 0.04; lo -= m; hi += m; }
   const X = i => pad.l + pw * (i - s0 + 0.5) / N, Y = p => pad.t + ph * (1 - (p - lo) / (hi - lo)), dec = decFor(L.price);
   const bull = cssv('--bull'), bear = cssv('--bear'), acc = cssv('--accent-lt'), info = cssv('--info'), warn = cssv('--warn'), mu = cssv('--muted'), dim = cssv('--dim');
   const o = [`<svg id="anaSvg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Candlestick chart with key levels"><defs><clipPath id="anaClip"><rect x="${pad.l}" y="${pad.t}" width="${pw}" height="${ph}"/></clipPath></defs><rect width="${w}" height="${h}" fill="#0e0f14" rx="8"/>`];
-  for (let k = 0; k <= 4; k++){ const p = lo + (hi - lo) * k / 4; o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(p).toFixed(1)}" y2="${Y(p).toFixed(1)}" stroke="rgba(255,255,255,.05)"/><text x="${w - pad.r + 6}" y="${(Y(p) + 3).toFixed(1)}" fill="${dim}" font-size="10">${p.toFixed(dec > 4 ? 4 : dec)}</text>`); }
+  const gridLbl = [];                                           // scale numbers are drawn after the price tags and skipped where a tag already sits
+  for (let k = 0; k <= 4; k++){ const p = lo + (hi - lo) * k / 4; o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(p).toFixed(1)}" y2="${Y(p).toFixed(1)}" stroke="rgba(255,255,255,.05)"/>`); gridLbl.push([Y(p), p.toFixed(dec > 4 ? 4 : dec)]); }
   const txt = (x, y, t, col, anchor) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${col}" font-size="10"${anchor ? ` text-anchor="${anchor}"` : ''}>${esc(t)}</text>`;
   o.push('<g clip-path="url(#anaClip)">');
   const rx0 = Math.max(s0, cd.length - L.range.R), xr = X(rx0) - pw / N / 2;
@@ -3894,15 +3916,18 @@ function anaChart(L, cd, w, h){
   const selI = ANA.sel && L.list.find(x => anaKey(x) === ANA.sel);
   if (selI){ if (selI.lo === selI.hi) o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(selI.mid).toFixed(1)}" y2="${Y(selI.mid).toFixed(1)}" stroke="#fff" stroke-width="2"/>`); else o.push(`<rect x="${pad.l}" y="${Y(selI.hi).toFixed(1)}" width="${(w - pad.l - pad.r).toFixed(1)}" height="${Math.max(Y(selI.lo) - Y(selI.hi), 3).toFixed(1)}" fill="rgba(255,255,255,.07)" stroke="#fff" stroke-width="1.6" stroke-dasharray="5 3"/>`); }
   o.push(`<line id="anaCross" x1="0" x2="0" y1="${pad.t}" y2="${pad.t + ph}" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 3" visibility="hidden"/></g>`);
-  const srTags = [];                                              // price tags only for the 3 nearest zones above and the 3 nearest below the price, so the scale stays readable
-  if (show.srp){ const near = (arr, d) => arr.sort((x, y) => d(x) - d(y)).slice(0, 3);
-    for (const z of [...near(srZ.filter(z => z.it.mid > L.price), z => z.it.lo - L.price), ...near(srZ.filter(z => z.it.mid <= L.price), z => L.price - z.it.hi)]) srTags.push([z.it.hi, z.zc], [z.it.lo, z.zc]); }
+  const srTags = [], tagYs = [];                                              // price tags only for the 3 nearest zones above and the 3 nearest below the price, so the scale stays readable
+  if (show.srp){ const k = show.vw ? 2 : 3, near = (arr, d) => arr.sort((x, y) => d(x) - d(y)).slice(0, k);   // only the edge facing the price: one number per zone
+    for (const z of near(srZ.filter(z => z.it.mid > L.price), z => z.it.lo - L.price)) srTags.push([z.it.lo, z.zc]);
+    for (const z of near(srZ.filter(z => z.it.mid <= L.price), z => L.price - z.it.hi)) srTags.push([z.it.hi, z.zc]); }
   if (srTags.length || avTags.length){               // S/R zone edges and the current AVWAP values as tags on the price scale, nudged apart so none overlap
     const pf = v => v >= 1 ? v.toFixed(dec > 4 ? 4 : dec) : v.toPrecision(4), tg = srTags.concat(show.vw ? avTags : []).filter(t => t[0] >= lo && t[0] <= hi).map(t => ({p: t[0], c: t[1], y: Y(t[0])})).sort((x, y) => x.y - y.y);
     for (let i = 1; i < tg.length; i++) if (tg[i].y - tg[i - 1].y < 14) tg[i].y = tg[i - 1].y + 14;
+    for (const t of tg) tagYs.push(t.y);
     for (const t of tg) o.push(`<line x1="${(w - pad.r - 6).toFixed(1)}" x2="${w - pad.r}" y1="${Y(t.p).toFixed(1)}" y2="${t.y.toFixed(1)}" stroke="${t.c}"/><rect x="${w - pad.r}" y="${(t.y - 7).toFixed(1)}" width="${pad.r - 4}" height="14" rx="3" fill="${t.c}" opacity=".92"/><text x="${w - pad.r + 5}" y="${(t.y + 3.5).toFixed(1)}" fill="#0e0f14" font-size="10" font-weight="700">${pf(t.p)}</text>`);
   }
-  const yl = Y(L.price);
+  const yl = Y(L.price), taken = tagYs.concat(off ? [] : [yl]);
+  for (const [gy, gt] of gridLbl) if (!taken.some(ty => Math.abs(ty - gy) < 13)) o.push(`<text x="${w - pad.r + 6}" y="${(gy + 3).toFixed(1)}" fill="${dim}" font-size="10">${gt}</text>`);
   if (!off) o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${yl.toFixed(1)}" y2="${yl.toFixed(1)}" stroke="${acc}" stroke-dasharray="3 3"/><rect x="${w - pad.r}" y="${(yl - 9).toFixed(1)}" width="${pad.r - 4}" height="18" rx="3" fill="${cssv('--accent')}"/><text x="${w - pad.r + 6}" y="${(yl + 4).toFixed(1)}" fill="#fff" font-size="11" font-weight="600">${L.price.toFixed(dec > 4 ? 4 : dec)}</text>`);
   const fmtT = t => { const d = new Date(t); return ANA.tf === '1d' || ANA.tf === '1w' ? d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) : d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) + ' ' + d.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'}); };
   for (let q = 0; q < 5; q++){ const i = s0 + Math.round((N - 1) * q / 4); o.push(txt(Math.min(Math.max(X(i), pad.l + 24), w - pad.r - 30), h - 6, fmtT(cd[i][0]), dim, 'middle')); }
@@ -4209,7 +4234,7 @@ for (const id of ['trigF','mtfF']) $(id).onchange = render;
 $('trigN').onchange = () => { saveSettings(); render(); };
 for (const id of ['rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) $(id).onchange = saveSettings;
 for (const id of ['fundHot','fundCold','minLiq','extremeFund','gradeF','rsF']) $(id).onchange = () => { saveSettings(); render(); };
-$('alertGrade').onchange = saveSettings;
+$('alertGrade').onchange = saveSettings; $('alertCap').onchange = saveSettings;
 for (const id of ['alertMcapMin', 'alertMcapMax']) $(id).onchange = () => { const lo = +$('alertMcapMin').value, hi = +$('alertMcapMax').value; if (lo && hi && lo >= hi){ $('alertMcapMax').value = '0'; toast('The upper market cap must be above the lower one, so the upper limit was reset to Any.'); } saveSettings(); };
 $('auto').onchange = () => { saveSettings(); setAuto(); };
 $('scanBtn').onclick = scan;
