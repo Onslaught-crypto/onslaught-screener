@@ -3839,13 +3839,13 @@ function anaChart(L, cd, w, h){
   }
   const zone = (it, x0, col, label, op, dash) => { const y1 = Y(it.hi), y2 = Y(it.lo), hh = Math.max(y2 - y1, 3);
     o.push(`<rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="${col}" opacity="${op}"/><rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="none" stroke="${col}" stroke-opacity=".75"${dash ? ' stroke-dasharray="4 3"' : ''}/>${txt(x0 + 4, y1 + 11, label, col)}`); };
-  const srTags = [], avTags = [];
+  const srZ = [], avTags = [];
   for (const it of anaPick(L, show)){
     if (it.kind === 'liq'){ const y = Y(it.mid); o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${warn}" stroke-dasharray="5 4"/>${txt(w - pad.r - 4, y - 4, ANA_NAMES[it.pool], warn, 'end')}`); continue; }
     const x0 = it.i != null ? Math.max(pad.l, X(Math.max(it.i, s0)) - pw / N / 2) : pad.l;
     if (it.kind === 'sr'){ const zc = it.side === 'above' ? bear : it.side === 'below' ? bull : mu;
       zone(it, pad.l, zc, it.side === 'above' ? 'Resistance' : it.side === 'below' ? 'Support' : 'S/R', .14);
-      srTags.push([it.hi, zc], [it.lo, zc]); }
+      srZ.push({it, zc}); }
     else if (it.kind === 'fvg') zone(it, x0, acc, (it.dir > 0 ? 'Bull' : 'Bear') + ' FVG', .22);
     else zone(it, x0, it.kind === 'breaker' ? warn : info, it.kind === 'breaker' ? (it.dir > 0 ? 'Bull breaker' : 'Bear breaker') : (it.dir > 0 ? 'Bull OB' : 'Bear OB'), .2, it.kind === 'breaker');
   }
@@ -3861,21 +3861,26 @@ function anaChart(L, cd, w, h){
   if (show.vw){
     const mj = ANA.avm !== 'latest', lines = [[mj ? L.avwapH : L.avwapH2, mj ? 'AVWAP · major high' : 'AVWAP · latest high', bear], [mj ? L.avwapL : L.avwapL2, mj ? 'AVWAP · major low' : 'AVWAP · latest low', bull]];
     if (ANA.anchorT != null){ const ci = cd.findIndex(k => k[0] >= ANA.anchorT); if (ci >= 0) lines.push([{i: ci, v: taAvwap(cd, ci)}, 'AVWAP · picked', '#4dd0e1']); }
-    let lastY = null;
+    const halo = (x, y, t, col) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${col}" font-size="10" font-weight="600" stroke="#0e0f14" stroke-width="3" paint-order="stroke" stroke-linejoin="round">${esc(t)}</text>`;
     for (const [A, label, col] of lines){
-      if (!A) continue; const ai = A.i, vals = A.v, pts = [];
-      for (let i = Math.max(ai, s0); i < cd.length; i++) pts.push(`${X(i).toFixed(1)},${Y(vals[i - ai]).toFixed(1)}`);
-      if (pts.length > 1){ avTags.push([vals[vals.length - 1], col]); let ly = Y(vals[vals.length - 1]); if (lastY != null && Math.abs(ly - lastY) < 12) ly = lastY + (ly >= lastY ? 12 : -12); lastY = ly;
-        o.push(`<polyline fill="none" stroke="${col}" stroke-width="1.8" points="${pts.join(' ')}"/>${txt(w - pad.r - 4, ly - 5, label, col, 'end')}`); }
-      if (ai >= s0){ const av = vals[0], ap = av >= 1 ? av.toFixed(dec > 4 ? 4 : dec) : av.toPrecision(4), low = /low/.test(label);        // anchor price beside the anchor dot
-        o.push(`<circle cx="${X(ai).toFixed(1)}" cy="${Y(av).toFixed(1)}" r="3.5" fill="${col}"/>${txt(Math.min(X(ai) + 7, w - pad.r - 60), Y(av) + (low ? 15 : -8), ap, col)}`); }
+      if (!A) continue; const ai = A.i, vals = A.v, pts = [], j0 = Math.max(ai, s0);
+      for (let i = j0; i < cd.length; i++) pts.push(`${X(i).toFixed(1)},${Y(vals[i - ai]).toFixed(1)}`);
+      if (pts.length > 1){ avTags.push([vals[vals.length - 1], col]);
+        const fp = v => v >= 1 ? v.toFixed(dec > 4 ? 4 : dec) : v.toPrecision(4), low = /low/.test(label), vis0 = ai >= s0,
+          lt = vis0 ? `${label} · ${fp(vals[0])}` : label, jl = (() => { for (let i = j0; i < cd.length; i++){ const yy = Y(vals[i - ai]); if (yy > pad.t + 12 && yy < pad.t + ph - 18) return i; } return j0; })(),   // first point of the line that is inside the plot
+          ly0 = Y(vals[jl - ai]) + (low ? 15 : -8), lx = Math.min(Math.max(X(jl) + 7, pad.l + 4), w - pad.r - lt.length * 6 - 8);   // label at the start of the line, with the anchor price when the anchor is on screen
+        o.push(`<polyline fill="none" stroke="${col}" stroke-width="1.8" points="${pts.join(' ')}"/>${halo(lx, ly0, lt, col)}`); }
+      if (ai >= s0) o.push(`<circle cx="${X(ai).toFixed(1)}" cy="${Y(vals[0]).toFixed(1)}" r="3.5" fill="${col}"/>`);
     }
   }
   const selI = ANA.sel && L.list.find(x => anaKey(x) === ANA.sel);
   if (selI){ if (selI.lo === selI.hi) o.push(`<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(selI.mid).toFixed(1)}" y2="${Y(selI.mid).toFixed(1)}" stroke="#fff" stroke-width="2"/>`); else o.push(`<rect x="${pad.l}" y="${Y(selI.hi).toFixed(1)}" width="${(w - pad.l - pad.r).toFixed(1)}" height="${Math.max(Y(selI.lo) - Y(selI.hi), 3).toFixed(1)}" fill="rgba(255,255,255,.07)" stroke="#fff" stroke-width="1.6" stroke-dasharray="5 3"/>`); }
   o.push(`<line id="anaCross" x1="0" x2="0" y1="${pad.t}" y2="${pad.t + ph}" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 3" visibility="hidden"/></g>`);
-  if ((show.srp && srTags.length) || avTags.length){               // S/R zone edges and the current AVWAP values as tags on the price scale, nudged apart so none overlap
-    const pf = v => v >= 1 ? v.toFixed(dec > 4 ? 4 : dec) : v.toPrecision(4), tg = (show.srp ? srTags : []).concat(show.vw ? avTags : []).filter(t => t[0] >= lo && t[0] <= hi).map(t => ({p: t[0], c: t[1], y: Y(t[0])})).sort((x, y) => x.y - y.y);
+  const srTags = [];                                              // price tags only for the 3 nearest zones above and the 3 nearest below the price, so the scale stays readable
+  if (show.srp){ const near = (arr, d) => arr.sort((x, y) => d(x) - d(y)).slice(0, 3);
+    for (const z of [...near(srZ.filter(z => z.it.mid > L.price), z => z.it.lo - L.price), ...near(srZ.filter(z => z.it.mid <= L.price), z => L.price - z.it.hi)]) srTags.push([z.it.hi, z.zc], [z.it.lo, z.zc]); }
+  if (srTags.length || avTags.length){               // S/R zone edges and the current AVWAP values as tags on the price scale, nudged apart so none overlap
+    const pf = v => v >= 1 ? v.toFixed(dec > 4 ? 4 : dec) : v.toPrecision(4), tg = srTags.concat(show.vw ? avTags : []).filter(t => t[0] >= lo && t[0] <= hi).map(t => ({p: t[0], c: t[1], y: Y(t[0])})).sort((x, y) => x.y - y.y);
     for (let i = 1; i < tg.length; i++) if (tg[i].y - tg[i - 1].y < 14) tg[i].y = tg[i - 1].y + 14;
     for (const t of tg) o.push(`<line x1="${(w - pad.r - 6).toFixed(1)}" x2="${w - pad.r}" y1="${Y(t.p).toFixed(1)}" y2="${t.y.toFixed(1)}" stroke="${t.c}"/><rect x="${w - pad.r}" y="${(t.y - 7).toFixed(1)}" width="${pad.r - 4}" height="14" rx="3" fill="${t.c}" opacity=".92"/><text x="${w - pad.r + 5}" y="${(t.y + 3.5).toFixed(1)}" fill="#0e0f14" font-size="10" font-weight="700">${pf(t.p)}</text>`);
   }
