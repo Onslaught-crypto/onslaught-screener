@@ -605,7 +605,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label title="Send a chart picture for each setup, centered on the signal candle with entry, stop and targets"><input id="tgImg" type="checkbox" checked> with chart image</label>
         <label title="Also message me when RSI and MACD both diverge from price on a confirmed swing (1H, 4H or 1D, Strong). The Divergences tab scans in the background while this page is open."><input id="tgDiv" type="checkbox"> Divergence alerts</label>
         <label title="Also message me about early divergences: the swing has 2 closed candles after it (instead of 5) and the last candle already turns against it. About 3 candles sooner, strength 60+, RSI + MACD, 1H / 4H / 1D. They fail more often than the confirmed ones. Needs this page open."><input id="tgDivE" type="checkbox"> ⚡ Early divergence alerts</label>
-        <label title="Message me when a long breaker candle appears on the 1H or 4H of the top 200 coins: a candle that breaks a swing high, closes above it, with volume 1.5x+ and a body of 60%+. The message gives a limit buy at 50% of the candle, the stop below its low and three targets. Experimental: this rule came out at about +0.15R per trade in the Breaker candle study (Journal tab) and is being forward-tested. Needs this page open."><input id="tgBrk" type="checkbox"> 🧱 Breaker candle alerts (long, experimental)</label>
+        <label title="Message me when a long breaker candle appears on the 1H or 4H of the top 200 coins: a candle that breaks a swing high, closes above it, with volume 1.5x+ and a body of 60%+. The message gives a limit buy at 50% of the candle, the stop at its low and three targets. Experimental: this rule came out at about +0.15R per trade in the Breaker candle study (Journal tab) and is being forward-tested. Needs this page open."><input id="tgBrk" type="checkbox"> 🧱 Breaker candle alerts (long, experimental)</label>
         <label title="No Telegram messages during these hours (your local time). Alerts that would have fired are skipped, not sent later."><input id="tgQuiet" type="checkbox"> Quiet hours</label>
         <input id="tgQFrom" type="time" value="23:00" aria-label="Quiet hours start"> to <input id="tgQTo" type="time" value="07:00" aria-label="Quiet hours end">
         <button id="tgTest">Send test</button>
@@ -3965,7 +3965,7 @@ async function divAlertRun(rows, early){
 
 
 /* ---------- Breaker candle alerts (long only, experimental) ----------
-   Same rule as the runner: the frozen rule from the Breaker candle study. A limit buy at 50% of the candle, stop below its low, targets at 1.618 / 2 / 2.272.
+   Same rule as the runner: the frozen rule from the Breaker candle study. A limit buy at 50% of the candle, stop at its low, targets at 1.618 / 2 / 2.272.
    This page sends the setup alert; the runner (if you use it) also follows the order and reports fill, targets and stop. */
 const BKSENT_KEY = 'onslaught-brksent', BKA = {busy: false, last: {}, errShown: false}, BKA_TFS = ['1h', '4h'], BKA_TOP = 200;
 function bkSentLoad(){ try { return JSON.parse(localStorage.getItem(BKSENT_KEY) || '{}'); } catch { return {}; } }
@@ -3988,7 +3988,7 @@ function brkLines(x){
   const {ev, tf, sym} = x, L = breakerLevels(ev), dec = decFor(L.entry), pc = v => fmtPct((v / L.entry - 1) * 100), by = new Date(ev.t + (1 + L.fill) * TF_MS[tf]);
   const lines = [`🧱 <b>${esc(sym.replace('USDT', ''))} ${DV_LBL[tf]} · BREAKER CANDLE LONG 🟢</b> (experimental)`,
     `Broke ${ev.lvl != null ? fp(ev.lvl, dec) : 'a swing high'} and closed above it · volume ${ev.vol.toFixed(1)}x · body ${(ev.body * 100).toFixed(0)}%`,
-    `<b>Limit buy ${fp(L.entry, dec)}</b> (50% of the candle) · SL ${fp(L.sl, dec)} (${pc(L.sl)}, below the candle low)`,
+    `<b>Limit buy ${fp(L.entry, dec)}</b> (50% of the candle) · SL ${fp(L.sl, dec)} (${pc(L.sl)}, at the candle low: if price trades below it, the setup failed)`,
     L.tps.map((t, i) => `TP${i + 1} ${fp(t.price, dec)} (${t.r.toFixed(1)}R)`).join(' · '),
     `Cancel the order if it is not filled by ${by.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} (${L.fill} candles) or if price reaches TP1 first. Plan: sell a third at each target, stop to entry after TP1.`,
     `<a href="https://www.tradingview.com/chart/?symbol=BINANCE:${sym}.P">Chart</a>`];
