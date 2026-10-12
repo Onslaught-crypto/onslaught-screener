@@ -1715,7 +1715,9 @@ function breakerSim(cd, ev, o){
   out.stopPct = Math.abs(E - px(stops[0])) / E * 100;
   let allDone = true;
   for (const sf of stops){
-    const S = px(sf), r = Math.abs(E - S);
+    let S = px(sf === 'prev' ? 0 : sf);
+    if (sf === 'prev'){ const q = cd[ev.i - 1], v = q ? (d > 0 ? q[3] : q[2]) : null; if (v != null && (d > 0 ? v < E : v > E)) S = v; }      // the candle before the breaker: its low (long) or high (short); the breaker's own end if that is on the wrong side of the entry
+    const r = Math.abs(E - S);
     for (const m of Object.keys(BRK_MODES)){
       const fibs = BRK_MODES[m], T = fibs.map(px), share = 1 / fibs.length;
       let sl = S, hits = 0, real = 0, done = false, res = null, bars = 0;
@@ -4523,7 +4525,8 @@ const BRK = {ev: [], meta: null, running: false, cancel: false, vari: 'plan|0', 
 const brkFrozen = breakerFrozen;      // the long rule found on the first 100 coins, kept fixed for the holdout test
 const brkEv = () => { let l = BRK.view === 'frozen' ? BRK.ev.filter(brkFrozen) : BRK.ev; if (BRK.since) l = l.filter(e => e.t >= BRK.since); return l; };
 const BRK_VARS = {'plan|0': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at 0', 'tp1|0': 'All out at 1.618, stop at 0', 'tp2|0': 'All out at 2, stop at 0',
-  'plan|-0.272': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at -0.272', 'tp1|-0.272': 'All out at 1.618, stop at -0.272', 'tp2|-0.272': 'All out at 2, stop at -0.272'};
+  'plan|-0.272': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at -0.272', 'tp1|-0.272': 'All out at 1.618, stop at -0.272', 'tp2|-0.272': 'All out at 2, stop at -0.272',
+  'plan|prev': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at the previous candle low', 'tp1|prev': 'All out at 1.618, stop at the previous candle low', 'tp2|prev': 'All out at 2, stop at the previous candle low'};
 async function brkLoad(){ const v = await Cache.get('brkStudy'); if (v && Array.isArray(v.ev)){ BRK.ev = v.ev; BRK.meta = v.meta || null; } brkRender(); }
 function brkStats(rs){
   const n = rs.length; if (!n) return null;
@@ -4597,7 +4600,7 @@ async function brkRun(){
         const [sym, tf] = tasks[i++];
         try {
           const cd = await getKlines(sym, tf, true, KDEEP);
-          for (const b of breakerScan(cd)){ const r = breakerSim(cd, b); ev.push({sym, tf, t: b.t, dir: b.dir, rngAtr: b.rngAtr, body: b.body, vol: b.vol, closeBeyond: b.closeBeyond, withTrend: b.withTrend, low: b.low, high: b.high, st: r.status, fb: r.fillBar, stopPct: r.stopPct, sims: r.status === 'filled' || r.status === 'open' ? r.sims : null}); }
+          for (const b of breakerScan(cd)){ const r = breakerSim(cd, b, {stops: [0, -0.272, 'prev']}); ev.push({sym, tf, t: b.t, dir: b.dir, rngAtr: b.rngAtr, body: b.body, vol: b.vol, closeBeyond: b.closeBeyond, withTrend: b.withTrend, low: b.low, high: b.high, st: r.status, fb: r.fillBar, stopPct: r.stopPct, sims: r.status === 'filled' || r.status === 'open' ? r.sims : null}); }
         } catch {}
         done++; stt.textContent = `Reading ${done}/${tasks.length} (coin and timeframe)…`;
       }
