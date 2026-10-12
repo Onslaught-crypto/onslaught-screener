@@ -854,7 +854,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input type="checkbox" class="brkTf" value="1h" checked> 1h</label>
         <label><input type="checkbox" class="brkTf" value="4h" checked> 4h</label>
         <label><input type="checkbox" class="brkTf" value="1d"> 1d</label>
-        <label>Coins <select id="brkN"><option value="50">Top 50 by volume</option><option value="100" selected>Top 100 by volume</option><option value="200">Top 200 by volume</option></select></label>
+        <label>Coins <select id="brkN"><option value="50">Top 50 by volume</option><option value="101-200">Coins ranked 101 to 200 (holdout test)</option><option value="100" selected>Top 100 by volume</option><option value="200">Top 200 by volume</option></select></label>
         <button id="brkRun" class="primary">Run study</button><button id="brkCsv">Export CSV</button><span class="mu" id="brkStatus" style="font-size:12px"></span>
       </div>
       <div id="brkOut"></div>
@@ -4442,7 +4442,9 @@ $('secLoad').onclick = loadSectors;
 
 /* ---------- Breaker candle study (Journal tab) ----------
    Replays the breaker rule on the long history (up to 1000 candles per coin and timeframe), so the answer does not need weeks of live signals. */
-const BRK = {ev: [], meta: null, running: false, cancel: false, vari: 'plan|0'};
+const BRK = {ev: [], meta: null, running: false, cancel: false, vari: 'plan|0', view: 'all'};
+const brkFrozen = e => e.dir > 0 && e.closeBeyond === true && e.vol != null && e.vol >= 1.5 && e.body >= 0.6;      // the long rule found on the first 100 coins, kept fixed for the holdout test
+const brkEv = () => BRK.view === 'frozen' ? BRK.ev.filter(brkFrozen) : BRK.ev;
 const BRK_VARS = {'plan|0': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at 0', 'tp1|0': 'All out at 1.618, stop at 0', 'tp2|0': 'All out at 2, stop at 0',
   'plan|-0.272': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at -0.272', 'tp1|-0.272': 'All out at 1.618, stop at -0.272', 'tp2|-0.272': 'All out at 2, stop at -0.272'};
 async function brkLoad(){ const v = await Cache.get('brkStudy'); if (v && Array.isArray(v.ev)){ BRK.ev = v.ev; BRK.meta = v.meta || null; } brkRender(); }
@@ -4452,7 +4454,7 @@ function brkStats(rs){
   for (const r of rs){ if (r > 0.001) w++; s += r; cum += r; if (cum > pk) pk = cum; if (pk - cum > dd) dd = pk - cum; }
   return {n, win: 100 * w / n, avg: s / n, tot: s, dd};
 }
-const brkTrades = (vari) => BRK.ev.filter(e => e.st === 'filled' && e.sims && e.sims[vari] && e.sims[vari].done).sort((a, b) => a.t - b.t);
+const brkTrades = (vari) => brkEv().filter(e => e.st === 'filled' && e.sims && e.sims[vari] && e.sims[vari].done).sort((a, b) => a.t - b.t);
 function brkMoments(tr, vari){
   const m = new Map(); for (const e of tr){ const k = e.tf + '|' + e.t + '|' + e.dir, a = m.get(k) || []; a.push(e.sims[vari].r); m.set(k, a); }
   const avgs = [...m.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length);
@@ -4461,13 +4463,14 @@ function brkMoments(tr, vari){
 function brkRender(){
   const out = $('brkOut'); if (!out) return;
   if (!BRK.ev.length){ out.innerHTML = '<div class="mu" style="margin-top:8px">No study run yet. Pick timeframes and press Run study.</div>'; return; }
-  const vari = BRK.vari, all = BRK.ev, filled = all.filter(e => e.st === 'filled'), tr = brkTrades(vari), n = all.filter(e => e.st !== 'open').length;
+  const vari = BRK.vari, all = brkEv(), filled = all.filter(e => e.st === 'filled'), tr = brkTrades(vari), n = all.filter(e => e.st !== 'open').length;
   const pct = (a, b) => b ? (100 * a / b).toFixed(0) + '%' : '–', f2 = x => (x >= 0 ? '+' : '') + x.toFixed(2);
   const cls = x => x > 0.02 ? 'up' : x < -0.02 ? 'dn' : '';
+  if (!all.length){ out.innerHTML = `<div class="row" style="margin:8px 0"><label>Show <select id="brkView"><option value="all">All breakers</option><option value="frozen" selected>Only the frozen long rule</option></select></label></div><div class="mu">No breakers match this view.</div>`; $('brkView').onchange = ev => { BRK.view = ev.target.value; brkRender(); }; return; }
   const t0 = Math.min(...all.map(e => e.t)), t1 = Math.max(...all.map(e => e.t)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
   const ran = all.filter(e => e.st === 'ran').length, exp = all.filter(e => e.st === 'expired').length, mo = brkMoments(tr, vari), st = brkStats(tr.map(e => e.sims[vari].r));
-  let h = `<div class="mu" style="font-size:12px;margin:8px 0">${all.length} breaker candles on ${BRK.meta ? BRK.meta.coins : '?'} coins (${BRK.meta ? BRK.meta.tfs.join(', ') : ''}) over about ${days} days. The order at the 0.5 level filled in ${pct(filled.length, n)} of them (${filled.length}); in ${pct(ran, n)} price ran to the first target without coming back, ${pct(exp, n)} never came back within 6 candles. The ${tr.length} finished trades come from ${mo.n} separate market moments (same timeframe, candle and side). Moments count once each, so the cluster-adjusted average R below is the number to trust more.</div>`;
-  h += `<div class="row" style="margin:6px 0"><label>Trade rule <select id="brkVar">${Object.keys(BRK_VARS).map(k => `<option value="${k}"${k === vari ? ' selected' : ''}>${BRK_VARS[k]}</option>`).join('')}</select></label></div>`;
+  let h = `<div class="mu" style="font-size:12px;margin:8px 0">${all.length} breaker candles on ${BRK.meta ? BRK.meta.coins : '?'} coins${BRK.meta && BRK.meta.range ? ' ' + BRK.meta.range : ''} (${BRK.meta ? BRK.meta.tfs.join(', ') : ''}) over about ${days} days. The order at the 0.5 level filled in ${pct(filled.length, n)} of them (${filled.length}); in ${pct(ran, n)} price ran to the first target without coming back, ${pct(exp, n)} never came back within 6 candles. The ${tr.length} finished trades come from ${mo.n} separate market moments (same timeframe, candle and side). Moments count once each, so the cluster-adjusted average R below is the number to trust more.</div>`;
+  h += `<div class="row" style="margin:6px 0"><label>Show <select id="brkView"><option value="all"${BRK.view === 'all' ? ' selected' : ''}>All breakers</option><option value="frozen"${BRK.view === 'frozen' ? ' selected' : ''}>Only the frozen long rule (long, close beyond the level, volume 1.5x+, body 60%+)</option></select></label> <label>Trade rule <select id="brkVar">${Object.keys(BRK_VARS).map(k => `<option value="${k}"${k === vari ? ' selected' : ''}>${BRK_VARS[k]}</option>`).join('')}</select></label></div>`;
   h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Trade rule</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Total R</th><th>Deepest drawdown</th></tr></thead><tbody>';
   for (const k of Object.keys(BRK_VARS)){ const s = brkStats(brkTrades(k).map(e => e.sims[k].r)); if (!s) continue; h += `<tr${k === vari ? ' style="background:var(--panel-2,rgba(255,255,255,.04))"' : ''}><td class="l">${BRK_VARS[k]}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td><td>${s.dd.toFixed(1)}R</td></tr>`; }
   h += '</tbody></table></div>';
@@ -4477,7 +4480,7 @@ function brkRender(){
     h += `<div class="mu" style="font-size:12px;margin:10px 0">Selected rule: cluster-adjusted average <b class="${cls(mo.avg)}">${f2(mo.avg)}R</b> per moment (plain average ${f2(st.avg)}R). First half of the period ${a ? f2(a.avg) + 'R' : '–'}, second half ${b ? f2(b.avg) + 'R' : '–'} (an edge that is real should show in both). `
       + (vari.startsWith('plan') ? `First target reached in ${pct(hits(1), tr.length)}, second in ${pct(hits(2), tr.length)}, third in ${pct(hits(3), tr.length)}. ` : '') + `Average ${mb.toFixed(1)} candles in the trade; median stop distance ${(() => { const v = filled.map(e => e.stopPct).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)].toFixed(1) : '–'; })()}% of the entry price.</div>`;
   }
-  const wave = new Map(); for (const e of all){ const k = e.tf + '|' + e.t + '|' + e.dir; wave.set(k, (wave.get(k) || 0) + 1); }
+  const wave = new Map(); for (const e of BRK.ev){ const k = e.tf + '|' + e.t + '|' + e.dir; wave.set(k, (wave.get(k) || 0) + 1); }
   const B = (v, cuts, labs) => { if (v == null || !Number.isFinite(v)) return null; for (let i = 0; i < cuts.length; i++) if (v < cuts[i]) return labs[i]; return labs[cuts.length]; };
   const ORD = ['15m', '1h', '4h', '1d', 'Long', 'Short', 'under 1', '1 to 2', '2 to 3', '3 or more', 'under 2%', '2 to 4%', '4 to 8%', '8% or more', 'under 60%', '60 to 80%', '80% or more', 'under 1x', '1 to 2x', '2x or more', 'Yes', 'No (wick only)', 'With the trend', 'Against the trend', '1 to 3', '4 to 10', '11 or more', 'next candle', '2 to 3', '4 to 6'];
   const groups = [
@@ -4500,16 +4503,17 @@ function brkRender(){
   }
   h += '</tbody></table></div><div class="mu" style="font-size:12px;margin-top:6px">Rows with fewer than 10 trades are dimmed. Assumptions: limit order at the 0.5 level, filled when price trades there; stop is checked before targets and no target counts on the candle that fills the order; trade closed at market after 48 candles; no fees or slippage; stop at 0 triggers when price trades below the candle low (above the high for shorts).</div>';
   out.innerHTML = h;
+  if ($('brkView')) $('brkView').onchange = ev => { BRK.view = ev.target.value; brkRender(); };
   if ($('brkVar')) $('brkVar').onchange = ev => { BRK.vari = ev.target.value; brkRender(); };
 }
 async function brkRun(){
   if (BRK.running){ BRK.cancel = true; return; }
-  const tfs = [...document.querySelectorAll('.brkTf:checked')].map(x => x.value), topN = +$('brkN').value || 100;
+  const tfs = [...document.querySelectorAll('.brkTf:checked')].map(x => x.value), coinSel = $('brkN').value, topN = coinSel === '101-200' ? 200 : +coinSel || 100;
   if (!tfs.length){ toast('Pick at least one timeframe.'); return; }
   BRK.running = true; BRK.cancel = false; $('brkRun').textContent = 'Stop'; const stt = $('brkStatus');
   try {
     stt.textContent = 'Loading the coin list…';
-    const uni = (await getUniverse()).slice(0, topN), tasks = []; for (const u of uni) for (const tf of tfs) tasks.push([u.sym, tf]);
+    const uni = (await getUniverse()).slice(coinSel === '101-200' ? 100 : 0, topN), tasks = []; for (const u of uni) for (const tf of tfs) tasks.push([u.sym, tf]);
     const ev = []; let done = 0, i = 0;
     async function worker(){
       while (i < tasks.length && !BRK.cancel){
@@ -4524,7 +4528,7 @@ async function brkRun(){
     await Promise.all(Array.from({length: 6}, worker));
     if (BRK.cancel){ stt.textContent = 'Stopped.'; }
     else {
-      BRK.ev = ev; BRK.meta = {coins: uni.length, tfs, at: Date.now()}; await Cache.set('brkStudy', {ev, meta: BRK.meta});
+      BRK.ev = ev; BRK.meta = {coins: uni.length, tfs, at: Date.now(), range: coinSel === '101-200' ? 'ranked 101 to 200' : ''}; await Cache.set('brkStudy', {ev, meta: BRK.meta});
       stt.textContent = `Done: ${ev.length} breaker candles.`; brkRender();
     }
   } catch (e){ stt.textContent = 'Failed: ' + (e && e.message || e); }
