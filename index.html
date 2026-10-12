@@ -862,6 +862,21 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div id="brkOut"></div>
       <div id="rxOut"></div>
     </details>
+    <details class="panel jfold" data-fold="setup">
+      <summary>Setup study</summary>
+      <div class="mu" style="font-size:12px;margin:6px 0">Tests a trading idea on up to 1000 candles of history per coin, with the same rules every time, so ideas can be compared fairly. The trade is taken at the open of the candle after the signal; every stop is tried with targets of 1R, 2R and 3R; a trade that reaches neither within 48 candles is closed at market; the stop wins when a candle touches both; no fees. Judge a result by the cluster-adjusted average (signals at the same moment count once), and by whether both halves of the period agree. <b>Liquidity sweep</b>: price trades beyond the highest high / lowest low of the last 20 candles and closes back inside; the trade is against the sweep. <b>Funding extreme</b>: at a funding settlement the rate is far from normal; the trade is against the crowd (a very positive rate = short, a very negative rate = long).</div>
+      <div class="row">
+        <label>Setup <select id="suKind"><option value="sweep">Liquidity sweep (20 candles)</option><option value="fund">Funding extreme (against the crowd)</option></select></label>
+        <label><input type="checkbox" class="suTf" value="15m"> 15m</label>
+        <label><input type="checkbox" class="suTf" value="1h" checked> 1h</label>
+        <label><input type="checkbox" class="suTf" value="4h" checked> 4h</label>
+        <label><input type="checkbox" class="suTf" value="1d"> 1d</label>
+        <label>Coins <select id="suN"><option value="50">Top 50 by volume</option><option value="101-200">Coins ranked 101 to 200 (holdout test)</option><option value="100" selected>Top 100 by volume</option><option value="200">Top 200 by volume</option></select></label>
+        <label id="suThrL" hidden>Funding at least <select id="suThr"><option value="0.03">0.03% per 8h</option><option value="0.05">0.05% per 8h</option><option value="0.1">0.1% per 8h</option></select></label>
+        <label>From <input id="suSince" type="date"></label><button id="suRun" class="primary">Run study</button><button id="suCsv">Export CSV</button><span class="mu" id="suStatus" style="font-size:12px"></span>
+      </div>
+      <div id="suOut"></div>
+    </details>
     <details class="panel" style="margin-top:12px" id="jRunPanel">
       <summary style="cursor:pointer">Advanced: Onslaught server check <span class="mu">Only for assessing the Onslaught web-based runner server: how successful its alerted signals were. Not needed for normal use.</span></summary>
       <div class="mu" style="font-size:12px;margin-top:8px">Load the <code>trades.csv</code> from the runner folder to see what the runner really alerted and followed with its own plan (three targets, stop to entry after TP1). The numbers are kept in this browser; Clear removes them.</div>
@@ -1845,6 +1860,81 @@ function lqNear(M, maxPct, minRel){
     }
     if (bi >= 0 && sm[bi] >= minRel * mx) out.push({side, price: pAt(bi), usd: sm[bi], rel: sm[bi] / mx, dist: (pAt(bi) / M.cur - 1) * 100});
   }
+  return out;
+}
+/* ---------- Setup study detectors (Journal tab, "Setup study") ----------
+   A detector returns events {i, t, dir, stops:{key:price}, ...} where i is the last closed candle of the signal; the trade is taken at the open of candle i+1.
+   setupSim() then scores every stop x target combination in R with the same conservative rules (stop first on a candle that touches both). */
+/* Liquidity sweep: a candle trades beyond the highest high (or lowest low) of the previous `look` candles and then closes back inside. Sweep of a high = short, of a low = long. */
+function sweepScan(cd, o){
+  o = o || {};
+  const look = o.look || 20, n = cd.length, out = [];
+  if (n < look + 30) return out;
+  const hh = cd.map(k => k[2]), ll = cd.map(k => k[3]), cc = cd.map(k => k[4]), at = atr(hh, ll, cc, 14), e50 = ema(cc, 50);
+  for (let i = look; i < n - 0; i++){
+    const O = cd[i][1], H = hh[i], L = ll[i], C = cc[i], a = at[i - 1];
+    if (!(a > 0)) continue;
+    let ph = -Infinity, pl = Infinity, ph2 = -Infinity, pl2 = Infinity;
+    for (let j = i - look; j < i; j++){ if (hh[j] > ph) ph = hh[j]; if (ll[j] < pl) pl = ll[j]; }
+    for (let j = Math.max(0, i - 3 * look); j < i; j++){ if (hh[j] > ph2) ph2 = hh[j]; if (ll[j] < pl2) pl2 = ll[j]; }
+    const bear = H > ph && C < ph, bull = L < pl && C > pl;
+    if (bear === bull) continue;                                          // none, or an outside candle that did both
+    const dir = bull ? 1 : -1, lvl = bull ? pl : ph, ext = bull ? L : H, rng = H - L;
+    let vs = 0, vn = 0; for (let j = Math.max(0, i - 20); j < i; j++){ vs += cd[j][5] || 0; vn++; }
+    out.push({i, t: cd[i][0], dir, lvl, ext, depth: Math.abs(ext - lvl) / a, reclaim: Math.abs(lvl - C) / a, wick: rng > 0 ? (bull ? Math.min(O, C) - L : H - Math.max(O, C)) / rng : 0,
+      vol: vn && vs > 0 ? (cd[i][5] || 0) / (vs / vn) : null, big: bull ? L < pl2 : H > ph2,
+      withTrend: Number.isFinite(e50[i - 1]) ? (dir > 0 ? C > e50[i - 1] : C < e50[i - 1]) : null,
+      stops: {ext: ext, ext5: bull ? ext - 0.5 * a : ext + 0.5 * a}, atr: a});
+  }
+  return out;
+}
+/* Funding extreme: at a funding settlement the rate is far from normal. Crowded longs (high positive rate) = short, crowded shorts (negative) = long (contrarian).
+   `rates` = [{t, r}] with r in percent per 8 hours. Stops are 1.5 and 3 ATR from the entry. */
+function fundScan(cd, rates, o){
+  o = o || {};
+  const thr = o.thr || 0.03, n = cd.length, out = [], tms = n > 1 ? cd[1][0] - cd[0][0] : 0;
+  if (n < 60 || !tms || !rates || !rates.length) return out;
+  const hh = cd.map(k => k[2]), ll = cd.map(k => k[3]), cc = cd.map(k => k[4]), at = atr(hh, ll, cc, 14), e50 = ema(cc, 50), back = Math.max(1, Math.round(864e5 / tms));
+  let i = 0;
+  for (const f of rates){
+    if (Math.abs(f.r) < thr) continue;
+    while (i < n && cd[i][0] + tms <= f.t) i++;                           // i = first candle that opens at or after the settlement
+    const s = i - 1;                                                      // last candle closed by the settlement
+    if (s < 50 || i >= n) continue;
+    const a = at[s]; if (!(a > 0)) continue;
+    const dir = f.r > 0 ? -1 : 1, ref = cd[s][4], ch = s - back >= 0 ? (ref / cc[s - back] - 1) * 100 : null;
+    out.push({i: s, t: cd[s][0] + tms, dir, fr: f.r, ch24: ch, atrPct: a / ref * 100, withTrend: Number.isFinite(e50[s]) ? (dir > 0 ? ref > e50[s] : ref < e50[s]) : null,
+      stops: {a15: dir > 0 ? ref - 1.5 * a : ref + 1.5 * a, a3: dir > 0 ? ref - 3 * a : ref + 3 * a}, atr: a});
+  }
+  return out;
+}
+const SETUP_TARGETS = [1, 2, 3];
+function setupSim(cd, ev, o){
+  o = o || {};
+  const hold = o.hold || 48, n = cd.length, d = ev.dir, q0 = ev.i + 1, out = {status: 'open', entry: null, risk: null, sims: {}};
+  if (q0 >= n) return out;
+  const E = cd[q0][1]; out.entry = E;
+  let allDone = true, any = false;
+  for (const sk of Object.keys(ev.stops)){
+    const S = ev.stops[sk], risk = d > 0 ? E - S : S - E;
+    if (!(risk > 0)){ continue; }                                         // the open is already beyond the stop: no trade for this stop
+    any = true; if (sk === Object.keys(ev.stops)[0]) out.risk = risk;
+    for (const m of SETUP_TARGETS){
+      const T = d > 0 ? E + m * risk : E - m * risk;
+      let r = null, res = null, bars = 0;
+      for (let q = q0; q < n && q < q0 + hold; q++){
+        const k = cd[q]; bars = q - q0 + 1;
+        if (d > 0 ? k[3] <= S : k[2] >= S){ r = -1; res = 'stop'; break; }
+        if (d > 0 ? k[2] >= T : k[3] <= T){ r = m; res = 'target'; break; }
+      }
+      if (r == null && q0 + hold - 1 <= n - 1){                           // time is up: close at that candle's close
+        const k = cd[q0 + hold - 1]; r = (d > 0 ? k[4] - E : E - k[4]) / risk; res = 'time'; bars = hold;
+      }
+      if (r == null) allDone = false;
+      out.sims[sk + '|' + m] = {r, res, bars, done: r != null};
+    }
+  }
+  if (!any) out.status = 'skip'; else out.status = allDone ? 'done' : 'open';
   return out;
 }
 // ==ENGINE END==
@@ -4724,6 +4814,119 @@ $('brkSince').onchange = () => { const v = $('brkSince').value; BRK.since = v ? 
 $('brkFwd').onclick = () => { $('brkSince').value = '2026-10-12'; BRK.view = 'frozen'; $('brkSince').onchange(); };
 $('brkRun').onclick = brkRun; $('brkCsv').onclick = brkCsv;
 loadJournal(); runLoad(); brkLoad();
+/* ---------- Setup study (Journal tab): sweeps and funding extremes, same trade rules for each idea ---------- */
+const FRLIM = {win: 300000, cap: 400, log: []};
+const SU = {kind: 'sweep', ev: {}, meta: {}, running: false, cancel: false, vari: 'ext|2', since: 0};
+const suB = (v, cuts, labs) => { if (v == null || !Number.isFinite(v)) return null; for (let i = 0; i < cuts.length; i++) if (v < cuts[i]) return labs[i]; return labs[cuts.length]; };
+const SU_KINDS = {
+  sweep: {name: 'Liquidity sweep', stops: {ext: 'stop at the wick extreme', ext5: 'stop 0.5 ATR beyond the wick'},
+    groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long (a low was swept)' : 'Short (a high was swept)'],
+      ['Sweep depth beyond the level (ATR)', e => suB(e.depth, [0.25, 0.5, 1], ['under 0.25', '0.25 to 0.5', '0.5 to 1', '1 or more'])],
+      ['Close back inside the level (ATR)', e => suB(e.reclaim, [0.25, 0.5, 1], ['under 0.25', '0.25 to 0.5', '0.5 to 1', '1 or more'])],
+      ['Wick share of the candle', e => suB(e.wick, [0.4, 0.6], ['under 40%', '40 to 60%', '60% or more'])],
+      ['Volume vs 20-candle average', e => suB(e.vol, [1, 2], ['under 1x', '1 to 2x', '2x or more'])],
+      ['Also beyond the 60-candle level', e => e.big == null ? null : e.big ? 'Yes' : 'No'],
+      ['Trend (close vs EMA50)', e => e.withTrend == null ? null : e.withTrend ? 'With the trend' : 'Against the trend'],
+      ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
+    csv: [['depth_atr', e => e.depth], ['reclaim_atr', e => e.reclaim], ['wick_share', e => e.wick], ['volume_x', e => e.vol], ['beyond_60_candle_level', e => e.big == null ? '' : e.big ? 1 : 0], ['with_trend', e => e.withTrend == null ? '' : e.withTrend ? 1 : 0]]},
+  fund: {name: 'Funding extreme', stops: {a15: 'stop 1.5 ATR from the entry', a3: 'stop 3 ATR from the entry'},
+    groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long (crowd was short)' : 'Short (crowd was long)'],
+      ['Funding rate (% per 8h, size only)', e => suB(Math.abs(e.fr), [0.05, 0.1, 0.2], ['0.03 to 0.05', '0.05 to 0.1', '0.1 to 0.2', '0.2 or more'])],
+      ['Price move in the 24h before (positive = already in the trade direction)', e => suB(e.ch24 == null ? null : e.dir * e.ch24, [-5, -2, 0, 2, 5], ['under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more'])],
+      ['Trend (price vs EMA50)', e => e.withTrend == null ? null : e.withTrend ? 'With the trend' : 'Against the trend'],
+      ['Volatility (ATR as % of price)', e => suB(e.atrPct, [0.5, 1, 2], ['under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more'])]],
+    csv: [['funding_pct_8h', e => e.fr], ['move_24h_pct', e => e.ch24], ['atr_pct', e => e.atrPct], ['with_trend', e => e.withTrend == null ? '' : e.withTrend ? 1 : 0]]}
+};
+const SU_ORD = ['15m', '1h', '4h', '1d', 'Long (a low was swept)', 'Short (a high was swept)', 'Long (crowd was short)', 'Short (crowd was long)', 'under 0.25', '0.25 to 0.5', '0.5 to 1', '1 to 2', '1 or more', '2 or more', 'under 0.5', 'under 40%', '40 to 60%', '60% or more',
+  'under 1x', '1 to 2x', '2x or more', 'No', 'Yes', 'With the trend', 'Against the trend', '0.03 to 0.05', '0.05 to 0.1', '0.1 to 0.2', '0.2 or more', 'under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more', 'under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more'];
+const suVars = k => { const o = {}; for (const sk of Object.keys(SU_KINDS[k].stops)) for (const m of SETUP_TARGETS) o[sk + '|' + m] = `${SU_KINDS[k].stops[sk][0].toUpperCase() + SU_KINDS[k].stops[sk].slice(1)}, target ${m}R`; return o; };
+const suEv = () => (SU.ev[SU.kind] || []).filter(e => !SU.since || e.t >= SU.since);
+const suTrades = vari => suEv().filter(e => e.sims && e.sims[vari] && e.sims[vari].done).sort((a, b) => a.t - b.t);
+async function suLoad(){ for (const k of Object.keys(SU_KINDS)){ const v = await Cache.get('setupStudy:' + k); if (v && Array.isArray(v.ev)){ SU.ev[k] = v.ev; SU.meta[k] = v.meta || null; } } suRender(); }
+async function suRates(sym){
+  const key = 'fr:' + sym, c = await Cache.get(key);
+  if (c && c.at && Date.now() - c.at < 6 * 36e5 && Array.isArray(c.rates)) return c.rates;
+  const d = await getJSON(`${FAPI}/fapi/v1/fundingRate?symbol=${sym}&limit=1000`, FRLIM, 1);
+  const rates = (Array.isArray(d) ? d : []).map(x => ({t: +x.fundingTime, r: +x.fundingRate * 100})).filter(x => Number.isFinite(x.r)).sort((a, b) => a.t - b.t);
+  await Cache.set(key, {at: Date.now(), rates}); return rates;
+}
+function suRender(){
+  const out = $('suOut'); if (!out) return;
+  const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), raw = SU.ev[SU.kind] || [];
+  if (!VARS[SU.vari]) SU.vari = Object.keys(VARS)[1];
+  if (!raw.length){ out.innerHTML = '<div class="mu" style="margin-top:8px">No study run yet for this setup. Pick timeframes and press Run study.</div>'; return; }
+  const vari = SU.vari, all = suEv(), tr = suTrades(vari), meta = SU.meta[SU.kind] || {};
+  const f2 = x => (x >= 0 ? '+' : '') + x.toFixed(2), cls = x => x > 0.02 ? 'up' : x < -0.02 ? 'dn' : '';
+  if (!all.length){ out.innerHTML = '<div class="mu" style="margin-top:8px">No signals from that date on.</div>'; return; }
+  const m = new Map(); for (const e of tr){ const k = e.tf + '|' + e.t + '|' + e.dir, a = m.get(k) || []; a.push(e.sims[vari].r); m.set(k, a); }
+  const mavg = [...m.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length), mo = {n: m.size, avg: mavg.length ? mavg.reduce((x, y) => x + y, 0) / mavg.length : 0}, st = brkStats(tr.map(e => e.sims[vari].r));
+  const t0 = Math.min(...all.map(e => e.t)), t1 = Math.max(...all.map(e => e.t)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
+  let h = `<div class="mu" style="font-size:12px;margin:8px 0">${K.name}: ${all.length} signals on ${meta.coins || '?'} coins${meta.range ? ' ' + meta.range : ''} (${(meta.tfs || []).join(', ')}${meta.thr ? ', funding at least ' + meta.thr + '% per 8h' : ''}) over about ${days} days. ${tr.length} finished trades come from ${mo.n} separate market moments (same timeframe, candle and side). Moments count once each, so the cluster-adjusted average R is the number to trust more.</div>`;
+  h += `<div class="row" style="margin:6px 0"><label>Trade rule <select id="suVar">${Object.keys(VARS).map(k => `<option value="${k}"${k === vari ? ' selected' : ''}>${VARS[k]}</option>`).join('')}</select></label></div>`;
+  h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Trade rule</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Total R</th><th>Deepest drawdown</th></tr></thead><tbody>';
+  for (const k of Object.keys(VARS)){ const s = brkStats(suTrades(k).map(e => e.sims[k].r)); if (!s) continue; h += `<tr${k === vari ? ' style="background:var(--panel-2,rgba(255,255,255,.04))"' : ''}><td class="l">${VARS[k]}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td><td>${s.dd.toFixed(1)}R</td></tr>`; }
+  h += '</tbody></table></div>';
+  if (st){
+    const half = Math.floor(tr.length / 2), a = brkStats(tr.slice(0, half).map(e => e.sims[vari].r)), b = brkStats(tr.slice(half).map(e => e.sims[vari].r));
+    h += `<div class="mu" style="font-size:12px;margin:10px 0">Selected rule: cluster-adjusted average <b class="${cls(mo.avg)}">${f2(mo.avg)}R</b> per moment (plain average ${f2(st.avg)}R). First half of the period ${a ? f2(a.avg) + 'R' : '–'}, second half ${b ? f2(b.avg) + 'R' : '–'} (a real edge should show in both). A clearly negative result means price tended to keep going the other way; that is information too, but it is not the same as a profitable mirror trade (stops and targets differ).</div>`;
+  }
+  h += '<div class="tablewrap" style="border:0;margin-top:8px"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Total R</th></tr></thead><tbody>';
+  let lastG = '';
+  for (const [g, fn] of K.groups){
+    const by = new Map(); for (const e of tr){ const bk = fn(e); if (bk == null) continue; (by.get(bk) || by.set(bk, []).get(bk)).push(e.sims[vari].r); }
+    for (const bk of [...by.keys()].sort((x, y) => SU_ORD.indexOf(x) - SU_ORD.indexOf(y))){ const s = brkStats(by.get(bk)), first = g !== lastG; lastG = g;
+      h += `<tr${s.n < 10 ? ' style="opacity:.5"' : ''}><td class="l">${first ? esc(g) : ''}</td><td class="l">${esc(bk)}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td></tr>`; }
+  }
+  h += '</tbody></table></div><div class="mu" style="font-size:12px;margin-top:6px">Rows with fewer than 10 trades are dimmed. Entry at the open after the signal; stop checked before the target on a candle that touches both; trades not finished in 48 candles close at market; no fees or slippage. Compare any bucket with the whole-table result, and trust it only if the other coin set and both halves of the period agree. ' + (SU.kind === 'sweep' ? 'Baseline: on pure random price data the sweep rules score about -0.1 to -0.2R with the stop at the wick extreme (the stop is tight, so it is often hit on the very next candle) and about 0 to -0.03R with the stop 0.5 ATR beyond it, so judge against those, not against zero.' : 'Baseline: on pure random price data this rule scores about 0R, so a positive result here is already a difference.') + '</div>';
+  out.innerHTML = h; $('suVar').onchange = ev => { SU.vari = ev.target.value; suRender(); };
+}
+async function suRun(){
+  if (SU.running){ SU.cancel = true; return; }
+  const kind = $('suKind').value, tfs = [...document.querySelectorAll('.suTf:checked')].map(x => x.value), coinSel = $('suN').value, topN = coinSel === '101-200' ? 200 : +coinSel || 100, thr = +$('suThr').value || 0.03;
+  if (!tfs.length){ toast('Pick at least one timeframe.'); return; }
+  SU.kind = kind; SU.running = true; SU.cancel = false; $('suRun').textContent = 'Stop'; const stt = $('suStatus');
+  try {
+    stt.textContent = 'Loading the coin list…';
+    const uni = (await getUniverse()).slice(coinSel === '101-200' ? 100 : 0, topN), tasks = []; for (const u of uni) for (const tf of tfs) tasks.push([u.sym, tf]);
+    const ev = []; let done = 0, i = 0;
+    async function worker(){
+      while (i < tasks.length && !SU.cancel){
+        const [sym, tf] = tasks[i++];
+        try {
+          const cd = await getKlines(sym, tf, true, KDEEP);
+          const found = kind === 'sweep' ? sweepScan(cd) : fundScan(cd, await suRates(sym), {thr});
+          for (const b of found){
+            const r = setupSim(cd, b), rec = {sym, tf, t: b.t, dir: b.dir, st: r.status, riskAtr: r.risk != null && b.atr > 0 ? r.risk / b.atr : null, sims: r.status === 'done' || r.status === 'open' ? r.sims : null};
+            if (kind === 'sweep') Object.assign(rec, {depth: b.depth, reclaim: b.reclaim, wick: b.wick, vol: b.vol, big: b.big, withTrend: b.withTrend});
+            else Object.assign(rec, {fr: b.fr, ch24: b.ch24, atrPct: b.atrPct, withTrend: b.withTrend});
+            ev.push(rec);
+          }
+        } catch {}
+        done++; stt.textContent = `Reading ${done}/${tasks.length} (coin and timeframe)…`;
+      }
+    }
+    await Promise.all(Array.from({length: kind === 'fund' ? 4 : 6}, worker));
+    if (SU.cancel){ stt.textContent = 'Stopped.'; }
+    else {
+      SU.ev[kind] = ev; SU.meta[kind] = {coins: uni.length, tfs, at: Date.now(), range: coinSel === '101-200' ? 'ranked 101 to 200' : '', thr: kind === 'fund' ? thr : null}; await Cache.set('setupStudy:' + kind, {ev, meta: SU.meta[kind]});
+      stt.textContent = `Done: ${ev.length} signals.`; suRender();
+    }
+  } catch (e){ stt.textContent = 'Failed: ' + (e && e.message || e); }
+  SU.running = false; $('suRun').textContent = 'Run study';
+}
+function suCsv(){
+  const raw = SU.ev[SU.kind] || []; if (!raw.length){ toast('Run the study first.'); return; }
+  const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), keys = Object.keys(VARS), head = ['time_utc', 'pair', 'tf', 'side', 'status', 'stop_atr'].concat(K.csv.map(c => c[0]));
+  keys.forEach(k => head.push(k.replace('|', '_target_') + 'R_result'));
+  const q = v => v == null ? '' : typeof v === 'number' ? +v.toFixed(5) : v, lines = [head.join(',')];
+  for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.st, q(e.riskAtr)].concat(K.csv.map(c => q(c[1](e)))).concat(keys.map(k => e.sims && e.sims[k] && e.sims[k].done ? +e.sims[k].r.toFixed(3) : '')).join(','));
+  downloadText(lines.join('\n'), `setup-${SU.kind}-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
+}
+$('suKind').onchange = () => { SU.kind = $('suKind').value; $('suThrL').hidden = SU.kind !== 'fund'; suRender(); };
+$('suSince').onchange = () => { const v = $('suSince').value; SU.since = v ? Date.parse(v + 'T00:00:00Z') : 0; suRender(); };
+$('suRun').onclick = suRun; $('suCsv').onclick = suCsv;
+suLoad();
+
 $('jUpdate').onclick = () => updateOutcomes(true);
 $('jShow').onchange = () => { JSH.show = $('jShow').value; try { localStorage.setItem('onslaught-jshow', JSH.show); } catch {} renderJournal(); };
 $('jCsv').onclick = journalCSV;
