@@ -846,6 +846,19 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li>The Advanced: Onslaught server check box at the bottom is only for assessing the Onslaught runner server (load its trades.csv); it is not needed to use the Journal.</li>
       <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
     </ul></details></div>
+    <details class="panel jfold" data-fold="brk">
+      <summary>Breaker candle study</summary>
+      <div class="mu" style="font-size:12px;margin:6px 0">Tests the Breaker candle rule (a candle that breaks market structure; its own range is the Fibonacci) on up to 1000 candles of history per coin, so you do not have to wait weeks for live signals. The order waits at the 0.5 level of the breaker candle and the stop sits at its far end (0); targets are the 1.618, 2 and 2.272 extensions. Study only: nothing here sends alerts.</div>
+      <div class="row">
+        <label><input type="checkbox" class="brkTf" value="15m"> 15m</label>
+        <label><input type="checkbox" class="brkTf" value="1h" checked> 1h</label>
+        <label><input type="checkbox" class="brkTf" value="4h" checked> 4h</label>
+        <label><input type="checkbox" class="brkTf" value="1d"> 1d</label>
+        <label>Coins <select id="brkN"><option value="50">Top 50 by volume</option><option value="100" selected>Top 100 by volume</option><option value="200">Top 200 by volume</option></select></label>
+        <button id="brkRun" class="primary">Run study</button><button id="brkCsv">Export CSV</button><span class="mu" id="brkStatus" style="font-size:12px"></span>
+      </div>
+      <div id="brkOut"></div>
+    </details>
     <details class="panel" style="margin-top:12px" id="jRunPanel">
       <summary style="cursor:pointer">Advanced: Onslaught server check <span class="mu">Only for assessing the Onslaught web-based runner server: how successful its alerted signals were. Not needed for normal use.</span></summary>
       <div class="mu" style="font-size:12px;margin-top:8px">Load the <code>trades.csv</code> from the runner folder to see what the runner really alerted and followed with its own plan (three targets, stop to entry after TP1). The numbers are kept in this browser; Clear removes them.</div>
@@ -1641,6 +1654,87 @@ function taProfile(cd, nb){
 function taAvwap(cd, i0, src){                                        // src: 2 = highs, 3 = lows, omitted = typical price
   const out = []; let pv = 0, vv = 0;
   for (let i = i0; i < cd.length; i++){ const k = cd[i], tp = src ? k[src] : (k[2] + k[3] + k[4]) / 3, vol = k[5] || 0; pv += tp * vol; vv += vol; out.push(vv > 0 ? pv / vv : tp); }
+  return out;
+}
+/* ---------- Breaker candles (the user's TradingView indicator) ----------
+   A candle that breaks market structure: a green candle with a higher high that goes above the high which came before the
+   latest lower low (bullish), or the mirror image (bearish). Swings are 3-candle pivots, found on closed candles only.
+   The candle's own range is the Fibonacci: 0 = its low, 1 = its high, extensions above (bullish) or below (bearish). */
+function breakerScan(cd, o){
+  o = o || {};
+  const wick = o.trigger !== 'close', n = cd.length, out = [];
+  if (n < 60) return out;
+  const hh = cd.map(k => k[2]), ll = cd.map(k => k[3]), cc = cd.map(k => k[4]);
+  const at = atr(hh, ll, cc, 14), e20 = ema(cc, 20), e50 = ema(cc, 50);
+  const pvh = [], pvl = [];                                              // most recent first: {p, i}
+  let htc = null, ltc = null;                                            // level to break upward / downward
+  for (let i = 2; i < n; i++){
+    const O = cd[i][1], H = cd[i][2], L = cd[i][3], C = cd[i][4], h1 = hh[i-1], h2 = hh[i-2], l1 = ll[i-1], l2 = ll[i-2];
+    if (H < h1 && h1 > h2){                                              // pivot high on the previous candle
+      pvh.unshift({p: h1, i: i - 1});
+      if (pvh.length > 1 && pvh[0].p > pvh[1].p){ const f = pvl.find(x => x.i < pvh[0].i); if (f) ltc = f; }   // higher high: the low before it is the level to break down
+    }
+    if (L > l1 && l1 < l2){                                              // pivot low on the previous candle
+      pvl.unshift({p: l1, i: i - 1});
+      if (pvl.length > 1 && pvl[0].p < pvl[1].p){ const f = pvh.find(x => x.i < pvl[0].i); if (f) htc = f; }   // lower low: the high before it is the level to break up
+    }
+    const th = wick ? H : Math.max(O, C), tl = wick ? L : Math.min(O, C);
+    let bos = false, up = null, dn = null;
+    if (htc && th > htc.p){ bos = true; up = htc; htc = null; }
+    if (ltc && tl < ltc.p){ bos = true; dn = ltc; ltc = null; }
+    if (!bos) continue;
+    const bull = H > h1 && C > O, bear = L < l1 && C < O;
+    if (!bull && !bear) continue;
+    const dir = bull ? 1 : -1, lv = dir > 0 ? up : dn, rng = H - L, a = at[i - 1];
+    let vs = 0, vn = 0; for (let j = Math.max(0, i - 20); j < i; j++){ vs += cd[j][5] || 0; vn++; }
+    out.push({i, t: cd[i][0], dir, low: L, high: H, rng, rngAtr: a > 0 ? rng / a : null, body: rng > 0 ? Math.abs(C - O) / rng : 0,
+      vol: vn && vs > 0 ? (cd[i][5] || 0) / (vs / vn) : null, lvl: lv ? lv.p : null, closeBeyond: lv ? (dir > 0 ? C > lv.p : C < lv.p) : null,
+      withTrend: Number.isFinite(e20[i-1]) && Number.isFinite(e50[i-1]) ? (dir > 0 ? e20[i-1] > e50[i-1] : e20[i-1] < e50[i-1]) : null});
+  }
+  return out;
+}
+const BRK_MODES = {plan: [1.618, 2, 2.272], tp1: [1.618], tp2: [2]};     // thirds + stop to entry after the first target / all out at one target
+/* Follow one breaker: the order waits at the 0.5 level of the candle for up to `fill` candles, the stop sits at fib stopFib (0 = the far end of the candle),
+   targets are candle-range extensions. Stop is checked before targets, and no target counts on the candle that fills the order (order of events unknown). */
+function breakerSim(cd, ev, o){
+  o = o || {};
+  const fill = o.fill || 6, hold = o.hold || 48, n = cd.length, d = ev.dir, R = ev.high - ev.low;
+  const px = f => d > 0 ? ev.low + R * f : ev.high - R * f;
+  const E = px(o.entry != null ? o.entry : 0.5), out = {status: 'open', fillBar: null, stopPct: null, sims: {}};
+  let j = ev.i + 1, f0 = -1;
+  const T1 = px(1.618);
+  for (; j < n && j <= ev.i + fill; j++){
+    const k = cd[j];
+    if (d > 0 ? k[3] <= E : k[2] >= E){ f0 = j; break; }
+    if (d > 0 ? k[2] >= T1 : k[3] <= T1){ out.status = 'ran'; return out; }
+  }
+  if (f0 < 0){ if (ev.i + fill < n) out.status = 'expired'; return out; }
+  out.status = 'filled'; out.fillBar = f0 - ev.i;
+  const stops = o.stops || [0, -0.272];
+  out.stopPct = Math.abs(E - px(stops[0])) / E * 100;
+  let allDone = true;
+  for (const sf of stops){
+    const S = px(sf), r = Math.abs(E - S);
+    for (const m of Object.keys(BRK_MODES)){
+      const fibs = BRK_MODES[m], T = fibs.map(px), share = 1 / fibs.length;
+      let sl = S, hits = 0, real = 0, done = false, res = null, bars = 0;
+      const stopHit = k => d > 0 ? k[3] < sl : k[2] > sl;
+      const fillBarStop = stopHit(cd[f0]);
+      if (fillBarStop){ real = -1; done = true; res = 'stop'; bars = 0; }
+      for (let q = f0 + 1; !done && q < n && q <= f0 + hold; q++){
+        const k = cd[q]; bars = q - f0;
+        if (stopHit(k)){ const left = 1 - hits * share; real += left * (d > 0 ? (sl - E) / r : (E - sl) / r); done = true; res = hits ? (sl === E ? 'breakeven' : 'stop') : 'stop'; break; }
+        while (hits < T.length && (d > 0 ? k[2] >= T[hits] : k[3] <= T[hits])){ real += share * Math.abs(T[hits] - E) / r; hits++; if (hits === 1 && fibs.length > 1) sl = E; }
+        if (hits === T.length){ done = true; res = 'target'; break; }
+      }
+      if (!done && f0 + hold < n){                                       // time is up: close what is left at the close
+        const k = cd[f0 + hold], left = 1 - hits * share; real += left * (d > 0 ? (k[4] - E) / r : (E - k[4]) / r); done = true; res = hits ? 'target' : 'time'; bars = hold;
+      }
+      if (!done) allDone = false;
+      out.sims[m + '|' + sf] = {r: real, res, hits, bars, done};
+    }
+  }
+  if (!allDone) out.status = 'open';
   return out;
 }
 // ==ENGINE END==
@@ -4345,7 +4439,109 @@ $('auto').onchange = () => { saveSettings(); setAuto(); };
 $('scanBtn').onclick = scan;
 $('tabs').onclick = e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); };
 $('secLoad').onclick = loadSectors;
-loadJournal(); runLoad();
+
+/* ---------- Breaker candle study (Journal tab) ----------
+   Replays the breaker rule on the long history (up to 1000 candles per coin and timeframe), so the answer does not need weeks of live signals. */
+const BRK = {ev: [], meta: null, running: false, cancel: false, vari: 'plan|0'};
+const BRK_VARS = {'plan|0': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at 0', 'tp1|0': 'All out at 1.618, stop at 0', 'tp2|0': 'All out at 2, stop at 0',
+  'plan|-0.272': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at -0.272', 'tp1|-0.272': 'All out at 1.618, stop at -0.272', 'tp2|-0.272': 'All out at 2, stop at -0.272'};
+async function brkLoad(){ const v = await Cache.get('brkStudy'); if (v && Array.isArray(v.ev)){ BRK.ev = v.ev; BRK.meta = v.meta || null; } brkRender(); }
+function brkStats(rs){
+  const n = rs.length; if (!n) return null;
+  let w = 0, s = 0, cum = 0, pk = 0, dd = 0;
+  for (const r of rs){ if (r > 0.001) w++; s += r; cum += r; if (cum > pk) pk = cum; if (pk - cum > dd) dd = pk - cum; }
+  return {n, win: 100 * w / n, avg: s / n, tot: s, dd};
+}
+const brkTrades = (vari) => BRK.ev.filter(e => e.st === 'filled' && e.sims && e.sims[vari] && e.sims[vari].done).sort((a, b) => a.t - b.t);
+function brkMoments(tr, vari){
+  const m = new Map(); for (const e of tr){ const k = e.tf + '|' + e.t + '|' + e.dir, a = m.get(k) || []; a.push(e.sims[vari].r); m.set(k, a); }
+  const avgs = [...m.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length);
+  return {n: m.size, avg: avgs.length ? avgs.reduce((x, y) => x + y, 0) / avgs.length : 0};
+}
+function brkRender(){
+  const out = $('brkOut'); if (!out) return;
+  if (!BRK.ev.length){ out.innerHTML = '<div class="mu" style="margin-top:8px">No study run yet. Pick timeframes and press Run study.</div>'; return; }
+  const vari = BRK.vari, all = BRK.ev, filled = all.filter(e => e.st === 'filled'), tr = brkTrades(vari), n = all.filter(e => e.st !== 'open').length;
+  const pct = (a, b) => b ? (100 * a / b).toFixed(0) + '%' : '–', f2 = x => (x >= 0 ? '+' : '') + x.toFixed(2);
+  const cls = x => x > 0.02 ? 'up' : x < -0.02 ? 'dn' : '';
+  const t0 = Math.min(...all.map(e => e.t)), t1 = Math.max(...all.map(e => e.t)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
+  const ran = all.filter(e => e.st === 'ran').length, exp = all.filter(e => e.st === 'expired').length, mo = brkMoments(tr, vari), st = brkStats(tr.map(e => e.sims[vari].r));
+  let h = `<div class="mu" style="font-size:12px;margin:8px 0">${all.length} breaker candles on ${BRK.meta ? BRK.meta.coins : '?'} coins (${BRK.meta ? BRK.meta.tfs.join(', ') : ''}) over about ${days} days. The order at the 0.5 level filled in ${pct(filled.length, n)} of them (${filled.length}); in ${pct(ran, n)} price ran to the first target without coming back, ${pct(exp, n)} never came back within 6 candles. The ${tr.length} finished trades come from ${mo.n} separate market moments (same timeframe, candle and side). Moments count once each, so the cluster-adjusted average R below is the number to trust more.</div>`;
+  h += `<div class="row" style="margin:6px 0"><label>Trade rule <select id="brkVar">${Object.keys(BRK_VARS).map(k => `<option value="${k}"${k === vari ? ' selected' : ''}>${BRK_VARS[k]}</option>`).join('')}</select></label></div>`;
+  h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Trade rule</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Total R</th><th>Deepest drawdown</th></tr></thead><tbody>';
+  for (const k of Object.keys(BRK_VARS)){ const s = brkStats(brkTrades(k).map(e => e.sims[k].r)); if (!s) continue; h += `<tr${k === vari ? ' style="background:var(--panel-2,rgba(255,255,255,.04))"' : ''}><td class="l">${BRK_VARS[k]}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td><td>${s.dd.toFixed(1)}R</td></tr>`; }
+  h += '</tbody></table></div>';
+  if (st){
+    const half = Math.floor(tr.length / 2), a = brkStats(tr.slice(0, half).map(e => e.sims[vari].r)), b = brkStats(tr.slice(half).map(e => e.sims[vari].r));
+    const hits = k => tr.filter(e => e.sims[vari].hits >= k).length, mb = tr.reduce((x, e) => x + e.sims[vari].bars, 0) / tr.length;
+    h += `<div class="mu" style="font-size:12px;margin:10px 0">Selected rule: cluster-adjusted average <b class="${cls(mo.avg)}">${f2(mo.avg)}R</b> per moment (plain average ${f2(st.avg)}R). First half of the period ${a ? f2(a.avg) + 'R' : '–'}, second half ${b ? f2(b.avg) + 'R' : '–'} (an edge that is real should show in both). `
+      + (vari.startsWith('plan') ? `First target reached in ${pct(hits(1), tr.length)}, second in ${pct(hits(2), tr.length)}, third in ${pct(hits(3), tr.length)}. ` : '') + `Average ${mb.toFixed(1)} candles in the trade; median stop distance ${(() => { const v = filled.map(e => e.stopPct).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)].toFixed(1) : '–'; })()}% of the entry price.</div>`;
+  }
+  const wave = new Map(); for (const e of all){ const k = e.tf + '|' + e.t + '|' + e.dir; wave.set(k, (wave.get(k) || 0) + 1); }
+  const B = (v, cuts, labs) => { if (v == null || !Number.isFinite(v)) return null; for (let i = 0; i < cuts.length; i++) if (v < cuts[i]) return labs[i]; return labs[cuts.length]; };
+  const ORD = ['15m', '1h', '4h', '1d', 'Long', 'Short', 'under 1', '1 to 2', '2 to 3', '3 or more', 'under 2%', '2 to 4%', '4 to 8%', '8% or more', 'under 60%', '60 to 80%', '80% or more', 'under 1x', '1 to 2x', '2x or more', 'Yes', 'No (wick only)', 'With the trend', 'Against the trend', '1 to 3', '4 to 10', '11 or more', 'next candle', '2 to 3', '4 to 6'];
+  const groups = [
+    ['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long' : 'Short'],
+    ['Candle size (ATR)', e => B(e.rngAtr, [1, 2, 3], ['under 1', '1 to 2', '2 to 3', '3 or more'])],
+    ['Stop distance', e => B(e.stopPct, [2, 4, 8], ['under 2%', '2 to 4%', '4 to 8%', '8% or more'])],
+    ['Candle body', e => B(e.body, [0.6, 0.8], ['under 60%', '60 to 80%', '80% or more'])],
+    ['Volume vs 20-candle average', e => B(e.vol, [1, 2], ['under 1x', '1 to 2x', '2x or more'])],
+    ['Close beyond the broken level', e => e.closeBeyond == null ? null : e.closeBeyond ? 'Yes' : 'No (wick only)'],
+    ['Trend (EMA20 vs EMA50)', e => e.withTrend == null ? null : e.withTrend ? 'With the trend' : 'Against the trend'],
+    ['Breakers on that candle and side', e => B(wave.get(e.tf + '|' + e.t + '|' + e.dir), [4, 11], ['1 to 3', '4 to 10', '11 or more'])],
+    ['Candles until the order filled', e => B(e.fb, [2, 4], ['next candle', '2 to 3', '4 to 6'])]];
+  h += '<div class="tablewrap" style="border:0;margin-top:8px"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Total R</th></tr></thead><tbody>';
+  let lastG = '';
+  for (const [g, fn] of groups){
+    const by = new Map(); for (const e of tr){ const b = fn(e); if (b == null) continue; (by.get(b) || by.set(b, []).get(b)).push(e.sims[vari].r); }
+    const order = [...by.keys()].sort((x, y) => ORD.indexOf(x) - ORD.indexOf(y));
+    for (const b of order){ const s = brkStats(by.get(b)); const first = g !== lastG; lastG = g;
+      h += `<tr${s.n < 10 ? ' style="opacity:.5"' : ''}><td class="l">${first ? g : ''}</td><td class="l">${b}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td></tr>`; }
+  }
+  h += '</tbody></table></div><div class="mu" style="font-size:12px;margin-top:6px">Rows with fewer than 10 trades are dimmed. Assumptions: limit order at the 0.5 level, filled when price trades there; stop is checked before targets and no target counts on the candle that fills the order; trade closed at market after 48 candles; no fees or slippage; stop at 0 triggers when price trades below the candle low (above the high for shorts).</div>';
+  out.innerHTML = h;
+  if ($('brkVar')) $('brkVar').onchange = ev => { BRK.vari = ev.target.value; brkRender(); };
+}
+async function brkRun(){
+  if (BRK.running){ BRK.cancel = true; return; }
+  const tfs = [...document.querySelectorAll('.brkTf:checked')].map(x => x.value), topN = +$('brkN').value || 100;
+  if (!tfs.length){ toast('Pick at least one timeframe.'); return; }
+  BRK.running = true; BRK.cancel = false; $('brkRun').textContent = 'Stop'; const stt = $('brkStatus');
+  try {
+    stt.textContent = 'Loading the coin list…';
+    const uni = (await getUniverse()).slice(0, topN), tasks = []; for (const u of uni) for (const tf of tfs) tasks.push([u.sym, tf]);
+    const ev = []; let done = 0, i = 0;
+    async function worker(){
+      while (i < tasks.length && !BRK.cancel){
+        const [sym, tf] = tasks[i++];
+        try {
+          const cd = await getKlines(sym, tf, true, KDEEP);
+          for (const b of breakerScan(cd)){ const r = breakerSim(cd, b); ev.push({sym, tf, t: b.t, dir: b.dir, rngAtr: b.rngAtr, body: b.body, vol: b.vol, closeBeyond: b.closeBeyond, withTrend: b.withTrend, low: b.low, high: b.high, st: r.status, fb: r.fillBar, stopPct: r.stopPct, sims: r.status === 'filled' || r.status === 'open' ? r.sims : null}); }
+        } catch {}
+        done++; stt.textContent = `Reading ${done}/${tasks.length} (coin and timeframe)…`;
+      }
+    }
+    await Promise.all(Array.from({length: 6}, worker));
+    if (BRK.cancel){ stt.textContent = 'Stopped.'; }
+    else {
+      BRK.ev = ev; BRK.meta = {coins: uni.length, tfs, at: Date.now()}; await Cache.set('brkStudy', {ev, meta: BRK.meta});
+      stt.textContent = `Done: ${ev.length} breaker candles.`; brkRender();
+    }
+  } catch (e){ stt.textContent = 'Failed: ' + (e && e.message || e); }
+  BRK.running = false; $('brkRun').textContent = 'Run study';
+}
+function brkCsv(){
+  if (!BRK.ev.length){ toast('Run the study first.'); return; }
+  const keys = Object.keys(BRK_VARS), head = ['time_utc', 'pair', 'tf', 'side', 'candle_low', 'candle_high', 'range_atr', 'body_pct', 'volume_x', 'close_beyond_level', 'with_trend', 'order', 'fill_candle', 'stop_pct'];
+  keys.forEach(k => head.push(k.replace('|', '_stop_') + '_r'));
+  const q = v => v == null ? '' : typeof v === 'number' ? +v.toFixed(5) : v, lines = [head.join(',')];
+  for (const e of BRK.ev.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.low, e.high, q(e.rngAtr), e.body != null ? +(e.body * 100).toFixed(0) : '', q(e.vol), e.closeBeyond == null ? '' : e.closeBeyond ? 1 : 0, e.withTrend == null ? '' : e.withTrend ? 1 : 0, e.st, q(e.fb), q(e.stopPct)]
+    .concat(keys.map(k => e.sims && e.sims[k] && e.sims[k].done ? +e.sims[k].r.toFixed(3) : '')).join(','));
+  downloadText(lines.join('\n'), `breaker-study-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
+}
+
+$('brkRun').onclick = brkRun; $('brkCsv').onclick = brkCsv;
+loadJournal(); runLoad(); brkLoad();
 $('jUpdate').onclick = () => updateOutcomes(true);
 $('jShow').onchange = () => { JSH.show = $('jShow').value; try { localStorage.setItem('onslaught-jshow', JSH.show); } catch {} renderJournal(); };
 $('jCsv').onclick = journalCSV;
