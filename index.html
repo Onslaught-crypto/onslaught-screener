@@ -893,6 +893,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="row">
       <label>Entry <input id="pEntry" type="number" step="any" style="width:120px"></label>
       <button id="pEntryLast" title="Use the last close">Last close</button>
+      <button id="pEntryLive" title="Use the current price (the last close is the last finished candle, so it can be a bit behind)">Live price</button>
       <button id="pEntryEma" title="Limit entry at EMA20 (pullback)">EMA20 pullback</button>
     </div>
   </div>
@@ -4807,6 +4808,7 @@ $('dDir').onclick = e => { const b = e.target.closest('button'); if (!b) return;
 for (const id of ['pSlMode','pAtr','pAcct','pRisk','pLev']) $(id).oninput = () => { saveAcct(); updatePlan(); };
 $('pEntry').oninput = () => { const v = parseFloat($('pEntry').value); D.entry = v > 0 ? v : null; updatePlan(); };
 $('pEntryLast').onclick = () => { D.entry = null; $('pEntry').value = ''; updatePlan(); };
+$('pEntryLive').onclick = () => { if (!D.plan) return; const lv = LIVE.q.get(D.sym), px = lv && lv[0] > 0 ? lv[0] : (D.row && D.row.price > 0 ? D.row.price : null); if (!px){ toast('No live price for this pair yet.'); return; } D.entry = px; $('pEntry').value = fp(px, decFor(px)); updatePlan(); };
 $('pEntryEma').onclick = () => { if (!D.plan) return; D.entry = D.plan.ema20; $('pEntry').value = fp(D.plan.ema20, decFor(D.plan.ema20)); updatePlan(); };
 $('dTg').onclick = async () => { try { const txt = `<b>Onslaught plan</b>\n<pre>${esc(planText())}</pre>`; const r = await tgSend(txt); $('dCopied').textContent = r === 'sent' ? 'Sent to Telegram' : 'Sent (unconfirmed)'; }
   catch(e){ $('dCopied').textContent = e.message; } setTimeout(() => $('dCopied').textContent = '', 3500); };
