@@ -1751,6 +1751,56 @@ function breakerLevels(ev, o){
 }
 /* True while the order is still waiting: no candle after the breaker has touched the entry, and none has reached the first target. */
 function breakerPending(cd, ev, fill){ const r = breakerSim(cd, ev, {fill: fill || 6}); return r.status === 'open' && r.fillBar == null; }
+/* Liquidation map model (estimated): used by the Liquidations tab, the page's liquidation alerts and the runner's. */
+// Leverage mix and maintenance margin the model assumes. A level is lit from the candle after it was opened until price trades through it.
+const LEV_MIX = {10: .3, 25: .3, 50: .25, 100: .15}, LQ_MMR = .004;
+function lqModel(D, range, levs){
+  const {k, oi} = D, n = k.length;
+  const wsum = levs.reduce((a, L) => a + LEV_MIX[L], 0) || 1, step = n > 1 ? k[1].t - k[0].t : 9e5;
+  const idx = new Map(k.map((c, i) => [c.t, i])), dOI = new Float64Array(n), prev = new Float64Array(n);
+  for (let j = 1; j < oi.length; j++){ const i = idx.get(Math.floor(oi[j - 1].t / step) * step); if (i == null) continue; dOI[i] += oi[j].n - oi[j - 1].n; prev[i] = oi[j - 1].n; }
+  const cur = k[n - 1].c, lo = cur * (1 - range / 100), hi = cur * (1 + range / 100), nb = 220;
+  const bin = p => Math.floor((p - lo) / (hi - lo) * nb);
+  const grid = new Float32Array(n * nb), lev = [], swept = new Float64Array(n);
+  let active = [];
+  for (let i = 0; i < n; i++){
+    const c = k[i];
+    if (active.length){
+      const keep = [];
+      for (const z of active){ if (z.side > 0 ? c.l <= z.p : c.h >= z.p){ swept[i] += z.amt; z.dead = i; } else keep.push(z); }
+      active = keep;
+      if (dOI[i] < 0 && prev[i] > 0){ const f = 1 - Math.min(1, -dOI[i] / prev[i]); for (const z of active) z.amt *= f; }
+      for (const z of active){ const b = z.b; if (b >= 0 && b < nb) grid[i * nb + b] += z.amt; }
+    }
+    if (dOI[i] > 0 && levs.length){
+      const tp = (c.h + c.l + c.c) / 3, N = dOI[i] * tp, w = Math.min(.7, Math.max(.3, c.v ? c.tb / c.v : .5));
+      for (const L of levs){ const sh = LEV_MIX[L] / wsum;
+        const pl = tp * (1 - 1 / L + LQ_MMR), ps = tp * (1 + 1 / L - LQ_MMR);
+        const a = {p: pl, amt: N * w * sh, side: 1, L, born: i, b: bin(pl)}, b = {p: ps, amt: N * (1 - w) * sh, side: -1, L, born: i, b: bin(ps)};
+        active.push(a, b); lev.push(a, b); }
+    }
+  }
+  const prof = new Float64Array(nb); for (const z of active) if (z.b >= 0 && z.b < nb) prof[z.b] += z.amt;
+  const nz = []; for (let i = 0; i < grid.length; i += 3) if (grid[i] > 0) nz.push(grid[i]); nz.sort((a, b) => a - b);
+  const vmax = nz.length ? nz[Math.floor(nz.length * .995)] : 1;
+  return {n, nb, lo, hi, cur, grid, prof, active, swept, vmax, step, levs};
+}
+/* Clusters within maxPct of price whose size is at least minRel × the largest cluster anywhere in the ±8% range. */
+function lqNear(M, maxPct, minRel){
+  const sm = Array.from(M.prof, (_, b) => { let q = 0; for (let d = -2; d <= 2; d++) q += M.prof[b + d] || 0; return q; });
+  const tot = M.prof.reduce((a, x) => a + x, 0), mx = Math.max(...sm); if (!(tot > 0) || !(mx > 0)) return [];
+  const pAt = b => M.lo + (b + .5) / M.nb * (M.hi - M.lo), cb = Math.floor((M.cur - M.lo) / (M.hi - M.lo) * M.nb), out = [];
+  for (const side of [1, -1]){                                   // 1 = above price (shorts), -1 = below (longs)
+    let bi = -1;
+    for (let b = 0; b < M.nb; b++){
+      if (side > 0 ? b <= cb : b >= cb) continue;
+      if (Math.abs(pAt(b) / M.cur - 1) * 100 > maxPct) continue;
+      if (sm[b] > 0 && (bi < 0 || sm[b] > sm[bi])) bi = b;
+    }
+    if (bi >= 0 && sm[bi] >= minRel * mx) out.push({side, price: pAt(bi), usd: sm[bi], rel: sm[bi] / mx, dist: (pAt(bi) / M.cur - 1) * 100});
+  }
+  return out;
+}
 // ==ENGINE END==
 
 /* ---------- Config & constants ---------- */
@@ -3351,8 +3401,6 @@ function macroChip(){
 }
 
 /* ---------- Liquidation map (estimated) + real liquidations ---------- */
-// Leverage mix and maintenance margin the model assumes. A level is lit from the candle after it was opened until price trades through it.
-const LEV_MIX = {10: .3, 25: .3, 50: .25, 100: .15}, LQ_MMR = .004;
 const LQ = {sym: 'BTCUSDT', tf: '15m', range: 8, data: null, model: null, loading: false, t: 0};
 const LQ_LUT = (() => {   // colour ramp: black → purple → blue → teal → neon green → near white
   const st = [[0, [7, 7, 11]], [.2, [42, 15, 58]], [.4, [100, 35, 114]], [.62, [59, 111, 168]], [.76, [47, 193, 176]], [.9, [158, 255, 0]], [1, [244, 255, 210]]], out = [];
@@ -3376,37 +3424,6 @@ async function loadLiq(){
   finally { LQ.loading = false; $('lqLoad').disabled = false; }
 }
 /* Estimated liquidation model for candles + open interest (pure: also used by the liquidation alerts). */
-function lqModel(D, range, levs){
-  const {k, oi} = D, n = k.length;
-  const wsum = levs.reduce((a, L) => a + LEV_MIX[L], 0) || 1, step = n > 1 ? k[1].t - k[0].t : 9e5;
-  const idx = new Map(k.map((c, i) => [c.t, i])), dOI = new Float64Array(n), prev = new Float64Array(n);
-  for (let j = 1; j < oi.length; j++){ const i = idx.get(Math.floor(oi[j - 1].t / step) * step); if (i == null) continue; dOI[i] += oi[j].n - oi[j - 1].n; prev[i] = oi[j - 1].n; }
-  const cur = k[n - 1].c, lo = cur * (1 - range / 100), hi = cur * (1 + range / 100), nb = 220;
-  const bin = p => Math.floor((p - lo) / (hi - lo) * nb);
-  const grid = new Float32Array(n * nb), lev = [], swept = new Float64Array(n);
-  let active = [];
-  for (let i = 0; i < n; i++){
-    const c = k[i];
-    if (active.length){
-      const keep = [];
-      for (const z of active){ if (z.side > 0 ? c.l <= z.p : c.h >= z.p){ swept[i] += z.amt; z.dead = i; } else keep.push(z); }
-      active = keep;
-      if (dOI[i] < 0 && prev[i] > 0){ const f = 1 - Math.min(1, -dOI[i] / prev[i]); for (const z of active) z.amt *= f; }
-      for (const z of active){ const b = z.b; if (b >= 0 && b < nb) grid[i * nb + b] += z.amt; }
-    }
-    if (dOI[i] > 0 && levs.length){
-      const tp = (c.h + c.l + c.c) / 3, N = dOI[i] * tp, w = Math.min(.7, Math.max(.3, c.v ? c.tb / c.v : .5));
-      for (const L of levs){ const sh = LEV_MIX[L] / wsum;
-        const pl = tp * (1 - 1 / L + LQ_MMR), ps = tp * (1 + 1 / L - LQ_MMR);
-        const a = {p: pl, amt: N * w * sh, side: 1, L, born: i, b: bin(pl)}, b = {p: ps, amt: N * (1 - w) * sh, side: -1, L, born: i, b: bin(ps)};
-        active.push(a, b); lev.push(a, b); }
-    }
-  }
-  const prof = new Float64Array(nb); for (const z of active) if (z.b >= 0 && z.b < nb) prof[z.b] += z.amt;
-  const nz = []; for (let i = 0; i < grid.length; i += 3) if (grid[i] > 0) nz.push(grid[i]); nz.sort((a, b) => a - b);
-  const vmax = nz.length ? nz[Math.floor(nz.length * .995)] : 1;
-  return {n, nb, lo, hi, cur, grid, prof, active, swept, vmax, step, levs};
-}
 function buildLiq(){
   const D = LQ.data; if (!D || !D.k.length) return;
   LQ.model = lqModel(D, LQ.range, Object.keys(LEV_MIX).map(Number).filter(L => document.querySelector(`#lqLev input[value="${L}"]`)?.checked));
@@ -3414,22 +3431,6 @@ function buildLiq(){
 const lqUsd = v => '$' + (v >= 1e9 ? (v / 1e9).toFixed(2) + 'B' : v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v.toFixed(0));
 /* ---- Liquidation alerts: price close to a large estimated cluster (BTC and ETH, 15m model, ±8%) ---- */
 const LQA = {syms: ['BTCUSDT', 'ETHUSDT'], maxPct: .5, minRel: .9, cool: 6 * 36e5, every: 5 * 6e4, t: 0, busy: false, KEY: 'onslaught-liqsent'};
-/* Clusters within maxPct of price whose size is at least minRel × the largest cluster anywhere in the ±8% range. */
-function lqNear(M, maxPct, minRel){
-  const sm = Array.from(M.prof, (_, b) => { let q = 0; for (let d = -2; d <= 2; d++) q += M.prof[b + d] || 0; return q; });
-  const tot = M.prof.reduce((a, x) => a + x, 0), mx = Math.max(...sm); if (!(tot > 0) || !(mx > 0)) return [];
-  const pAt = b => M.lo + (b + .5) / M.nb * (M.hi - M.lo), cb = Math.floor((M.cur - M.lo) / (M.hi - M.lo) * M.nb), out = [];
-  for (const side of [1, -1]){                                   // 1 = above price (shorts), -1 = below (longs)
-    let bi = -1;
-    for (let b = 0; b < M.nb; b++){
-      if (side > 0 ? b <= cb : b >= cb) continue;
-      if (Math.abs(pAt(b) / M.cur - 1) * 100 > maxPct) continue;
-      if (sm[b] > 0 && (bi < 0 || sm[b] > sm[bi])) bi = b;
-    }
-    if (bi >= 0 && sm[bi] >= minRel * mx) out.push({side, price: pAt(bi), usd: sm[bi], rel: sm[bi] / mx, dist: (pAt(bi) / M.cur - 1) * 100});
-  }
-  return out;
-}
 const lqaLoad = () => { try { return JSON.parse(localStorage.getItem(LQA.KEY) || '{}'); } catch { return {}; } };
 async function liqAlertScan(force){
   if (LQA.busy || !tgActive() || !$('tgLiq').checked) return;
