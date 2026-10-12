@@ -856,9 +856,11 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input type="checkbox" class="brkTf" value="4h" checked> 4h</label>
         <label><input type="checkbox" class="brkTf" value="1d"> 1d</label>
         <label>Coins <select id="brkN"><option value="50">Top 50 by volume</option><option value="101-200">Coins ranked 101 to 200 (holdout test)</option><option value="100" selected>Top 100 by volume</option><option value="200">Top 200 by volume</option></select></label>
+        <label title="Also look at what price does when it reaches each breaker target (1.618, 2, 2.272), and whether a fair value gap, an order block, a breaker block or the EMA50 / EMA200 sits there. About a minute slower."><input type="checkbox" id="brkRx" checked> Measure the reaction at the targets</label>
         <label title="Only count breakers from this date on. Use it for the forward test: the rule was fixed on 12 October 2026, so anything after that date was not used to choose it.">From <input id="brkSince" type="date"></label><button id="brkFwd" title="Count only breakers since 12 October 2026, the day the rule was fixed and the alerts started">Forward test only</button><button id="brkRun" class="primary">Run study</button><button id="brkCsv">Export CSV</button><span class="mu" id="brkStatus" style="font-size:12px"></span>
       </div>
       <div id="brkOut"></div>
+      <div id="rxOut"></div>
     </details>
     <details class="panel" style="margin-top:12px" id="jRunPanel">
       <summary style="cursor:pointer">Advanced: Onslaught server check <span class="mu">Only for assessing the Onslaught web-based runner server: how successful its alerted signals were. Not needed for normal use.</span></summary>
@@ -1744,6 +1746,49 @@ function breakerSim(cd, ev, o){
 /* The rule kept for alerts: long only, the close is beyond the level the candle broke, volume at least 1.5x the 20-candle average, body at least 60% of the range.
    Chosen on the top 100 coins and confirmed on the coins ranked 101 to 200 (Breaker candle study, October 2026). Still an experiment: the forward test decides. */
 function breakerFrozen(e){ return !!e && e.dir > 0 && e.closeBeyond === true && e.vol != null && e.vol >= 1.5 && e.body >= 0.6; }
+/* What price does when it reaches a breaker's targets (1.618 / 2 / 2.272)? Looks at the trade against the breaker, taken at the target level.
+   A = limit order at the level: stop 1 ATR beyond it, scored at 1R and at 2R; on the candle that touches the level only the stop counts.
+   B = after confirmation: the touching candle closes back on the other side of the level; entry at that close, stop at that candle's far end, scored at 1R and at 2R.
+   Both: 12 candles, then closed at that candle's close; a trade that is not finished yet gives null. conf = what sits at the level (read from candles before the touch only):
+   fvg = an open fair value gap of the supporting side, blk = an order block or breaker block of that side, ema = the EMA50 or EMA200 under or over the level (within 0.15 ATR of the touching candle). */
+function breakerReact(cd, ev, o){
+  o = o || {};
+  const hold = o.hold || 12, reach = o.reach || 48, n = cd.length, d = ev.dir, G = ev.high - ev.low, cdir = -d, px = f => d > 0 ? ev.low + G * f : ev.high - G * f;
+  const at = atr(cd.map(k => k[2]), cd.map(k => k[3]), cd.map(k => k[4]), 14), out = {};
+  const run = (from, entry, stop, risk, fillBar) => {
+    const res = {};
+    for (const tp of [1, 2]){
+      let r = null;
+      for (let q = from; q < n && q < from + hold; q++){
+        const k = cd[q], sh = cdir > 0 ? k[3] <= stop : k[2] >= stop, th = cdir > 0 ? k[2] >= entry + tp * risk : k[3] <= entry - tp * risk;
+        if (sh){ r = -1; break; }
+        if (th && !(fillBar && q === from)){ r = tp; break; }
+        if (q === from + hold - 1) r = cdir * (k[4] - entry) / risk;
+      }
+      res['r' + tp] = r;
+    }
+    return res;
+  };
+  for (const f of [1.618, 2, 2.272]){
+    const T = px(f); let j = -1;
+    for (let q = ev.i + 1; q < n && q <= ev.i + reach; q++) if (d > 0 ? cd[q][2] >= T : cd[q][3] <= T){ j = q; break; }
+    if (j < 0) continue;
+    const a = at[j - 1]; if (!(a > 0)) continue;
+    const k = cd[j], rec = {bars: j - ev.i, A: run(j, T, T + d * a, a, true), B: null, mfe: null, mae: null, conf: null};
+    if (cdir * (k[4] - T) > 0){ const stop = cdir > 0 ? k[3] : k[2], risk = Math.abs(k[4] - stop); if (risk > 0.05 * a) rec.B = run(j + 1, k[4], stop, risk, false); }
+    if (j + hold - 1 < n){ let up = 0, dn = 0; for (let q = j; q < j + hold; q++){ up = Math.max(up, cdir * ((cdir > 0 ? cd[q][2] : cd[q][3]) - T) / a); dn = Math.max(dn, -cdir * ((cdir > 0 ? cd[q][3] : cd[q][2]) - T) / a); } rec.mfe = up; rec.mae = dn; }
+    if (o.conf){
+      const s0 = cd.slice(Math.max(0, j - 400), j), L = taLevels(s0), c = {fvg: false, blk: false, ema: false, ob: false, bb: false, e50: false, e200: false};
+      const hit = z => z.dir === cdir && z.lo <= k[2] && z.hi >= k[3];
+      if (L){ c.fvg = L.fvg.some(hit); c.ob = L.ob.some(z => z.kind === 'ob' && hit(z)); c.bb = L.ob.some(z => z.kind === 'breaker' && hit(z)); c.blk = c.ob || c.bb; }
+      if (s0.length >= 60){ const cl = s0.map(x => x[4]), e50 = ema(cl, 50), e200 = ema(cl, 200), m = 0.15 * a, near = v => Number.isFinite(v) && v >= k[3] - m && v <= k[2] + m;
+        c.e50 = near(e50[e50.length - 1]); c.e200 = near(e200[e200.length - 1]); c.ema = c.e50 || c.e200; }
+      rec.conf = c;
+    }
+    out[f] = rec;
+  }
+  return out;
+}
 /* The order of a breaker: limit at the 0.5 level of the candle, stop at its far end (0), targets at the 1.618 / 2 / 2.272 extensions. r = reward in units of the risk (entry to stop). */
 function breakerLevels(ev, o){
   o = o || {};
@@ -4523,7 +4568,7 @@ $('secLoad').onclick = loadSectors;
 
 /* ---------- Breaker candle study (Journal tab) ----------
    Replays the breaker rule on the long history (up to 1000 candles per coin and timeframe), so the answer does not need weeks of live signals. */
-const BRK = {ev: [], meta: null, running: false, cancel: false, vari: 'plan|0', view: 'all'};
+const BRK = {ev: [], meta: null, running: false, cancel: false, vari: 'plan|0', view: 'all', rxSide: 'all'};
 const brkFrozen = breakerFrozen;      // the long rule found on the first 100 coins, kept fixed for the holdout test
 const brkEv = () => { let l = BRK.view === 'frozen' ? BRK.ev.filter(brkFrozen) : BRK.ev; if (BRK.since) l = l.filter(e => e.t >= BRK.since); return l; };
 const BRK_VARS = {'plan|0': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at 0', 'tp1|0': 'All out at 1.618, stop at 0', 'tp2|0': 'All out at 2, stop at 0',
@@ -4543,6 +4588,7 @@ function brkMoments(tr, vari){
   return {n: m.size, avg: avgs.length ? avgs.reduce((x, y) => x + y, 0) / avgs.length : 0};
 }
 function brkRender(){
+  queueMicrotask(rxRender);
   const out = $('brkOut'); if (!out) return;
   if (!BRK.ev.length){ out.innerHTML = '<div class="mu" style="margin-top:8px">No study run yet. Pick timeframes and press Run study.</div>'; return; }
   const vari = BRK.vari, all = brkEv(), filled = all.filter(e => e.st === 'filled'), tr = brkTrades(vari), n = all.filter(e => e.st !== 'open').length;
@@ -4602,7 +4648,7 @@ async function brkRun(){
         const [sym, tf] = tasks[i++];
         try {
           const cd = await getKlines(sym, tf, true, KDEEP);
-          for (const b of breakerScan(cd)){ const r = breakerSim(cd, b, {stops: [0, -0.272, 'prev']}); ev.push({sym, tf, t: b.t, dir: b.dir, rngAtr: b.rngAtr, body: b.body, vol: b.vol, closeBeyond: b.closeBeyond, withTrend: b.withTrend, low: b.low, high: b.high, st: r.status, fb: r.fillBar, stopPct: r.stopPct, sims: r.status === 'filled' || r.status === 'open' ? r.sims : null}); }
+          for (const b of breakerScan(cd)){ const r = breakerSim(cd, b, {stops: [0, -0.272, 'prev']}); ev.push({sym, tf, t: b.t, dir: b.dir, rngAtr: b.rngAtr, body: b.body, vol: b.vol, closeBeyond: b.closeBeyond, withTrend: b.withTrend, low: b.low, high: b.high, st: r.status, fb: r.fillBar, stopPct: r.stopPct, sims: r.status === 'filled' || r.status === 'open' ? r.sims : null, rx: $('brkRx').checked ? breakerReact(cd, b, {conf: true}) : null}); }
         } catch {}
         done++; stt.textContent = `Reading ${done}/${tasks.length} (coin and timeframe)…`;
       }
@@ -4615,6 +4661,54 @@ async function brkRun(){
     }
   } catch (e){ stt.textContent = 'Failed: ' + (e && e.message || e); }
   BRK.running = false; $('brkRun').textContent = 'Run study';
+}
+
+/* ---- Reaction at the breaker targets ---- */
+const RX_FIBS = ['1.618', '2', '2.272'];
+function rxTouches(){
+  const out = [];
+  for (const e of brkEv()){
+    if (!e.rx || (BRK.rxSide === 'bear' && e.dir > 0) || (BRK.rxSide === 'bull' && e.dir < 0)) continue;
+    for (const f of RX_FIBS){ const r = e.rx[f]; if (!r) continue; const c = r.conf, cnt = c ? (c.fvg ? 1 : 0) + (c.blk ? 1 : 0) + (c.ema ? 1 : 0) : null; out.push({e, f, r, c, cnt, t: e.t + r.bars * TF_MS[e.tf]}); }
+  }
+  return out;
+}
+function rxStat(list){
+  const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null, A1 = list.map(x => x.r.A.r1).filter(v => v != null), A2 = list.map(x => x.r.A.r2).filter(v => v != null);
+  const Bl = list.filter(x => x.r.B && x.r.B.r1 != null), B1 = Bl.map(x => x.r.B.r1), B2 = Bl.map(x => x.r.B.r2);
+  const m = new Map(); for (const x of list){ if (x.r.A.r1 == null) continue; const k = x.e.tf + '|' + x.t + '|' + x.e.dir, a = m.get(k) || []; a.push(x.r.A.r1); m.set(k, a); }
+  const mo = avg([...m.values()].map(a => a.reduce((p, q) => p + q, 0) / a.length));
+  return {n: list.length, mfe: avg(list.map(x => x.r.mfe).filter(v => v != null)), mae: avg(list.map(x => x.r.mae).filter(v => v != null)),
+    an: A1.length, aw: A1.length ? 100 * A1.filter(v => v > 0).length / A1.length : null, a1: avg(A1), a2: avg(A2), am: mo, bn: B1.length, bw: B1.length ? 100 * B1.filter(v => v > 0).length / B1.length : null, b1: avg(B1), b2: avg(B2)};
+}
+function rxRender(){
+  const out = $('rxOut'); if (!out) return;
+  const withRx = BRK.ev.filter(e => e.rx).length;
+  if (!BRK.ev.length){ out.innerHTML = ''; return; }
+  if (!withRx){ out.innerHTML = '<div class="mu" style="font-size:12px;margin-top:10px">This study run did not measure the reaction at the targets. Tick "Measure the reaction at the targets" and run it again.</div>'; return; }
+  const all = rxTouches(), f2 = x => x == null ? '–' : (x >= 0 ? '+' : '') + x.toFixed(2), cls = x => x == null ? '' : x > 0.02 ? 'up' : x < -0.02 ? 'dn' : '', pc = x => x == null ? '–' : x.toFixed(0) + '%', f1 = x => x == null ? '–' : x.toFixed(1);
+  let h = `<div style="margin-top:14px;font-weight:600">What price does at the breaker targets</div><div class="mu" style="font-size:12px;margin:4px 0 8px">When price reaches a target of a breaker candle, what happens if you trade <b>against</b> the breaker there? A bearish breaker reaching its target is a possible bounce (long); a bullish breaker reaching its target a possible pullback (short). Uses the same Show and From settings as above. <b>A</b>: limit order at the level, stop 1 ATR beyond it; on the touching candle only the stop counts. <b>B</b>: wait for the touching candle to close back on the other side of the level, enter at that close, stop at that candle's far end. Both are scored at 1R and at 2R, held at most 12 candles. No fees. <b>Confluence</b> = a fair value gap (FVG), an order block or breaker block, or the EMA50 / EMA200 at the level, read from candles before the touch only.</div>`;
+  h += `<div class="row" style="margin:6px 0"><label>Breakers <select id="rxSide"><option value="all"${BRK.rxSide === 'all' ? ' selected' : ''}>All (bounces and pullbacks together)</option><option value="bear"${BRK.rxSide === 'bear' ? ' selected' : ''}>Bearish breakers only (the trade is a long)</option><option value="bull"${BRK.rxSide === 'bull' ? ' selected' : ''}>Bullish breakers only (the trade is a short)</option></select></label><button id="rxCsv">Export reaction CSV</button></div>`;
+  if (!all.length){ out.innerHTML = h + '<div class="mu">No target was reached in this view.</div>'; bindRx(); return; }
+  h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Target and what sits there</th><th>Touches</th><th>Bounce / push through (ATR)</th><th>A: trades</th><th>A: win 1R</th><th>A: avg R at 1R</th><th>A: avg R at 2R</th><th>A: avg R at 1R, per moment</th><th>B: trades</th><th>B: win 1R</th><th>B: avg R at 1R</th><th>B: avg R at 2R</th></tr></thead><tbody>';
+  const rows = [['Any', x => true], ['No confluence', x => x.cnt === 0], ['1 of 3', x => x.cnt === 1], ['2 or 3 of 3', x => x.cnt >= 2], ['  FVG there', x => x.c && x.c.fvg], ['  Order or breaker block there', x => x.c && x.c.blk], ['  EMA50 / EMA200 there', x => x.c && x.c.ema]];
+  for (const f of RX_FIBS){
+    const lf = all.filter(x => x.f === f); if (!lf.length) continue;
+    h += `<tr><td class="l" colspan="12" style="padding-top:8px"><b>Target ${f}</b> <span class="mu">(${lf.length} touches)</span></td></tr>`;
+    for (const [nm, fn] of rows){
+      const l = lf.filter(fn); if (!l.length) continue; const s = rxStat(l), dim = s.n < 30 ? ' style="opacity:.5"' : '';
+      h += `<tr${dim}><td class="l" style="white-space:pre">${esc(nm)}</td><td>${s.n}</td><td>${f1(s.mfe)} / ${f1(s.mae)}</td><td>${s.an}</td><td>${pc(s.aw)}</td><td class="${cls(s.a1)}">${f2(s.a1)}</td><td class="${cls(s.a2)}">${f2(s.a2)}</td><td class="${cls(s.am)}">${f2(s.am)}</td><td>${s.bn}</td><td>${pc(s.bw)}</td><td class="${cls(s.b1)}">${f2(s.b1)}</td><td class="${cls(s.b2)}">${f2(s.b2)}</td></tr>`;
+    }
+  }
+  h += '</tbody></table></div><div class="mu" style="font-size:12px;margin-top:6px">Rows with fewer than 30 touches are dimmed. The "bounce / push through" column is how far price travelled in the trade\'s favour and against it in the 12 candles from the touch, in ATR. "Per moment" counts touches on the same candle, timeframe and side as one. A row is only worth a thought if it is positive on both coin sets and in both halves of the period; compare each with the "Any" line of the same target, not with zero.</div>';
+  out.innerHTML = h; bindRx();
+}
+function bindRx(){ $('rxSide').onchange = e => { BRK.rxSide = e.target.value; rxRender(); }; if ($('rxCsv')) $('rxCsv').onclick = rxCsv; }
+function rxCsv(){
+  const head = ['time_utc', 'pair', 'tf', 'breaker_side', 'target', 'candles_to_touch', 'confluence_count', 'fvg', 'order_block', 'breaker_block', 'ema50', 'ema200', 'a_r_1R', 'a_r_2R', 'b_r_1R', 'b_r_2R', 'up_atr', 'down_atr'], q = v => v == null ? '' : typeof v === 'number' ? +v.toFixed(3) : v, b = v => v == null ? '' : v ? 1 : 0;
+  const lines = [head.join(',')];
+  for (const x of rxTouches().sort((a, c) => a.e.t - c.e.t)) lines.push([new Date(x.e.t).toISOString(), x.e.sym, x.e.tf, x.e.dir > 0 ? 'bullish' : 'bearish', x.f, x.r.bars, x.cnt == null ? '' : x.cnt, b(x.c && x.c.fvg), b(x.c && x.c.ob), b(x.c && x.c.bb), b(x.c && x.c.e50), b(x.c && x.c.e200), q(x.r.A.r1), q(x.r.A.r2), q(x.r.B && x.r.B.r1), q(x.r.B && x.r.B.r2), q(x.r.mfe), q(x.r.mae)].join(','));
+  downloadText(lines.join('\n'), `breaker-reaction-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
 }
 function brkCsv(){
   if (!BRK.ev.length){ toast('Run the study first.'); return; }
