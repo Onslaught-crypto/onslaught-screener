@@ -4173,11 +4173,12 @@ function bkSentSave(o){ try { localStorage.setItem(BKSENT_KEY, JSON.stringify(o)
 const bkId = x => `brk|${x.sym}|${x.tf}|${x.ev.t}`;
 async function brkFind(tf){
   const list = (await getUniverse()).slice(0, BKA_TOP), out = []; let i = 0;
+  const btc = await getKlines('BTCUSDT', tf, true).catch(() => null);
   async function worker(){
     while (i < list.length){
-      const u = list[i++];
+      const idx = i, u = list[i++];
       try { const k = await getKlines(u.sym, tf, true), n = k.length; if (n < 60) continue;
-        for (const ev of breakerScan(k)) if (ev.i >= n - 2 && breakerFrozen(ev) && breakerPending(k, ev)) out.push({sym: u.sym, tf, ev, cd: k.slice(0, ev.i + 1)}); }
+        for (const ev of breakerScan(k)) if (ev.i >= n - 2 && breakerFrozen(ev) && breakerPending(k, ev)) out.push({sym: u.sym, tf, ev, cd: k.slice(0, ev.i + 1), rank: idx + 1, rs30: btc ? rsVsBtc(k, btc, ev.i, 30) : null}); }
       catch {}
     }
   }
@@ -4188,6 +4189,7 @@ function brkLines(x){
   const {ev, tf, sym} = x, L = breakerLevels(ev), dec = decFor(L.entry), pc = v => fmtPct((v / L.entry - 1) * 100), by = new Date(ev.t + (1 + L.fill) * TF_MS[tf]);
   const lines = [`🧱 <b>${esc(sym.replace('USDT', ''))} ${DV_LBL[tf]} · BREAKER CANDLE LONG 🟢</b> (experimental)`,
     `Broke ${ev.lvl != null ? fp(ev.lvl, dec) : 'a swing high'} and closed above it · volume ${ev.vol.toFixed(1)}x · body ${(ev.body * 100).toFixed(0)}%`,
+    `Tracking only: ${x.rank != null ? 'volume rank #' + x.rank + ' · ' : ''}${x.rs30 == null ? 'strength vs BTC n/a' : (x.rs30 >= 0 ? '+' : '') + x.rs30.toFixed(1) + ' points vs BTC over 30 candles'}`,
     `<b>Limit buy ${fp(L.entry, dec)}</b> (50% of the candle) · SL ${fp(L.sl, dec)} (${pc(L.sl)}, at the candle low: if price trades below it, the setup failed)`,
     L.tps.map((t, i) => `TP${i + 1} ${fp(t.price, dec)} (${t.r.toFixed(1)}R)`).join(' · '),
     `Cancel the order if it is not filled by ${by.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} (${L.fill} candles) or if price reaches TP1 first. Plan: sell a third at each target, stop to entry after TP1.`,
