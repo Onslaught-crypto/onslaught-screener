@@ -605,6 +605,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label title="Send a chart picture for each setup, centered on the signal candle with entry, stop and targets"><input id="tgImg" type="checkbox" checked> with chart image</label>
         <label title="Also message me when RSI and MACD both diverge from price on a confirmed swing (1H, 4H or 1D, Strong). The Divergences tab scans in the background while this page is open."><input id="tgDiv" type="checkbox"> Divergence alerts</label>
         <label title="Also message me about early divergences: the swing has 2 closed candles after it (instead of 5) and the last candle already turns against it. About 3 candles sooner, strength 60+, RSI + MACD, 1H / 4H / 1D. They fail more often than the confirmed ones. Needs this page open."><input id="tgDivE" type="checkbox"> ⚡ Early divergence alerts</label>
+        <label title="Message me when a long breaker candle appears on the 1H or 4H of the top 200 coins: a candle that breaks a swing high, closes above it, with volume 1.5x+ and a body of 60%+. The message gives a limit buy at 50% of the candle, the stop below its low and three targets. Experimental: this rule came out at about +0.15R per trade in the Breaker candle study (Journal tab) and is being forward-tested. Needs this page open."><input id="tgBrk" type="checkbox"> 🧱 Breaker candle alerts (long, experimental)</label>
         <label title="No Telegram messages during these hours (your local time). Alerts that would have fired are skipped, not sent later."><input id="tgQuiet" type="checkbox"> Quiet hours</label>
         <input id="tgQFrom" type="time" value="23:00" aria-label="Quiet hours start"> to <input id="tgQTo" type="time" value="07:00" aria-label="Quiet hours end">
         <button id="tgTest">Send test</button>
@@ -855,7 +856,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input type="checkbox" class="brkTf" value="4h" checked> 4h</label>
         <label><input type="checkbox" class="brkTf" value="1d"> 1d</label>
         <label>Coins <select id="brkN"><option value="50">Top 50 by volume</option><option value="101-200">Coins ranked 101 to 200 (holdout test)</option><option value="100" selected>Top 100 by volume</option><option value="200">Top 200 by volume</option></select></label>
-        <button id="brkRun" class="primary">Run study</button><button id="brkCsv">Export CSV</button><span class="mu" id="brkStatus" style="font-size:12px"></span>
+        <label title="Only count breakers from this date on. Use it for the forward test: the rule was fixed on 12 October 2026, so anything after that date was not used to choose it.">From <input id="brkSince" type="date"></label><button id="brkFwd" title="Count only breakers since 12 October 2026, the day the rule was fixed and the alerts started">Forward test only</button><button id="brkRun" class="primary">Run study</button><button id="brkCsv">Export CSV</button><span class="mu" id="brkStatus" style="font-size:12px"></span>
       </div>
       <div id="brkOut"></div>
     </details>
@@ -1737,6 +1738,17 @@ function breakerSim(cd, ev, o){
   if (!allDone) out.status = 'open';
   return out;
 }
+/* The rule kept for alerts: long only, the close is beyond the level the candle broke, volume at least 1.5x the 20-candle average, body at least 60% of the range.
+   Chosen on the top 100 coins and confirmed on the coins ranked 101 to 200 (Breaker candle study, October 2026). Still an experiment: the forward test decides. */
+function breakerFrozen(e){ return !!e && e.dir > 0 && e.closeBeyond === true && e.vol != null && e.vol >= 1.5 && e.body >= 0.6; }
+/* The order of a breaker: limit at the 0.5 level of the candle, stop at its far end (0), targets at the 1.618 / 2 / 2.272 extensions. r = reward in units of the risk (entry to stop). */
+function breakerLevels(ev, o){
+  o = o || {};
+  const R = ev.high - ev.low, d = ev.dir, px = f => d > 0 ? ev.low + R * f : ev.high - R * f, E = px(o.entry != null ? o.entry : 0.5), S = px(o.stop != null ? o.stop : 0), r = Math.abs(E - S) || 1;
+  return {entry: E, sl: S, tps: [1.618, 2, 2.272].map(f => ({f, price: px(f), r: Math.abs(px(f) - E) / r})), fill: o.fill || 6};
+}
+/* True while the order is still waiting: no candle after the breaker has touched the entry, and none has reached the first target. */
+function breakerPending(cd, ev, fill){ const r = breakerSim(cd, ev, {fill: fill || 6}); return r.status === 'open' && r.fillBar == null; }
 // ==ENGINE END==
 
 /* ---------- Config & constants ---------- */
@@ -2275,7 +2287,7 @@ async function scan(){
 
 function setAuto(){
   clearInterval(S.timer); const s = +$('auto').value;
-  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on || tgActive()) scan(); if (tgActive() && ($('tgDiv').checked || $('tgDivE').checked)) divScan(); if (tgActive() && $('tgLiq').checked) liqAlertScan(); }, s * 1000);
+  if (s) S.timer = setInterval(() => { if (!document.hidden || ALERT.on || tgActive()) scan(); if (tgActive() && ($('tgDiv').checked || $('tgDivE').checked)) divScan(); if (tgActive() && $('tgLiq').checked) liqAlertScan(); if (tgActive() && $('tgBrk').checked) brkAlertScan(); }, s * 1000);
 }
 
 function exportCSV(){
@@ -2693,8 +2705,8 @@ function toast(msg, items){
 /* ---------- Telegram ---------- */
 const TG_KEY = 'onslaught-tg';
 function tgLoad(){ let o = {}; try { o = JSON.parse(localStorage.getItem(TG_KEY) || '{}'); } catch {}
-  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgImg').checked = o.img !== false; $('tgDiv').checked = !!o.div; $('tgDivE').checked = !!o.divE; $('tgLiq').checked = !!o.liq; $('tgQuiet').checked = !!o.quiet; $('tgQFrom').value = o.qFrom || '23:00'; $('tgQTo').value = o.qTo || '07:00'; }
-function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, img: $('tgImg').checked, div: $('tgDiv').checked, divE: $('tgDivE').checked, liq: $('tgLiq').checked, quiet: $('tgQuiet').checked, qFrom: $('tgQFrom').value, qTo: $('tgQTo').value})); } catch {} }
+  $('tgToken').value = o.token || ''; $('tgChat').value = o.chat || ''; $('tgOn').checked = !!o.on; $('tgPlan').checked = o.plan !== false; $('tgImg').checked = o.img !== false; $('tgDiv').checked = !!o.div; $('tgDivE').checked = !!o.divE; $('tgLiq').checked = !!o.liq; $('tgBrk').checked = !!o.brk; $('tgQuiet').checked = !!o.quiet; $('tgQFrom').value = o.qFrom || '23:00'; $('tgQTo').value = o.qTo || '07:00'; }
+function tgSave(){ try { localStorage.setItem(TG_KEY, JSON.stringify({token: $('tgToken').value.trim(), chat: $('tgChat').value.trim(), on: $('tgOn').checked, plan: $('tgPlan').checked, img: $('tgImg').checked, div: $('tgDiv').checked, divE: $('tgDivE').checked, liq: $('tgLiq').checked, brk: $('tgBrk').checked, quiet: $('tgQuiet').checked, qFrom: $('tgQFrom').value, qTo: $('tgQTo').value})); } catch {} }
 const tgReady = () => /^\d+:[\w-]{20,}$/.test($('tgToken').value.trim()) && $('tgChat').value.trim() !== '';
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 /* Form-encoded POST = a "simple" CORS request (no preflight). If the browser can't read the reply, the message has usually still gone. */
@@ -2752,9 +2764,9 @@ async function tgAlertText(items, notes){ const P = await tgAlertParts(items, no
 
 
 /* Chart picture for a Telegram alert: the signal candle sits in the middle, 50 candles of history on the left, empty room on the right for entry, stop and targets. */
-async function tgChartBlob(sym, dir, tf = S.tf, own = false){          // own = true: a divergence on its own timeframe (plan from divPlan, no scanner row needed)
-  const P = own ? await divPlan(sym, tf, dir) : await planFor(sym, dir); if (!P) return null;
-  let cd = await Cache.get(`k:${sym}:${tf}`); if (!cd) return null;
+async function tgChartBlob(sym, dir, tf = S.tf, own = false, opt = null){          // own = true: a divergence on its own timeframe (plan from divPlan, no scanner row needed)
+  const P = opt && opt.plan ? opt.plan : own ? await divPlan(sym, tf, dir) : await planFor(sym, dir); if (!P) return null;     // opt = {plan, cd}: a ready-made plan and candles (breaker alerts)
+  let cd = opt && opt.cd ? opt.cd : await Cache.get(`k:${sym}:${tf}`); if (!cd) return null;
   const cur = Math.floor(Date.now() / TF_MS[tf]) * TF_MS[tf]; cd = cd.filter(k => k[0] < cur);
   const BEF = 50, AFT = 28, seg = cd.slice(-(BEF + 1)); if (seg.length < 20) return null;
   const cs = getComputedStyle(document.documentElement), col = (n, d) => (cs.getPropertyValue(n) || '').trim() || d;
@@ -3949,6 +3961,71 @@ async function divAlertRun(rows, early){
   catch(e){ dvSentSave(sent); if (!DIV.errShown){ DIV.errShown = true; toast('Divergence alert not sent: ' + e.message); } }
 }
 
+
+/* ---------- Breaker candle alerts (long only, experimental) ----------
+   Same rule as the runner: the frozen rule from the Breaker candle study. A limit buy at 50% of the candle, stop below its low, targets at 1.618 / 2 / 2.272.
+   This page sends the setup alert; the runner (if you use it) also follows the order and reports fill, targets and stop. */
+const BKSENT_KEY = 'onslaught-brksent', BKA = {busy: false, last: {}, errShown: false}, BKA_TFS = ['1h', '4h'], BKA_TOP = 200;
+function bkSentLoad(){ try { return JSON.parse(localStorage.getItem(BKSENT_KEY) || '{}'); } catch { return {}; } }
+function bkSentSave(o){ try { localStorage.setItem(BKSENT_KEY, JSON.stringify(o)); } catch {} }
+const bkId = x => `brk|${x.sym}|${x.tf}|${x.ev.t}`;
+async function brkFind(tf){
+  const list = (await getUniverse()).slice(0, BKA_TOP), out = []; let i = 0;
+  async function worker(){
+    while (i < list.length){
+      const u = list[i++];
+      try { const k = await getKlines(u.sym, tf, true), n = k.length; if (n < 60) continue;
+        for (const ev of breakerScan(k)) if (ev.i >= n - 2 && breakerFrozen(ev) && breakerPending(k, ev)) out.push({sym: u.sym, tf, ev, cd: k.slice(0, ev.i + 1)}); }
+      catch {}
+    }
+  }
+  await Promise.all(Array.from({length: Math.min(6, list.length)}, worker));
+  return {out, scanned: list.length};
+}
+function brkLines(x){
+  const {ev, tf, sym} = x, L = breakerLevels(ev), dec = decFor(L.entry), pc = v => fmtPct((v / L.entry - 1) * 100), by = new Date(ev.t + (1 + L.fill) * TF_MS[tf]);
+  const lines = [`🧱 <b>${esc(sym.replace('USDT', ''))} ${DV_LBL[tf]} · BREAKER CANDLE LONG 🟢</b> (experimental)`,
+    `Broke ${ev.lvl != null ? fp(ev.lvl, dec) : 'a swing high'} and closed above it · volume ${ev.vol.toFixed(1)}x · body ${(ev.body * 100).toFixed(0)}%`,
+    `<b>Limit buy ${fp(L.entry, dec)}</b> (50% of the candle) · SL ${fp(L.sl, dec)} (${pc(L.sl)}, below the candle low)`,
+    L.tps.map((t, i) => `TP${i + 1} ${fp(t.price, dec)} (${t.r.toFixed(1)}R)`).join(' · '),
+    `Cancel the order if it is not filled by ${by.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} (${L.fill} candles) or if price reaches TP1 first. Plan: sell a third at each target, stop to entry after TP1.`,
+    `<a href="https://www.tradingview.com/chart/?symbol=BINANCE:${sym}.P">Chart</a>`];
+  return lines;
+}
+async function brkDeliver(items, notes){
+  const wait = ms => new Promise(z => setTimeout(z, ms)), vis = h => h.replace(/<[^>]+>/g, '').replace(/&amp;|&lt;|&gt;/g, '_').length;
+  if (notes && notes.length) await tgSend(notes.join('\n'));
+  for (const [i, x] of items.entries()){
+    if (i || (notes && notes.length)) await wait(1100);
+    const lines = brkLines(x), text = lines.join('\n'); let ok = false, sentText = false;
+    try { if ($('tgImg').checked){ const L = breakerLevels(x.ev), bl = await tgChartBlob(x.sym, 1, x.tf, false, {plan: {entry: L.entry, sl: L.sl, tps: L.tps}, cd: x.cd});
+      if (bl){ const long = vis(text) > 1000; ok = await tgSendPhoto(bl, long ? lines[0] : text); sentText = !!ok && !long; } } } catch {}
+    if (!sentText){ if (ok) await wait(1100); await tgSend(text); }
+  }
+}
+async function brkAlertScan(force){
+  if (BKA.busy || !tgActive() || !$('tgBrk').checked) return;
+  BKA.busy = true;
+  try {
+    for (const tf of BKA_TFS){
+      const cur = Math.floor(Date.now() / TF_MS[tf]) * TF_MS[tf];
+      if (!force && BKA.last[tf] === cur) continue;                                       // one look per candle close
+      if (Date.now() - cur < 20000 && !force) continue;                                   // give Binance a moment to finalise the candle
+      BKA.last[tf] = cur;
+      const {out} = await brkFind(tf), sent = bkSentLoad(), now = Date.now(), base = '_base_' + tf;
+      for (const k of Object.keys(sent)) if (k[0] !== '_' && now - sent[k] > 14 * 864e5) delete sent[k];
+      if (!sent[base]){ for (const x of out) sent[bkId(x)] = now; sent[base] = now; bkSentSave(sent); toast(`Breaker alerts are on (${DV_LBL[tf]}). ${out.length} existing breaker${out.length === 1 ? '' : 's'} noted; you'll be messaged about new ones.`); continue; }
+      const fresh = out.filter(x => !sent[bkId(x)]).sort((a, b) => b.ev.vol - a.ev.vol);
+      if (!fresh.length){ bkSentSave(sent); continue; }
+      if (tgQuiet()){ for (const x of fresh) sent[bkId(x)] = now; bkSentSave(sent); continue; }       // quiet hours: noted, not sent
+      const cap = +$('alertCap').value || 0, kept = cap ? fresh.slice(0, cap) : fresh, notes = kept.length < fresh.length ? [`🌊 <b>${fresh.length} breaker candles</b> on ${DV_LBL[tf]} at once. It is really one market-wide move, so only the ${kept.length} with the strongest volume are shown.`] : [];
+      try { await brkDeliver(kept, notes); for (const x of fresh) sent[bkId(x)] = now; bkSentSave(sent); BKA.errShown = false; toast(`Breaker alert sent: ${kept.map(x => x.sym.replace('USDT', '')).join(', ')} ${DV_LBL[tf]}`); }
+      catch (e){ bkSentSave(sent); if (!BKA.errShown){ BKA.errShown = true; toast('Breaker alert not sent: ' + e.message); } }
+    }
+  } catch (e){ if (!BKA.errShown){ BKA.errShown = true; toast('Breaker scan failed: ' + e.message); } }
+  finally { BKA.busy = false; }
+}
+
 /* Row for the trade drawer when the pair isn't in the Crypto Scanner results (same data the scanner builds). */
 async function buildRow(u, tf, c){
   const others = $('mtfOn').checked ? MTF_TFS.filter(t => t !== tf) : [], needD = tf !== '1d' && !others.includes('1d');
@@ -4443,8 +4520,8 @@ $('secLoad').onclick = loadSectors;
 /* ---------- Breaker candle study (Journal tab) ----------
    Replays the breaker rule on the long history (up to 1000 candles per coin and timeframe), so the answer does not need weeks of live signals. */
 const BRK = {ev: [], meta: null, running: false, cancel: false, vari: 'plan|0', view: 'all'};
-const brkFrozen = e => e.dir > 0 && e.closeBeyond === true && e.vol != null && e.vol >= 1.5 && e.body >= 0.6;      // the long rule found on the first 100 coins, kept fixed for the holdout test
-const brkEv = () => BRK.view === 'frozen' ? BRK.ev.filter(brkFrozen) : BRK.ev;
+const brkFrozen = breakerFrozen;      // the long rule found on the first 100 coins, kept fixed for the holdout test
+const brkEv = () => { let l = BRK.view === 'frozen' ? BRK.ev.filter(brkFrozen) : BRK.ev; if (BRK.since) l = l.filter(e => e.t >= BRK.since); return l; };
 const BRK_VARS = {'plan|0': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at 0', 'tp1|0': 'All out at 1.618, stop at 0', 'tp2|0': 'All out at 2, stop at 0',
   'plan|-0.272': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at -0.272', 'tp1|-0.272': 'All out at 1.618, stop at -0.272', 'tp2|-0.272': 'All out at 2, stop at -0.272'};
 async function brkLoad(){ const v = await Cache.get('brkStudy'); if (v && Array.isArray(v.ev)){ BRK.ev = v.ev; BRK.meta = v.meta || null; } brkRender(); }
@@ -4544,6 +4621,8 @@ function brkCsv(){
   downloadText(lines.join('\n'), `breaker-study-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
 }
 
+$('brkSince').onchange = () => { const v = $('brkSince').value; BRK.since = v ? Date.parse(v + 'T00:00:00Z') : 0; brkRender(); };
+$('brkFwd').onclick = () => { $('brkSince').value = '2026-10-12'; BRK.view = 'frozen'; $('brkSince').onchange(); };
 $('brkRun').onclick = brkRun; $('brkCsv').onclick = brkCsv;
 loadJournal(); runLoad(); brkLoad();
 $('jUpdate').onclick = () => updateOutcomes(true);
@@ -4788,6 +4867,13 @@ $('tgLiq').onchange = () => {
   if ($('tgLiq').checked){ if (!tgReady()){ toast('Add the bot token and chat ID first, then tick this again.'); $('tgLiq').checked = false; tgSave(); return; }
     if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); }
     LQA.errShown = false; liqAlertScan(true); }
+};
+$('tgBrk').onchange = () => {
+  if ($('tgBrk').checked && !$('tgOn').checked){ $('tgOn').checked = true; $('tgOn').dispatchEvent(new Event('change')); }
+  tgSave();
+  if ($('tgBrk').checked){ if (!tgReady()){ toast('Add the bot token and chat ID first, then tick this again.'); $('tgBrk').checked = false; tgSave(); return; }
+    if (+$('auto').value === 0){ $('auto').value = '120'; setAuto(); }
+    BKA.errShown = false; brkAlertScan(true); }
 };
 for (const id of ['tgDiv', 'tgDivE']) $(id).onchange = () => {
   if ($(id).checked && !$('tgOn').checked){ $('tgOn').checked = true; $('tgOn').dispatchEvent(new Event('change')); }
