@@ -864,9 +864,9 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </details>
     <details class="panel jfold" data-fold="setup">
       <summary>Setup study</summary>
-      <div class="mu" style="font-size:12px;margin:6px 0">Tests a trading idea on up to 1000 candles of history per coin, with the same rules every time, so ideas can be compared fairly. The trade is taken at the open of the candle after the signal; every stop is tried with targets of 1R, 2R and 3R; a trade that reaches neither within 48 candles is closed at market; the stop wins when a candle touches both; no fees. Judge a result by the cluster-adjusted average (signals at the same moment count once), and by whether both halves of the period agree. <b>Liquidity sweep</b>: price trades beyond the highest high / lowest low of the last 20 candles and closes back inside; the trade is against the sweep. <b>Funding extreme</b>: at a funding settlement the rate is far from normal; the trade is against the crowd (a very positive rate = short, a very negative rate = long).</div>
+      <div class="mu" style="font-size:12px;margin:6px 0">Tests a trading idea on up to 1000 candles of history per coin, with the same rules every time, so ideas can be compared fairly. The trade is taken at the open of the candle after the signal; every stop is tried with targets of 1R, 2R and 3R; a trade that reaches neither within 48 candles is closed at market; the stop wins when a candle touches both; no fees. Judge a result by the cluster-adjusted average (signals at the same moment count once), and by whether both halves of the period agree. <b>Liquidity sweep</b>: price trades beyond the highest high / lowest low of the last 20 candles and closes back inside; the trade is against the sweep. <b>Funding extreme</b>: at a funding settlement the rate is far from normal; the trade is against the crowd (a very positive rate = short, a very negative rate = long). <b>Trend pullback</b>: EMA21 above EMA50 above EMA200 (reverse for shorts), the candle dips to the EMA21 and closes back on the trend side; the trade goes with the trend. <b>Tight-range breakout</b>: the last 20 candles' range was among the narrowest 20% of the last 100, and the candle closes beyond that range; the trade goes with the break. Both record the coin's strength against BTC over the last 30 candles.</div>
       <div class="row">
-        <label>Setup <select id="suKind"><option value="sweep">Liquidity sweep (20 candles)</option><option value="fund">Funding extreme (against the crowd)</option></select></label>
+        <label>Setup <select id="suKind"><option value="sweep">Liquidity sweep (20 candles)</option><option value="fund">Funding extreme (against the crowd)</option><option value="pull">Trend pullback to the EMA21 (with the trend)</option><option value="range">Breakout from a tight range (with the break)</option></select></label>
         <label><input type="checkbox" class="suTf" value="15m"> 15m</label>
         <label><input type="checkbox" class="suTf" value="1h" checked> 1h</label>
         <label><input type="checkbox" class="suTf" value="4h" checked> 4h</label>
@@ -1905,6 +1905,65 @@ function fundScan(cd, rates, o){
     const dir = f.r > 0 ? -1 : 1, ref = cd[s][4], ch = s - back >= 0 ? (ref / cc[s - back] - 1) * 100 : null;
     out.push({i: s, t: cd[s][0] + tms, dir, fr: f.r, ch24: ch, atrPct: a / ref * 100, withTrend: Number.isFinite(e50[s]) ? (dir > 0 ? ref > e50[s] : ref < e50[s]) : null,
       stops: {a15: dir > 0 ? ref - 1.5 * a : ref + 1.5 * a, a3: dir > 0 ? ref - 3 * a : ref + 3 * a}, atr: a});
+  }
+  return out;
+}
+/* Relative strength vs BTC over `look` candles, in percentage points (coin return minus BTC return), read at candle i. btc = BTCUSDT candles of the same timeframe. */
+function rsVsBtc(cd, btc, i, look){
+  if (!btc || i < look) return null;
+  const m = rsVsBtc.m && rsVsBtc.src === btc ? rsVsBtc.m : (rsVsBtc.src = btc, rsVsBtc.m = new Map(btc.map(k => [k[0], k[4]])));
+  const b1 = m.get(cd[i][0]), b0 = m.get(cd[i - look][0]);
+  if (!(b1 > 0) || !(b0 > 0)) return null;
+  return (cd[i][4] / cd[i - look][4] - b1 / b0) * 100;
+}
+/* Trend pullback: EMA21 above EMA50 above EMA200 (mirror for shorts), the candle's low reaches the EMA21 and closes back above it on a green candle. At most one signal per 5 candles.
+   Stops: the signal candle's far end, or 1.5 ATR from the close. */
+function pullScan(cd, btc, o){
+  o = o || {};
+  const n = cd.length, out = [];
+  if (n < 260) return out;
+  const hh = cd.map(k => k[2]), ll = cd.map(k => k[3]), cc = cd.map(k => k[4]), at = atr(hh, ll, cc, 14), e21 = ema(cc, 21), e50 = ema(cc, 50), e200 = ema(cc, 200);
+  let last = -99;
+  for (let i = 210; i < n; i++){
+    const O = cd[i][1], H = hh[i], L = ll[i], C = cc[i], a = at[i - 1];
+    if (!(a > 0) || i - last < 5) continue;
+    const up = e21[i] > e50[i] && e50[i] > e200[i] && C > e21[i], dn = e21[i] < e50[i] && e50[i] < e200[i] && C < e21[i];
+    const bull = up && L <= e21[i] && C > O, bear = dn && H >= e21[i] && C < O;
+    if (!bull && !bear) continue;
+    last = i;
+    const dir = bull ? 1 : -1;
+    let vs = 0, vn = 0; for (let j = Math.max(0, i - 20); j < i; j++){ vs += cd[j][5] || 0; vn++; }
+    out.push({i, t: cd[i][0], dir, depth: Math.abs((dir > 0 ? L : H) - e21[i]) / a, reach50: dir > 0 ? L <= e50[i] : H >= e50[i], slope: Math.abs(e21[i] - e50[i]) / a,
+      rs30: rsVsBtc(cd, btc, i, 30), vol: vn && vs > 0 ? (cd[i][5] || 0) / (vs / vn) : null, atrPct: a / C * 100,
+      stops: {ext: dir > 0 ? L : H, a15: dir > 0 ? C - 1.5 * a : C + 1.5 * a}, atr: a});
+  }
+  return out;
+}
+/* Breakout from a tight range: the last 20 candles' range was in the lowest 20% of its own last 100 values; the candle closes beyond the 20-candle high (long) or low (short).
+   Stops: the breakout candle's far end, or the middle of the range. At most one signal per 5 candles. */
+function rangeScan(cd, btc, o){
+  o = o || {};
+  const L20 = 20, n = cd.length, out = [];
+  if (n < 160) return out;
+  const hh = cd.map(k => k[2]), ll = cd.map(k => k[3]), cc = cd.map(k => k[4]), at = atr(hh, ll, cc, 14), e50 = ema(cc, 50);
+  const w = new Array(n).fill(NaN), hi = new Array(n).fill(NaN), lo = new Array(n).fill(NaN);
+  for (let i = L20 - 1; i < n; i++){ let h = -Infinity, l = Infinity; for (let j = i - L20 + 1; j <= i; j++){ if (hh[j] > h) h = hh[j]; if (ll[j] < l) l = ll[j]; } hi[i] = h; lo[i] = l; w[i] = (h - l) / cc[i]; }
+  let last = -99;
+  for (let i = 130; i < n; i++){
+    if (i - last < 5) continue;
+    const pw = w[i - 1], ph = hi[i - 1], pl = lo[i - 1], a = at[i - 1], C = cc[i], O = cd[i][1];
+    if (!(a > 0) || !Number.isFinite(pw)) continue;
+    let below = 0, cnt = 0; for (let j = i - 100; j < i; j++){ if (Number.isFinite(w[j])){ cnt++; if (w[j] <= pw) below++; } }
+    const pct = cnt ? below / cnt : 1;
+    if (pct > 0.2) continue;
+    const bull = C > ph, bear = C < pl;
+    if (bull === bear) continue;
+    last = i;
+    const dir = bull ? 1 : -1;
+    let vs = 0, vn = 0; for (let j = Math.max(0, i - 20); j < i; j++){ vs += cd[j][5] || 0; vn++; }
+    out.push({i, t: cd[i][0], dir, pct, close: Math.abs(C - (dir > 0 ? ph : pl)) / a, body: cd[i][2] > cd[i][3] ? Math.abs(C - O) / (cd[i][2] - cd[i][3]) : 0,
+      rs30: rsVsBtc(cd, btc, i, 30), vol: vn && vs > 0 ? (cd[i][5] || 0) / (vs / vn) : null, withTrend: Number.isFinite(e50[i - 1]) ? (dir > 0 ? C > e50[i - 1] : C < e50[i - 1]) : null,
+      stops: {ext: dir > 0 ? cd[i][3] : cd[i][2], mid: (ph + pl) / 2}, atr: a});
   }
   return out;
 }
@@ -4835,10 +4894,28 @@ const SU_KINDS = {
       ['Price move in the 24h before (positive = already in the trade direction)', e => suB(e.ch24 == null ? null : e.dir * e.ch24, [-5, -2, 0, 2, 5], ['under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more'])],
       ['Trend (price vs EMA50)', e => e.withTrend == null ? null : e.withTrend ? 'With the trend' : 'Against the trend'],
       ['Volatility (ATR as % of price)', e => suB(e.atrPct, [0.5, 1, 2], ['under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more'])]],
-    csv: [['funding_pct_8h', e => e.fr], ['move_24h_pct', e => e.ch24], ['atr_pct', e => e.atrPct], ['with_trend', e => e.withTrend == null ? '' : e.withTrend ? 1 : 0]]}
+    csv: [['funding_pct_8h', e => e.fr], ['move_24h_pct', e => e.ch24], ['atr_pct', e => e.atrPct], ['with_trend', e => e.withTrend == null ? '' : e.withTrend ? 1 : 0]]},
+  pull: {name: 'Trend pullback', stops: {ext: 'stop at the far end of the signal candle', a15: 'stop 1.5 ATR from the close'},
+    groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long (uptrend)' : 'Short (downtrend)'],
+      ['Strength vs BTC, last 30 candles (pp, positive = stronger than BTC)', e => suB(e.rs30, [-10, -3, 0, 3, 10], ['under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more'])],
+      ['Dip beyond the EMA21 (ATR)', e => suB(e.depth, [0.25, 0.5, 1], ['under 0.25', '0.25 to 0.5', '0.5 to 1', '1 or more'])],
+      ['Dip also reached the EMA50', e => e.reach50 ? 'Yes' : 'No'],
+      ['Trend strength (EMA21 to EMA50 gap, ATR)', e => suB(e.slope, [1, 2, 4], ['under 1', '1 to 2', '2 to 4', '4 or more'])],
+      ['Volume vs 20-candle average', e => suB(e.vol, [1, 2], ['under 1x', '1 to 2x', '2x or more'])],
+      ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
+    csv: [['rs30_pp', e => e.rs30], ['depth_atr', e => e.depth], ['reached_ema50', e => e.reach50 ? 1 : 0], ['trend_gap_atr', e => e.slope], ['volume_x', e => e.vol]]},
+  range: {name: 'Tight-range breakout', stops: {ext: 'stop at the far end of the breakout candle', mid: 'stop at the middle of the range'},
+    groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long (broke up)' : 'Short (broke down)'],
+      ['Strength vs BTC, last 30 candles (pp, positive = stronger than BTC)', e => suB(e.rs30, [-10, -3, 0, 3, 10], ['under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more'])],
+      ['Close beyond the range (ATR)', e => suB(e.close, [0.25, 0.5, 1], ['under 0.25', '0.25 to 0.5', '0.5 to 1', '1 or more'])],
+      ['Candle body', e => suB(e.body, [0.6, 0.8], ['under 60%', '60 to 80%', '80% or more'])],
+      ['Volume vs 20-candle average', e => suB(e.vol, [1, 2, 3], ['under 1x', '1 to 2x', '2 to 3x', '3x or more'])],
+      ['Trend (close vs EMA50)', e => e.withTrend == null ? null : e.withTrend ? 'With the trend' : 'Against the trend'],
+      ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
+    csv: [['rs30_pp', e => e.rs30], ['range_percentile', e => e.pct], ['close_beyond_atr', e => e.close], ['body_share', e => e.body], ['volume_x', e => e.vol], ['with_trend', e => e.withTrend == null ? '' : e.withTrend ? 1 : 0]]}
 };
 const SU_ORD = ['15m', '1h', '4h', '1d', 'Long (a low was swept)', 'Short (a high was swept)', 'Long (crowd was short)', 'Short (crowd was long)', 'under 0.25', '0.25 to 0.5', '0.5 to 1', '1 to 2', '1 or more', '2 or more', 'under 0.5', 'under 40%', '40 to 60%', '60% or more',
-  'under 1x', '1 to 2x', '2x or more', 'No', 'Yes', 'With the trend', 'Against the trend', '0.03 to 0.05', '0.05 to 0.1', '0.1 to 0.2', '0.2 or more', 'under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more', 'under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more'];
+  'under 1x', '1 to 2x', '2x or more', 'No', 'Yes', 'With the trend', 'Against the trend', '0.03 to 0.05', '0.05 to 0.1', '0.1 to 0.2', '0.2 or more', 'under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more', 'under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more', 'Long (uptrend)', 'Short (downtrend)', 'Long (broke up)', 'Short (broke down)', 'under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more', 'under 1', '2 to 4', '4 or more', '2 to 3x', '3x or more', 'under 60%', '60 to 80%', '80% or more'];
 const suVars = k => { const o = {}; for (const sk of Object.keys(SU_KINDS[k].stops)) for (const m of SETUP_TARGETS) o[sk + '|' + m] = `${SU_KINDS[k].stops[sk][0].toUpperCase() + SU_KINDS[k].stops[sk].slice(1)}, target ${m}R`; return o; };
 const suEv = () => (SU.ev[SU.kind] || []).filter(e => !SU.since || e.t >= SU.since);
 const suTrades = vari => suEv().filter(e => e.sims && e.sims[vari] && e.sims[vari].done).sort((a, b) => a.t - b.t);
@@ -4877,7 +4954,7 @@ function suRender(){
     for (const bk of [...by.keys()].sort((x, y) => SU_ORD.indexOf(x) - SU_ORD.indexOf(y))){ const s = brkStats(by.get(bk)), first = g !== lastG; lastG = g;
       h += `<tr${s.n < 10 ? ' style="opacity:.5"' : ''}><td class="l">${first ? esc(g) : ''}</td><td class="l">${esc(bk)}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td></tr>`; }
   }
-  h += '</tbody></table></div><div class="mu" style="font-size:12px;margin-top:6px">Rows with fewer than 10 trades are dimmed. Entry at the open after the signal; stop checked before the target on a candle that touches both; trades not finished in 48 candles close at market; no fees or slippage. Compare any bucket with the whole-table result, and trust it only if the other coin set and both halves of the period agree. ' + (SU.kind === 'sweep' ? 'Baseline: on pure random price data the sweep rules score about -0.1 to -0.2R with the stop at the wick extreme (the stop is tight, so it is often hit on the very next candle) and about 0 to -0.03R with the stop 0.5 ATR beyond it, so judge against those, not against zero.' : 'Baseline: on pure random price data this rule scores about 0R, so a positive result here is already a difference.') + '</div>';
+  h += '</tbody></table></div><div class="mu" style="font-size:12px;margin-top:6px">Rows with fewer than 10 trades are dimmed. Entry at the open after the signal; stop checked before the target on a candle that touches both; trades not finished in 48 candles close at market; no fees or slippage. Compare any bucket with the whole-table result, and trust it only if the other coin set and both halves of the period agree. ' + (SU.kind === 'sweep' ? 'Baseline: on pure random price data the sweep rules score about -0.1 to -0.2R with the stop at the wick extreme (the stop is tight, so it is often hit on the very next candle) and about 0 to -0.03R with the stop 0.5 ATR beyond it, so judge against those, not against zero.' : 'Baseline: on pure random price data this rule scores about 0R to slightly below, so a positive result here is already a difference. Note that the market has drifted up over this period, so longs with the trend get a tailwind that shorts do not: compare the two sides separately.') + '</div>';
   out.innerHTML = h; $('suVar').onchange = ev => { SU.vari = ev.target.value; suRender(); };
 }
 async function suRun(){
@@ -4894,11 +4971,16 @@ async function suRun(){
         const [sym, tf] = tasks[i++];
         try {
           const cd = await getKlines(sym, tf, true, KDEEP);
-          const found = kind === 'sweep' ? sweepScan(cd) : fundScan(cd, await suRates(sym), {thr});
+          let found;
+          if (kind === 'sweep') found = sweepScan(cd);
+          else if (kind === 'fund') found = fundScan(cd, await suRates(sym), {thr});
+          else { const btc = await getKlines('BTCUSDT', tf, true, KDEEP); found = (kind === 'pull' ? pullScan : rangeScan)(cd, btc); }
           for (const b of found){
             const r = setupSim(cd, b), rec = {sym, tf, t: b.t, dir: b.dir, st: r.status, riskAtr: r.risk != null && b.atr > 0 ? r.risk / b.atr : null, sims: r.status === 'done' || r.status === 'open' ? r.sims : null};
             if (kind === 'sweep') Object.assign(rec, {depth: b.depth, reclaim: b.reclaim, wick: b.wick, vol: b.vol, big: b.big, withTrend: b.withTrend});
-            else Object.assign(rec, {fr: b.fr, ch24: b.ch24, atrPct: b.atrPct, withTrend: b.withTrend});
+            else if (kind === 'fund') Object.assign(rec, {fr: b.fr, ch24: b.ch24, atrPct: b.atrPct, withTrend: b.withTrend});
+            else if (kind === 'pull') Object.assign(rec, {rs30: b.rs30, depth: b.depth, reach50: b.reach50, slope: b.slope, vol: b.vol});
+            else Object.assign(rec, {rs30: b.rs30, pct: b.pct, close: b.close, body: b.body, vol: b.vol, withTrend: b.withTrend});
             ev.push(rec);
           }
         } catch {}
