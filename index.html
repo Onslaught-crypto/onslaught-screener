@@ -857,6 +857,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input type="checkbox" class="brkTf" value="1d"> 1d</label>
         <label>Coins <select id="brkN"><option value="50">Top 50 by volume</option><option value="101-200">Coins ranked 101 to 200 (holdout test)</option><option value="100" selected>Top 100 by volume</option><option value="200">Top 200 by volume</option></select></label>
         <label title="Also look at what price does when it reaches each breaker target (1.618, 2, 2.272), and whether a fair value gap, an order block, a breaker block or the EMA50 / EMA200 sits there. About a minute slower."><input type="checkbox" id="brkRx" checked> Measure the reaction at the targets</label>
+        <label title="Adds to every breaker: how strong the coin was against BTC over the last 30 candles, the funding rate at that moment, and the macro regime of the day before. Needs the Macro tab data (loaded automatically) and about a minute more."><input type="checkbox" id="brkAdd" checked> Add BTC strength, funding and macro regime</label>
+        <label title="Count only the coins ranked this high by trading volume (today's ranking). Cumulative: Top 20 includes the top 10.">Show <select id="brkTop"><option value="0">All coins run</option><option value="100">Top 100</option><option value="70">Top 70</option><option value="50">Top 50</option><option value="20">Top 20</option><option value="10">Top 10</option></select></label>
         <label title="Only count breakers from this date on. Use it for the forward test: the rule was fixed on 12 October 2026, so anything after that date was not used to choose it.">From <input id="brkSince" type="date"></label><button id="brkFwd" title="Count only breakers since 12 October 2026, the day the rule was fixed and the alerts started">Forward test only</button><button id="brkRun" class="primary">Run study</button><button id="brkCsv">Export CSV</button><span class="mu" id="brkStatus" style="font-size:12px"></span>
       </div>
       <div id="brkOut"></div>
@@ -873,6 +875,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input type="checkbox" class="suTf" value="1d"> 1d</label>
         <label>Coins <select id="suN"><option value="50">Top 50 by volume</option><option value="101-200">Coins ranked 101 to 200 (holdout test)</option><option value="100" selected>Top 100 by volume</option><option value="200">Top 200 by volume</option></select></label>
         <label id="suThrL" hidden>Funding at least <select id="suThr"><option value="0.03">0.03% per 8h</option><option value="0.05">0.05% per 8h</option><option value="0.1">0.1% per 8h</option></select></label>
+        <label title="Count only the coins ranked this high by trading volume (today's ranking). Cumulative: Top 20 includes the top 10.">Show <select id="suTop"><option value="0">All coins run</option><option value="100">Top 100</option><option value="70">Top 70</option><option value="50">Top 50</option><option value="20">Top 20</option><option value="10">Top 10</option></select></label>
         <label>From <input id="suSince" type="date"></label><button id="suRun" class="primary">Run study</button><button id="suCsv">Export CSV</button><span class="mu" id="suStatus" style="font-size:12px"></span>
       </div>
       <div id="suOut"></div>
@@ -1911,7 +1914,8 @@ function fundScan(cd, rates, o){
 /* Relative strength vs BTC over `look` candles, in percentage points (coin return minus BTC return), read at candle i. btc = BTCUSDT candles of the same timeframe. */
 function rsVsBtc(cd, btc, i, look){
   if (!btc || i < look) return null;
-  const m = rsVsBtc.m && rsVsBtc.src === btc ? rsVsBtc.m : (rsVsBtc.src = btc, rsVsBtc.m = new Map(btc.map(k => [k[0], k[4]])));
+  const C = rsVsBtc.c || (rsVsBtc.c = new WeakMap());
+  let m = C.get(btc); if (!m){ m = new Map(btc.map(k => [k[0], k[4]])); C.set(btc, m); }
   const b1 = m.get(cd[i][0]), b0 = m.get(cd[i - look][0]);
   if (!(b1 > 0) || !(b0 > 0)) return null;
   return (cd[i][4] / cd[i - look][4] - b1 / b0) * 100;
@@ -4719,7 +4723,7 @@ $('secLoad').onclick = loadSectors;
    Replays the breaker rule on the long history (up to 1000 candles per coin and timeframe), so the answer does not need weeks of live signals. */
 const BRK = {ev: [], meta: null, running: false, cancel: false, vari: 'plan|0', view: 'all', rxSide: 'all'};
 const brkFrozen = breakerFrozen;      // the long rule found on the first 100 coins, kept fixed for the holdout test
-const brkEv = () => { let l = BRK.view === 'frozen' ? BRK.ev.filter(brkFrozen) : BRK.ev; if (BRK.since) l = l.filter(e => e.t >= BRK.since); return l; };
+const brkEv = () => { let l = BRK.view === 'frozen' ? BRK.ev.filter(brkFrozen) : BRK.ev; if (BRK.since) l = l.filter(e => e.t >= BRK.since); if (BRK.top) l = l.filter(e => e.rk != null && e.rk <= BRK.top); return l; };
 const BRK_VARS = {'plan|0': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at 0', 'tp1|0': 'All out at 1.618, stop at 0', 'tp2|0': 'All out at 2, stop at 0',
   'plan|-0.272': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at -0.272', 'tp1|-0.272': 'All out at 1.618, stop at -0.272', 'tp2|-0.272': 'All out at 2, stop at -0.272',
   'plan|prev': 'Thirds at 1.618 / 2 / 2.272, stop to entry after the first, stop at the previous candle low', 'tp1|prev': 'All out at 1.618, stop at the previous candle low', 'tp2|prev': 'All out at 2, stop at the previous candle low'};
@@ -4759,7 +4763,7 @@ function brkRender(){
   }
   const wave = new Map(); for (const e of BRK.ev){ const k = e.tf + '|' + e.t + '|' + e.dir; wave.set(k, (wave.get(k) || 0) + 1); }
   const B = (v, cuts, labs) => { if (v == null || !Number.isFinite(v)) return null; for (let i = 0; i < cuts.length; i++) if (v < cuts[i]) return labs[i]; return labs[cuts.length]; };
-  const ORD = ['15m', '1h', '4h', '1d', 'Long', 'Short', 'under 1', '1 to 2', '2 to 3', '3 or more', 'under 2%', '2 to 4%', '4 to 8%', '8% or more', 'under 60%', '60 to 80%', '80% or more', 'under 1x', '1 to 2x', '2x or more', 'Yes', 'No (wick only)', 'With the trend', 'Against the trend', '1 to 3', '4 to 10', '11 or more', 'next candle', '2 to 3', '4 to 6'];
+  const ORD = ['15m', '1h', '4h', '1d', 'Long', 'Short', 'under 1', '1 to 2', '2 to 3', '3 or more', 'under 2%', '2 to 4%', '4 to 8%', '8% or more', 'under 60%', '60 to 80%', '80% or more', 'under 1x', '1 to 2x', '2x or more', 'Yes', 'No (wick only)', 'With the trend', 'Against the trend', '1 to 3', '4 to 10', '11 or more', 'next candle', '2 to 3', '4 to 6', 'under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more', 'under -0.03', '-0.03 to 0', '0 to 0.01 (normal)', '0.01 to 0.03', '0.03 or more', 'top 10', '11 to 20', '21 to 50', '51 to 70', '71 to 100', '101 to 200'];
   const groups = [
     ['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long' : 'Short'],
     ['Candle size (ATR)', e => B(e.rngAtr, [1, 2, 3], ['under 1', '1 to 2', '2 to 3', '3 or more'])],
@@ -4769,7 +4773,11 @@ function brkRender(){
     ['Close beyond the broken level', e => e.closeBeyond == null ? null : e.closeBeyond ? 'Yes' : 'No (wick only)'],
     ['Trend (EMA20 vs EMA50)', e => e.withTrend == null ? null : e.withTrend ? 'With the trend' : 'Against the trend'],
     ['Breakers on that candle and side', e => B(wave.get(e.tf + '|' + e.t + '|' + e.dir), [4, 11], ['1 to 3', '4 to 10', '11 or more'])],
-    ['Candles until the order filled', e => B(e.fb, [2, 4], ['next candle', '2 to 3', '4 to 6'])]];
+    ['Candles until the order filled', e => B(e.fb, [2, 4], ['next candle', '2 to 3', '4 to 6'])],
+    ['Coin rank by volume', e => B(e.rk, [11, 21, 51, 71, 101], ['top 10', '11 to 20', '21 to 50', '51 to 70', '71 to 100', '101 to 200'])],
+    ['Macro regime (day before)', e => e.mac || null],
+    ['Strength vs BTC, last 30 candles (pp)', e => B(e.rs30, [-10, -3, 0, 3, 10], ['under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more'])],
+    ['Funding rate at the signal (% per 8h)', e => B(e.fr, [-0.03, 0, 0.0101, 0.03], ['under -0.03', '-0.03 to 0', '0 to 0.01 (normal)', '0.01 to 0.03', '0.03 or more'])]];
   h += '<div class="tablewrap" style="border:0;margin-top:8px"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Total R</th></tr></thead><tbody>';
   let lastG = '';
   for (const [g, fn] of groups){
@@ -4783,6 +4791,13 @@ function brkRender(){
   if ($('brkView')) $('brkView').onchange = ev => { BRK.view = ev.target.value; brkRender(); };
   if ($('brkVar')) $('brkVar').onchange = ev => { BRK.vari = ev.target.value; brkRender(); };
 }
+/* Macro regime of each past day, from the Macro tab's daily series; an event at time t uses the last completed day before it (no look-ahead). */
+function macroDayLookup(){
+  const M = S.macro, SER = M && M.series; if (!SER || SER.length < 31) return () => null;
+  const days = [], names = [];
+  for (let i = 29; i < SER.length; i++){ const r = macroRegime(SER.slice(0, i + 1), 1, 30); days.push(SER[i].t); names.push(r ? r.name : null); }
+  return t => { const d = Math.floor(t / 864e5) * 864e5; let lo = 0, hi = days.length - 1, k = -1; while (lo <= hi){ const m = (lo + hi) >> 1; if (days[m] < d){ k = m; lo = m + 1; } else hi = m - 1; } return k >= 0 ? names[k] : null; };
+}
 async function brkRun(){
   if (BRK.running){ BRK.cancel = true; return; }
   const tfs = [...document.querySelectorAll('.brkTf:checked')].map(x => x.value), coinSel = $('brkN').value, topN = coinSel === '101-200' ? 200 : +coinSel || 100;
@@ -4790,14 +4805,22 @@ async function brkRun(){
   BRK.running = true; BRK.cancel = false; $('brkRun').textContent = 'Stop'; const stt = $('brkStatus');
   try {
     stt.textContent = 'Loading the coin list…';
-    const uni = (await getUniverse()).slice(coinSel === '101-200' ? 100 : 0, topN), tasks = []; for (const u of uni) for (const tf of tfs) tasks.push([u.sym, tf]);
-    const ev = []; let done = 0, i = 0;
+    const uni = (await getUniverse()).slice(coinSel === '101-200' ? 100 : 0, topN), tasks = [], rk0 = coinSel === '101-200' ? 100 : 0; uni.forEach((u, ix) => { for (const tf of tfs) tasks.push([u.sym, tf, rk0 + ix + 1]); });
+    const ev = [], addOn = $('brkAdd').checked, btcK = {}; let done = 0, i = 0, macAt = () => null;
+    if (addOn){
+      stt.textContent = 'Loading the macro regime…';
+      if (!S.macro) { try { await loadMacro(false); } catch {} }
+      macAt = macroDayLookup();
+      for (const tf of tfs) btcK[tf] = await getKlines('BTCUSDT', tf, true, KDEEP);
+    }
     async function worker(){
       while (i < tasks.length && !BRK.cancel){
-        const [sym, tf] = tasks[i++];
+        const [sym, tf, rk] = tasks[i++];
         try {
-          const cd = await getKlines(sym, tf, true, KDEEP);
-          for (const b of breakerScan(cd)){ const r = breakerSim(cd, b, {stops: [0, -0.272, 'prev']}); ev.push({sym, tf, t: b.t, dir: b.dir, rngAtr: b.rngAtr, body: b.body, vol: b.vol, closeBeyond: b.closeBeyond, withTrend: b.withTrend, low: b.low, high: b.high, st: r.status, fb: r.fillBar, stopPct: r.stopPct, sims: r.status === 'filled' || r.status === 'open' ? r.sims : null, rx: $('brkRx').checked ? breakerReact(cd, b, {conf: true}) : null}); }
+          const cd = await getKlines(sym, tf, true, KDEEP), rates = addOn ? await suRates(sym).catch(() => []) : [];
+          for (const b of breakerScan(cd)){ const r = breakerSim(cd, b, {stops: [0, -0.272, 'prev']});
+            const ct = b.t + TF_MS[tf], x = addOn ? {mac: macAt(ct), rs30: rsVsBtc(cd, btcK[tf], b.i, 30), fr: (() => { let v = null; for (const q of rates){ if (q.t <= ct) v = q.r; else break; } return v; })()} : {};
+            ev.push({sym, tf, rk, t: b.t, dir: b.dir, mac: x.mac, rs30: x.rs30, fr: x.fr, rngAtr: b.rngAtr, body: b.body, vol: b.vol, closeBeyond: b.closeBeyond, withTrend: b.withTrend, low: b.low, high: b.high, st: r.status, fb: r.fillBar, stopPct: r.stopPct, sims: r.status === 'filled' || r.status === 'open' ? r.sims : null, rx: $('brkRx').checked ? breakerReact(cd, b, {conf: true}) : null}); }
         } catch {}
         done++; stt.textContent = `Reading ${done}/${tasks.length} (coin and timeframe)…`;
       }
@@ -4861,14 +4884,15 @@ function rxCsv(){
 }
 function brkCsv(){
   if (!BRK.ev.length){ toast('Run the study first.'); return; }
-  const keys = Object.keys(BRK_VARS), head = ['time_utc', 'pair', 'tf', 'side', 'candle_low', 'candle_high', 'range_atr', 'body_pct', 'volume_x', 'close_beyond_level', 'with_trend', 'order', 'fill_candle', 'stop_pct'];
+  const keys = Object.keys(BRK_VARS), head = ['time_utc', 'pair', 'tf', 'side', 'candle_low', 'candle_high', 'range_atr', 'body_pct', 'volume_x', 'close_beyond_level', 'with_trend', 'order', 'fill_candle', 'stop_pct', 'macro_regime', 'rs30_pp', 'funding_pct_8h', 'volume_rank'];
   keys.forEach(k => head.push(k.replace('|', '_stop_') + '_r'));
   const q = v => v == null ? '' : typeof v === 'number' ? +v.toFixed(5) : v, lines = [head.join(',')];
-  for (const e of BRK.ev.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.low, e.high, q(e.rngAtr), e.body != null ? +(e.body * 100).toFixed(0) : '', q(e.vol), e.closeBeyond == null ? '' : e.closeBeyond ? 1 : 0, e.withTrend == null ? '' : e.withTrend ? 1 : 0, e.st, q(e.fb), q(e.stopPct)]
+  for (const e of BRK.ev.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.low, e.high, q(e.rngAtr), e.body != null ? +(e.body * 100).toFixed(0) : '', q(e.vol), e.closeBeyond == null ? '' : e.closeBeyond ? 1 : 0, e.withTrend == null ? '' : e.withTrend ? 1 : 0, e.st, q(e.fb), q(e.stopPct), e.mac || '', q(e.rs30), q(e.fr), e.rk == null ? '' : e.rk]
     .concat(keys.map(k => e.sims && e.sims[k] && e.sims[k].done ? +e.sims[k].r.toFixed(3) : '')).join(','));
   downloadText(lines.join('\n'), `breaker-study-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
 }
 
+$('brkTop').onchange = () => { BRK.top = +$('brkTop').value; brkRender(); };
 $('brkSince').onchange = () => { const v = $('brkSince').value; BRK.since = v ? Date.parse(v + 'T00:00:00Z') : 0; brkRender(); };
 $('brkFwd').onclick = () => { $('brkSince').value = '2026-10-12'; BRK.view = 'frozen'; $('brkSince').onchange(); };
 $('brkRun').onclick = brkRun; $('brkCsv').onclick = brkCsv;
@@ -4915,9 +4939,10 @@ const SU_KINDS = {
     csv: [['rs30_pp', e => e.rs30], ['range_percentile', e => e.pct], ['close_beyond_atr', e => e.close], ['body_share', e => e.body], ['volume_x', e => e.vol], ['with_trend', e => e.withTrend == null ? '' : e.withTrend ? 1 : 0]]}
 };
 const SU_ORD = ['15m', '1h', '4h', '1d', 'Long (a low was swept)', 'Short (a high was swept)', 'Long (crowd was short)', 'Short (crowd was long)', 'under 0.25', '0.25 to 0.5', '0.5 to 1', '1 to 2', '1 or more', '2 or more', 'under 0.5', 'under 40%', '40 to 60%', '60% or more',
-  'under 1x', '1 to 2x', '2x or more', 'No', 'Yes', 'With the trend', 'Against the trend', '0.03 to 0.05', '0.05 to 0.1', '0.1 to 0.2', '0.2 or more', 'under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more', 'under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more', 'Long (uptrend)', 'Short (downtrend)', 'Long (broke up)', 'Short (broke down)', 'under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more', 'under 1', '2 to 4', '4 or more', '2 to 3x', '3x or more', 'under 60%', '60 to 80%', '80% or more'];
+  'under 1x', '1 to 2x', '2x or more', 'No', 'Yes', 'With the trend', 'Against the trend', '0.03 to 0.05', '0.05 to 0.1', '0.1 to 0.2', '0.2 or more', 'under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more', 'under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more', 'Long (uptrend)', 'Short (downtrend)', 'Long (broke up)', 'Short (broke down)', 'under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more', 'under 1', '2 to 4', '4 or more', '2 to 3x', '3x or more', 'under 60%', '60 to 80%', '80% or more', 'top 10', '11 to 20', '21 to 50', '51 to 70', '71 to 100', '101 to 200'];
 const suVars = k => { const o = {}; for (const sk of Object.keys(SU_KINDS[k].stops)) for (const m of SETUP_TARGETS) o[sk + '|' + m] = `${SU_KINDS[k].stops[sk][0].toUpperCase() + SU_KINDS[k].stops[sk].slice(1)}, target ${m}R`; return o; };
-const suEv = () => (SU.ev[SU.kind] || []).filter(e => !SU.since || e.t >= SU.since);
+const SU_RANK = ['Coin rank by volume', e => suB(e.rk, [11, 21, 51, 71, 101], ['top 10', '11 to 20', '21 to 50', '51 to 70', '71 to 100', '101 to 200'])];
+const suEv = () => (SU.ev[SU.kind] || []).filter(e => (!SU.since || e.t >= SU.since) && (!SU.top || (e.rk != null && e.rk <= SU.top)));
 const suTrades = vari => suEv().filter(e => e.sims && e.sims[vari] && e.sims[vari].done).sort((a, b) => a.t - b.t);
 async function suLoad(){ for (const k of Object.keys(SU_KINDS)){ const v = await Cache.get('setupStudy:' + k); if (v && Array.isArray(v.ev)){ SU.ev[k] = v.ev; SU.meta[k] = v.meta || null; } } suRender(); }
 async function suRates(sym){
@@ -4949,7 +4974,7 @@ function suRender(){
   }
   h += '<div class="tablewrap" style="border:0;margin-top:8px"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Total R</th></tr></thead><tbody>';
   let lastG = '';
-  for (const [g, fn] of K.groups){
+  for (const [g, fn] of K.groups.concat([SU_RANK])){
     const by = new Map(); for (const e of tr){ const bk = fn(e); if (bk == null) continue; (by.get(bk) || by.set(bk, []).get(bk)).push(e.sims[vari].r); }
     for (const bk of [...by.keys()].sort((x, y) => SU_ORD.indexOf(x) - SU_ORD.indexOf(y))){ const s = brkStats(by.get(bk)), first = g !== lastG; lastG = g;
       h += `<tr${s.n < 10 ? ' style="opacity:.5"' : ''}><td class="l">${first ? esc(g) : ''}</td><td class="l">${esc(bk)}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td></tr>`; }
@@ -4964,11 +4989,11 @@ async function suRun(){
   SU.kind = kind; SU.running = true; SU.cancel = false; $('suRun').textContent = 'Stop'; const stt = $('suStatus');
   try {
     stt.textContent = 'Loading the coin list…';
-    const uni = (await getUniverse()).slice(coinSel === '101-200' ? 100 : 0, topN), tasks = []; for (const u of uni) for (const tf of tfs) tasks.push([u.sym, tf]);
+    const uni = (await getUniverse()).slice(coinSel === '101-200' ? 100 : 0, topN), tasks = [], rk0 = coinSel === '101-200' ? 100 : 0; uni.forEach((u, ix) => { for (const tf of tfs) tasks.push([u.sym, tf, rk0 + ix + 1]); });
     const ev = []; let done = 0, i = 0;
     async function worker(){
       while (i < tasks.length && !SU.cancel){
-        const [sym, tf] = tasks[i++];
+        const [sym, tf, rk] = tasks[i++];
         try {
           const cd = await getKlines(sym, tf, true, KDEEP);
           let found;
@@ -4976,7 +5001,7 @@ async function suRun(){
           else if (kind === 'fund') found = fundScan(cd, await suRates(sym), {thr});
           else { const btc = await getKlines('BTCUSDT', tf, true, KDEEP); found = (kind === 'pull' ? pullScan : rangeScan)(cd, btc); }
           for (const b of found){
-            const r = setupSim(cd, b), rec = {sym, tf, t: b.t, dir: b.dir, st: r.status, riskAtr: r.risk != null && b.atr > 0 ? r.risk / b.atr : null, sims: r.status === 'done' || r.status === 'open' ? r.sims : null};
+            const r = setupSim(cd, b), rec = {sym, tf, rk, t: b.t, dir: b.dir, st: r.status, riskAtr: r.risk != null && b.atr > 0 ? r.risk / b.atr : null, sims: r.status === 'done' || r.status === 'open' ? r.sims : null};
             if (kind === 'sweep') Object.assign(rec, {depth: b.depth, reclaim: b.reclaim, wick: b.wick, vol: b.vol, big: b.big, withTrend: b.withTrend});
             else if (kind === 'fund') Object.assign(rec, {fr: b.fr, ch24: b.ch24, atrPct: b.atrPct, withTrend: b.withTrend});
             else if (kind === 'pull') Object.assign(rec, {rs30: b.rs30, depth: b.depth, reach50: b.reach50, slope: b.slope, vol: b.vol});
@@ -4998,13 +5023,14 @@ async function suRun(){
 }
 function suCsv(){
   const raw = SU.ev[SU.kind] || []; if (!raw.length){ toast('Run the study first.'); return; }
-  const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), keys = Object.keys(VARS), head = ['time_utc', 'pair', 'tf', 'side', 'status', 'stop_atr'].concat(K.csv.map(c => c[0]));
+  const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), keys = Object.keys(VARS), head = ['time_utc', 'pair', 'volume_rank', 'tf', 'side', 'status', 'stop_atr'].concat(K.csv.map(c => c[0]));
   keys.forEach(k => head.push(k.replace('|', '_target_') + 'R_result'));
   const q = v => v == null ? '' : typeof v === 'number' ? +v.toFixed(5) : v, lines = [head.join(',')];
-  for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.st, q(e.riskAtr)].concat(K.csv.map(c => q(c[1](e)))).concat(keys.map(k => e.sims && e.sims[k] && e.sims[k].done ? +e.sims[k].r.toFixed(3) : '')).join(','));
+  for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.rk == null ? '' : e.rk, e.tf, e.dir > 0 ? 'long' : 'short', e.st, q(e.riskAtr)].concat(K.csv.map(c => q(c[1](e)))).concat(keys.map(k => e.sims && e.sims[k] && e.sims[k].done ? +e.sims[k].r.toFixed(3) : '')).join(','));
   downloadText(lines.join('\n'), `setup-${SU.kind}-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
 }
 $('suKind').onchange = () => { SU.kind = $('suKind').value; $('suThrL').hidden = SU.kind !== 'fund'; suRender(); };
+$('suTop').onchange = () => { SU.top = +$('suTop').value; suRender(); };
 $('suSince').onchange = () => { const v = $('suSince').value; SU.since = v ? Date.parse(v + 'T00:00:00Z') : 0; suRender(); };
 $('suRun').onclick = suRun; $('suCsv').onclick = suCsv;
 suLoad();
