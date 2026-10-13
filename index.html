@@ -807,6 +807,18 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <button id="jClear">Clear journal</button>
       </div>
     </div>
+    <div class="panel"><details data-help="journal"><summary>How the journal works</summary><ul>
+      <li>After each Crypto Scanner scan with closed candles, it logs every <b>triggered setup</b> (cooldown 6 candles per pair, side and timeframe) and every <b>new alignment</b> (aligned on the latest candle only). It records the context at that moment: score, triggers, regime, MTF, extension, positioning and funding.</li>
+      <li><b>Outcomes</b> update after each scan, or with Update outcomes: returns after 4, 12 and 24 candles (in your favour = positive), maximum favourable and adverse excursion, and a simulated trade result: <b>Win</b> = +1.5R target hit first, <b>Loss</b> = −1R stop hit first (both in the same candle counts as a loss), <b>Time</b> = neither within 24 candles, closed at market.</li>
+      <li><b>Avg R</b> is the expectancy per trade in risk units: above 0 means the signal paid over this sample, before fees and slippage.</li>
+      <li><b>Count</b> chooses which signals the cards, equity curve, edge table and loss review use. <b>Every logged signal</b>: all of them, the simple test above. <b>Only signals I was alerted to</b>: only those that passed your alert settings (min grade, market cap range, starred filter, wave guard), marked 🔔 in the log; signals logged before v1.54 have no mark. <b>Alerted, traded with the alert plan</b>: the same alerted signals, but followed with the plan in the alert: stop and up to 3 targets stored at alert time, a third closed at each target, stop moved to entry after TP1, closed after 48 candles; only finished plans count.</li>
+      <li>Each signal also stores the <b>macro regime</b> at that time; the edge table has a Macro group to show whether a regime helps. Macro only adjusts the grade, nothing is blocked because of it.</li>
+      <li>Every block below can be collapsed by clicking its title (remembered in this browser). Clustered signals count as one market bet: this journal usually holds far fewer independent moments than signals, so judge filters only after several weeks and at least 30 moments.</li>
+      <li><b>Where is the edge?</b> splits the results by grade, side, timeframe, regime, funding and so on. <b>Loss review</b> shows what stopped-out signals have in common and has <b>What if I had skipped…</b>: tick filters (grade, regime direction, stretched, funding, market cap under $1B or over $10B, did not pass my alerts, outside the best 5 per moment) and see the same signals without them. Market cap is recorded from 13 October 2026 on; nothing is changed in your alerts.</li>
+      <li>The <b>Breaker candle study</b> and the <b>Setup study</b> replay rules on up to 1000 candles of history per coin (study only, no alerts). The Setup study covers liquidity sweeps, funding extremes, trend pullbacks, tight-range breakouts and <b>Indicator settings</b>, which replays the screener's setup for different RSI, DMI, ADX and OBV settings to see whether any setting beats the default. History has no open interest, market cap or grade, so those can only be judged here in the journal.</li>
+      <li>The Advanced: Onslaught server check box at the bottom is only for assessing the Onslaught runner server (load its trades.csv); it is not needed to use the Journal.</li>
+      <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
+    </ul></details></div>
     <div class="mu" id="jShowNote" style="font-size:12px;margin:-4px 2px 8px"></div>
     <div class="stats" id="jCards"></div>
     <div class="panel"><div class="rot-head"><b>Equity curve</b> <span class="mu" id="jEqNote">Running total of R over completed signals, oldest to newest (setups only, 1R each).</span></div><div id="jEq"></div></div>
@@ -823,6 +835,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="whatif" id="jWhat2">
         <label><input type="checkbox" data-wi="grade"> Grade C</label>
         <label><input type="checkbox" data-wi="regime"> Against regime</label>
+        <label title="Skips signals in the direction of the market regime, to test whether trading against it does better"><input type="checkbox" data-wi="regWith"> With the regime</label>
         <label><input type="checkbox" data-wi="mtf"> All 3 timeframes against</label>
         <label><input type="checkbox" data-wi="ext"> Stretched (3+ ATR)</label>
         <label><input type="checkbox" data-wi="fund"> Crowded funding</label>
@@ -844,16 +857,6 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
     <div class="pager" id="jPager"></div>
     </details>
-    <div class="panel" style="margin-top:12px"><details data-help="journal"><summary>How the journal works</summary><ul>
-      <li>After each Crypto Scanner scan with closed candles, it logs every <b>triggered setup</b> (cooldown 6 candles per pair, side and timeframe) and every <b>new alignment</b> (aligned on the latest candle only). It records the context at that moment: score, triggers, regime, MTF, extension, positioning and funding.</li>
-      <li><b>Outcomes</b> update after each scan, or with Update outcomes: returns after 4, 12 and 24 candles (in your favour = positive), maximum favourable and adverse excursion, and a simulated trade result: <b>Win</b> = +1.5R target hit first, <b>Loss</b> = −1R stop hit first (both in the same candle counts as a loss), <b>Time</b> = neither within 24 candles, closed at market.</li>
-      <li><b>Avg R</b> is the expectancy per trade in risk units: above 0 means the signal paid over this sample, before fees and slippage.</li>
-      <li><b>Count</b> chooses which signals the cards, equity curve, edge table and loss review use. <b>Every logged signal</b>: all of them, the simple test above. <b>Only signals I was alerted to</b>: only those that passed your alert settings (min grade, market cap range, starred filter, wave guard), marked 🔔 in the log; signals logged before v1.54 have no mark. <b>Alerted, traded with the alert plan</b>: the same alerted signals, but followed with the plan in the alert: stop and up to 3 targets stored at alert time, a third closed at each target, stop moved to entry after TP1, closed after 48 candles; only finished plans count.</li>
-      <li>Each signal also stores the <b>macro regime</b> at that time; the edge table has a Macro group to show whether a regime helps. Macro only adjusts the grade, nothing is blocked because of it.</li>
-      <li><b>Where is the edge?</b>, <b>Loss review</b> and the <b>Signal log</b> can be collapsed by clicking their titles (remembered in this browser). Clustered signals count as one market bet, so judge filters only after several weeks of data.</li>
-      <li>The Advanced: Onslaught server check box at the bottom is only for assessing the Onslaught runner server (load its trades.csv); it is not needed to use the Journal.</li>
-      <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
-    </ul></details></div>
     <details class="panel jfold" data-fold="brk">
       <summary>Breaker candle study</summary>
       <div class="mu" style="font-size:12px;margin:6px 0">Tests the Breaker candle rule (a candle that breaks market structure; its own range is the Fibonacci) on up to 1000 candles of history per coin, so you do not have to wait weeks for live signals. The order waits at the 0.5 level of the breaker candle and the stop sits at its far end (0); targets are the 1.618, 2 and 2.272 extensions. Study only: nothing here sends alerts.</div>
@@ -2822,7 +2825,7 @@ const LOSS_COND = [
   ['Stretched (3+ ATR)', e => e.ext != null && e.ext * e.dir >= 3], ['Crowded funding', e => e.fFlag === e.dir], ['Aligned (no trigger)', e => e.kind === 'aligned'],
   ['Long', e => e.dir > 0], ['Short', e => e.dir < 0], ['Leader against its side (RS)', e => e.rs7 != null && e.rs7 * e.dir <= -2]
 ];
-const WI = {gradeB: e => e.grade === 'B' || e.grade === 'C', mcSmall: e => e.mc != null && e.mc < 1e9, mcBig: e => e.mc != null && e.mc >= 1e10, fundAny: e => e.fFlag !== 0 && e.fFlag != null, notal: e => e.al === 0, wave: () => false, grade: e => e.grade === 'C', regime: e => e.regime === -e.dir, mtf: e => e.mtf === 'against', ext: e => e.ext != null && e.ext * e.dir >= 3, fund: e => e.fFlag === e.dir, aligned: e => e.kind === 'aligned'};
+const WI = {regWith: e => e.regime !== 0 && e.regime === e.dir, gradeB: e => e.grade === 'B' || e.grade === 'C', mcSmall: e => e.mc != null && e.mc < 1e9, mcBig: e => e.mc != null && e.mc >= 1e10, fundAny: e => e.fFlag !== 0 && e.fFlag != null, notal: e => e.al === 0, wave: () => false, grade: e => e.grade === 'C', regime: e => e.regime === -e.dir, mtf: e => e.mtf === 'against', ext: e => e.ext != null && e.ext * e.dir >= 3, fund: e => e.fFlag === e.dir, aligned: e => e.kind === 'aligned'};
 function renderLoss(es){
   const done = es.filter(e => e.out && e.out.res), L = done.filter(e => e.out.res === 'loss'), box = $('jLoss');
   if (!box) return;
@@ -5450,7 +5453,9 @@ journal: ['Como funciona o journal', `<ul>
 <li><b>Avg R</b> é a expectativa por trade em unidades de risco: acima de 0 significa que o sinal compensou nesta amostra, antes de comissões e slippage.</li>
 <li><b>Count</b> escolhe que sinais entram nos cartões, na curva de equity, na tabela do edge e na loss review. <b>Every logged signal</b>: todos, o teste simples acima. <b>Only signals I was alerted to</b>: só os que passaram as tuas definições de alerta (grade mínima, market cap, favoritos, wave guard), marcados com 🔔 no registo; os sinais anteriores à v1.54 não têm marca. <b>Alerted, traded with the alert plan</b>: os mesmos sinais alertados, seguidos com o plano do alerta: stop e até 3 alvos guardados no momento do alerta, um terço fechado em cada alvo, stop para a entrada depois do TP1, fecho às 48 velas; só contam planos terminados.</li>
 <li>Cada sinal guarda também o <b>regime macro</b> desse momento; a tabela do edge tem um grupo Macro para ver se um regime ajuda. O macro só ajusta a grade, nada é bloqueado por causa dele.</li>
-<li><b>Where is the edge?</b>, <b>Loss review</b> e o <b>Signal log</b> recolhem-se ao clicar no título (fica guardado neste browser). Sinais agrupados contam como uma só aposta de mercado, por isso só avalia filtros após várias semanas de dados.</li>
+<li>Todos os blocos abaixo recolhem-se ao clicar no título (fica guardado neste browser). Sinais agrupados contam como uma só aposta de mercado: este journal tem normalmente muito menos momentos independentes do que sinais, por isso só julga filtros após várias semanas e pelo menos 30 momentos.</li>
+<li><b>Where is the edge?</b> divide os resultados por grade, lado, timeframe, regime, funding, etc. <b>Loss review</b> mostra o que os sinais parados têm em comum e tem <b>What if I had skipped…</b>: marca filtros (grade, direção do regime, esticado, funding, market cap abaixo de $1B ou acima de $10B, não passou nos meus alertas, fora dos melhores 5 por momento) e vê os mesmos sinais sem eles. O market cap é registado a partir de 13 de outubro de 2026; nada muda nos teus alertas.</li>
+<li>O <b>Breaker candle study</b> e o <b>Setup study</b> repetem regras em até 1000 velas de histórico por moeda (só estudo, sem alertas). O Setup study cobre varrimentos de liquidez, funding extremo, pullbacks de tendência, rompimentos de range apertado e <b>Indicator settings</b>, que repete o setup do screener com diferentes definições de RSI, DMI, ADX e OBV para ver se alguma bate a predefinida. O histórico não tem open interest, market cap nem grade, por isso estes só se avaliam aqui no journal.</li>
 <li>A caixa Advanced: Onslaught server check no fim serve apenas para avaliar o servidor runner da Onslaught (carregar o trades.csv); não é preciso para usar o Journal.</li>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
 </ul>`]
