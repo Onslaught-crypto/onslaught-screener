@@ -819,7 +819,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <summary>Loss review</summary>
       <div class="rot-head"><span class="mu">What the stopped-out signals have in common. Simulated results, so use it to spot patterns to test, not as proof.</span></div>
       <div id="jLoss"></div>
-      <div class="rot-head" style="margin-top:14px"><b>What if I had skipped…</b> <span class="mu">Tick filters to replay the completed signals without them (nothing is changed in your alerts).</span></div>
+      <div class="rot-head" style="margin-top:14px"><b>What if I had skipped…</b> <span class="mu">Tick filters to replay the completed signals without them (nothing is changed in your alerts). Market cap is recorded from this version on, so the two market cap filters only count newer signals.</span></div>
       <div class="whatif" id="jWhat2">
         <label><input type="checkbox" data-wi="grade"> Grade C</label>
         <label><input type="checkbox" data-wi="regime"> Against regime</label>
@@ -827,6 +827,12 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input type="checkbox" data-wi="ext"> Stretched (3+ ATR)</label>
         <label><input type="checkbox" data-wi="fund"> Crowded funding</label>
         <label><input type="checkbox" data-wi="aligned"> Aligned (no trigger)</label>
+        <label><input type="checkbox" data-wi="gradeB"> Grade B or lower (keep only A)</label>
+        <label title="Only signals logged since market cap was recorded count for these two"><input type="checkbox" data-wi="mcSmall"> Market cap under $1B</label>
+        <label><input type="checkbox" data-wi="mcBig"> Market cap over $10B</label>
+        <label><input type="checkbox" data-wi="fundAny"> Funding hot or cold (either side)</label>
+        <label><input type="checkbox" data-wi="notal"> Did not pass my alert settings</label>
+        <label title="Keeps only the best 5 per side on each candle, like the wave guard"><input type="checkbox" data-wi="wave"> Outside the best 5 per moment</label>
       </div>
       <div id="jWhatOut" class="mu" style="margin-top:8px"></div>
     </details>
@@ -869,7 +875,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <summary>Setup study</summary>
       <div class="mu" style="font-size:12px;margin:6px 0">Tests a trading idea on up to 1000 candles of history per coin, with the same rules every time, so ideas can be compared fairly. The trade is taken at the open of the candle after the signal; every stop is tried with targets of 1R, 2R and 3R; a trade that reaches neither within 48 candles is closed at market; the stop wins when a candle touches both; no fees. Judge a result by the cluster-adjusted average (signals at the same moment count once), and by whether both halves of the period agree. <b>Liquidity sweep</b>: price trades beyond the highest high / lowest low of the last 20 candles and closes back inside; the trade is against the sweep. <b>Funding extreme</b>: at a funding settlement the rate is far from normal; the trade is against the crowd (a very positive rate = short, a very negative rate = long). <b>Trend pullback</b>: EMA21 above EMA50 above EMA200 (reverse for shorts), the candle dips to the EMA21 and closes back on the trend side; the trade goes with the trend. <b>Tight-range breakout</b>: the last 20 candles' range was among the narrowest 20% of the last 100, and the candle closes beyond that range; the trade goes with the break. Both record the coin's strength against BTC over the last 30 candles.</div>
       <div class="row">
-        <label>Setup <select id="suKind"><option value="sweep">Liquidity sweep (20 candles)</option><option value="fund">Funding extreme (against the crowd)</option><option value="pull">Trend pullback to the EMA21 (with the trend)</option><option value="range">Breakout from a tight range (with the break)</option></select></label>
+        <label>Setup <select id="suKind"><option value="sweep">Liquidity sweep (20 candles)</option><option value="fund">Funding extreme (against the crowd)</option><option value="pull">Trend pullback to the EMA21 (with the trend)</option><option value="range">Breakout from a tight range (with the break)</option><option value="cfg">Indicator settings (screener setups, compare settings)</option></select></label>
         <label><input type="checkbox" class="suTf" value="15m"> 15m</label>
         <label><input type="checkbox" class="suTf" value="1h" checked> 1h</label>
         <label><input type="checkbox" class="suTf" value="4h" checked> 4h</label>
@@ -1022,16 +1028,26 @@ function crossAgo(a, b, L, back, gate){
   return null;
 }
 const TRIG_BACK = 10;
-function triggers(cd, ind, cfg){
-  const o = cd.map(k => k[1]), h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), v = cd.map(k => k[5]), L = c.length - 1, out = [];
-  const {r, re, d, o: ob, oe} = ind, fifty = c.map(() => 50);
+/* Per-candle-array helpers for the history replay (only used when an index is passed, so live scans are untouched). */
+const _trigPre = new WeakMap();
+function trigPre(cd){
+  let p = _trigPre.get(cd); if (p) return p;
+  const o = cd.map(k => k[1]), h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), v = cd.map(k => k[5]);
+  p = {o, h, l, c, v, fifty: c.map(() => 50), m: sma(c, 20), sd: stdev(c, 20), e: ema(c, 20), a20: atr(h, l, c, 20), pv: pivots(h, l, 3)};
+  _trigPre.set(cd, p); return p;
+}
+/* Lopt: evaluate as of that candle index instead of the last candle (history replay). */
+function triggers(cd, ind, cfg, Lopt){
+  const hist = Lopt != null, P = hist ? trigPre(cd) : null;
+  const o = hist ? P.o : cd.map(k => k[1]), h = hist ? P.h : cd.map(k => k[2]), l = hist ? P.l : cd.map(k => k[3]), c = hist ? P.c : cd.map(k => k[4]), v = hist ? P.v : cd.map(k => k[5]), L = hist ? Lopt : c.length - 1, out = [];
+  const {r, re, d, o: ob, oe} = ind, fifty = hist ? P.fifty : c.map(() => 50);
   const push = (t, x, name) => { if (x) out.push({t, dir: x.dir, ago: x.ago, name}); };
   push('dmi', crossAgo(d.pdi, d.mdi, L, TRIG_BACK, i => d.adx[i] >= cfg.adxThr - 5), 'DMI cross');
   push('rsi50', crossAgo(r, fifty, L, TRIG_BACK), 'RSI 50 cross');
   push('rsiema', crossAgo(r, re, L, TRIG_BACK), 'RSI/EMA cross');
   push('obv', crossAgo(ob, oe, L, TRIG_BACK), 'OBV/EMA cross');
   // Squeeze: Bollinger(20,2) inside Keltner(EMA20 ± 1.5 ATR20). Fire = squeeze ends.
-  const m = sma(c, 20), sd = stdev(c, 20), e = ema(c, 20), a20 = atr(h, l, c, 20);
+  const m = hist ? P.m : sma(c, 20), sd = hist ? P.sd : stdev(c, 20), e = hist ? P.e : ema(c, 20), a20 = hist ? P.a20 : atr(h, l, c, 20);
   const sq = i => Number.isFinite(sd[i]) && Number.isFinite(a20[i]) && m[i] + 2 * sd[i] < e[i] + 1.5 * a20[i] && m[i] - 2 * sd[i] > e[i] - 1.5 * a20[i];
   let fired = null;
   for (let j = 0; j < TRIG_BACK && L - j - 1 >= 0; j++){ const i = L - j; if (sq(i - 1) && !sq(i)){ fired = {dir: sgn(c[i], m[i]) || 1, ago: j}; break; } }
@@ -1044,7 +1060,7 @@ function triggers(cd, ind, cfg){
     if (rv >= 2){ out.push({t: 'rvol', dir: sgn(c[i], o[i]), ago: j, name: `Volume ×${rv.toFixed(1)}`}); break; }
   }
   // RSI divergences from 3-bar pivots (confirmed 3 bars after the pivot)
-  const pv = pivots(h, l, 3), recent = p => L - p - 3 < TRIG_BACK, okGap = (a, b) => b - a >= 5 && b - a <= 60;
+  const pv0 = hist ? P.pv : pivots(h, l, 3), pv = hist ? {hi: pv0.hi.filter(p => p + 3 <= L), lo: pv0.lo.filter(p => p + 3 <= L)} : pv0, recent = p => L - p - 3 < TRIG_BACK, okGap = (a, b) => b - a >= 5 && b - a <= 60;
   const [l1, l2] = pv.lo.slice(-2), [h1, h2] = pv.hi.slice(-2);
   if (l2 != null && l1 != null && recent(l2) && okGap(l1, l2) && Number.isFinite(r[l1])){
     if (l[l2] < l[l1] && r[l2] > r[l1]) out.push({t: 'div', dir: 1, ago: L - l2 - 3, name: 'Bullish divergence'});
@@ -2001,6 +2017,38 @@ function setupSim(cd, ev, o){
   if (!any) out.status = 'skip'; else out.status = allDone ? 'done' : 'open';
   return out;
 }
+/* ---- Indicator-settings replay: the screener's "triggered setup" on history, for several settings. ----
+ A setup = at least 3 of the 4 price/volume checks (DMI, RSI/EMA, RSI vs 50, OBV) agree AND a same-side trigger fired within trigN candles.
+ (The live screener also counts open interest as a fifth check, which has no long history, so 3 of 4 stands in for "4 of 5 with OI rising".) */
+const CFG_BASE = {rsiLen: 14, rsiEmaLen: 14, dmiLen: 14, adxThr: 20, obvLen: 50, trigN: 3};
+function cfgVariants(){
+  const alt = [['rsiLen', [7, 21], 'RSI length'], ['rsiEmaLen', [9, 21], 'RSI EMA length'], ['dmiLen', [10, 20], 'DMI length'], ['adxThr', [15, 25, 30], 'ADX threshold'], ['obvLen', [20, 100], 'OBV EMA length'], ['trigN', [1, 5], 'Trigger within (candles)']];
+  const out = [{name: 'Default (14 / 14 / 14 / ADX 20 / OBV 50 / trigger within 3)', cfg: {...CFG_BASE}}];
+  for (const [k, vals, lab] of alt) for (const v of vals) out.push({name: `${lab} ${v}`, cfg: {...CFG_BASE, [k]: v}});
+  return out;
+}
+/* Returns one event per signal candle and side (the stop depends only on the candle, so it is shared by every setting):
+   {i, t, dir, atr, stops, m: bitmask of the settings that fired it, a: bitmask of those where all 4 checks agreed}. */
+function cfgScan(cd, variants, o){
+  o = o || {};
+  const n = cd.length, i0 = o.start || 140, cool = o.cool || 6, U = new Map();
+  if (n < i0 + 10) return [];
+  const h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), v = cd.map(k => k[5]), at = atr(h, l, c, 14), ob = obv(c, v);
+  variants.forEach((V, vi) => {
+    const f = V.cfg, r = rsi(c, f.rsiLen), re = ema(r, f.rsiEmaLen), d = dmi(h, l, c, f.dmiLen), oe = ema(ob, f.obvLen), ind = {r, re, d, o: ob, oe}, last = {1: -1e9, '-1': -1e9};
+    for (let i = i0; i < n - 1; i++){
+      const ta = taAt(ind, i, f); if (!ta) continue;
+      const dir = ta.bull >= 3 ? 1 : ta.bear >= 3 ? -1 : 0; if (!dir || !(at[i] > 0)) continue;
+      if (i - last[dir] < cool) continue;
+      const tr = triggers(cd, ind, f, i).filter(t => t.dir === dir && t.ago < f.trigN); if (!tr.length) continue;
+      last[dir] = i;
+      const key = i * 2 + (dir > 0 ? 1 : 0); let e = U.get(key);
+      if (!e){ e = {i, t: cd[i][0], dir, atr: at[i], stops: {a15: dir > 0 ? c[i] - 1.5 * at[i] : c[i] + 1.5 * at[i]}, m: 0, a: 0}; U.set(key, e); }
+      e.m |= 1 << vi; if ((dir > 0 ? ta.bull : ta.bear) === 4) e.a |= 1 << vi;
+    }
+  });
+  return [...U.values()].sort((x, y) => x.i - y.i);
+}
 // ==ENGINE END==
 
 /* ---------- Config & constants ---------- */
@@ -2704,7 +2752,7 @@ async function journalLog(tf){
       if (kind === 'setup' && lastBy.has(key) && x.d.lastTime - lastBy.get(key) < 6 * ms) continue;
       J.entries.push({id, key, sym: r.sym, tf, kind, dir, ct: x.d.lastTime, price: x.d.lastClose, atr: x.d.atr,
         score: dir > 0 ? x.bull : x.bear, rs7: x.rs?.b7 ?? null, pts: x.G ? x.G.pts : null, grade: x.G && (x.setup === dir || (!x.setup && (dir > 0 ? x.bull : x.bear) >= 4)) ? x.G.grade : null, trig: x.trig.filter(t => t.dir === dir).map(t => t.t),
-        regime: S.regimeDir || 0, mtf: r.mtf ? (x.mtfAll === dir ? 'all' : x.mtfAll === -dir ? 'against' : 'mixed') : null,
+        mc: r.mcap > 0 ? r.mcap : null, qv: r.qv ?? null, regime: S.regimeDir || 0, mtf: r.mtf ? (x.mtfAll === dir ? 'all' : x.mtfAll === -dir ? 'against' : 'mixed') : null,
         ext: x.ext, pos: x.pos, fFlag: x.fFlag, macro: S.macro && S.macro.reg ? S.macro.reg.name : null, out: null}); fresh.push(J.entries.at(-1));
       seen.add(id); lastBy.set(key, x.d.lastTime); added++;
     }
@@ -2774,7 +2822,7 @@ const LOSS_COND = [
   ['Stretched (3+ ATR)', e => e.ext != null && e.ext * e.dir >= 3], ['Crowded funding', e => e.fFlag === e.dir], ['Aligned (no trigger)', e => e.kind === 'aligned'],
   ['Long', e => e.dir > 0], ['Short', e => e.dir < 0], ['Leader against its side (RS)', e => e.rs7 != null && e.rs7 * e.dir <= -2]
 ];
-const WI = {grade: e => e.grade === 'C', regime: e => e.regime === -e.dir, mtf: e => e.mtf === 'against', ext: e => e.ext != null && e.ext * e.dir >= 3, fund: e => e.fFlag === e.dir, aligned: e => e.kind === 'aligned'};
+const WI = {gradeB: e => e.grade === 'B' || e.grade === 'C', mcSmall: e => e.mc != null && e.mc < 1e9, mcBig: e => e.mc != null && e.mc >= 1e10, fundAny: e => e.fFlag !== 0 && e.fFlag != null, notal: e => e.al === 0, wave: () => false, grade: e => e.grade === 'C', regime: e => e.regime === -e.dir, mtf: e => e.mtf === 'against', ext: e => e.ext != null && e.ext * e.dir >= 3, fund: e => e.fFlag === e.dir, aligned: e => e.kind === 'aligned'};
 function renderLoss(es){
   const done = es.filter(e => e.out && e.out.res), L = done.filter(e => e.out.res === 'loss'), box = $('jLoss');
   if (!box) return;
@@ -2800,7 +2848,9 @@ function renderLoss(es){
 function renderWhatIf(es){
   const done = es.filter(e => e.out && e.out.res), on = [...document.querySelectorAll('#jWhat2 [data-wi]')].filter(c => c.checked).map(c => WI[c.dataset.wi]), out = $('jWhatOut');
   if (!on.length || !done.length){ out.textContent = on.length ? '' : 'Nothing ticked: showing all completed signals would give the same numbers as the table above.'; return; }
-  const kept = done.filter(e => !on.some(f => f(e))), a = jStats(done), b = jStats(kept), sum = l => l.reduce((t, e) => t + (e.out.rr || 0), 0);
+  let kept = done.filter(e => !on.some(f => f(e)));
+  if (document.querySelector('#jWhat2 [data-wi="wave"]').checked){ const g = new Map(), jq = e => (GRADE_RANK[e.grade] || 0) * 1000 + (e.pts || 0) * 10 + e.score; for (const e of kept){ const k = e.tf + '|' + e.ct + '|' + e.dir; (g.get(k) || g.set(k, []).get(k)).push(e); } kept = [...g.values()].flatMap(l => l.sort((x, y) => jq(y) - jq(x)).slice(0, 5)); }
+  const a = jStats(done), b = jStats(kept), sum = l => l.reduce((t, e) => t + (e.out.rr || 0), 0);
   const f = v => v == null ? '—' : fR(v), w = v => v == null ? '—' : v.toFixed(0) + '%';
   out.innerHTML = `Kept <b>${kept.length}</b> of ${done.length} signals · win rate ${w(a.win)} → <b>${w(b.win)}</b> · average ${f(a.avgR)} → <b class="${cls(b.avgR)}">${f(b.avgR)}</b> · total ${fR(sum(done))} → <b class="${cls(sum(kept))}">${fR(sum(kept))}</b>${kept.length < 30 ? '<br><span class="dn">Fewer than 30 signals kept: this can easily be luck. Wait for more data before changing any rule.</span>' : ''}`;
 }
@@ -4902,7 +4952,7 @@ $('brkRun').onclick = brkRun; $('brkCsv').onclick = brkCsv;
 loadJournal(); runLoad(); brkLoad();
 /* ---------- Setup study (Journal tab): sweeps and funding extremes, same trade rules for each idea ---------- */
 const FRLIM = {win: 300000, cap: 400, log: []};
-const SU = {kind: 'sweep', ev: {}, meta: {}, running: false, cancel: false, vari: 'ext|2', since: 0};
+const SU = {kind: 'sweep', ev: {}, meta: {}, running: false, cancel: false, vari: 'ext|2', since: 0, setSel: ''};
 const suB = (v, cuts, labs) => { if (v == null || !Number.isFinite(v)) return null; for (let i = 0; i < cuts.length; i++) if (v < cuts[i]) return labs[i]; return labs[cuts.length]; };
 const SU_KINDS = {
   sweep: {name: 'Liquidity sweep', stops: {ext: 'stop at the wick extreme', ext5: 'stop 0.5 ATR beyond the wick'},
@@ -4941,11 +4991,20 @@ const SU_KINDS = {
       ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
     csv: [['rs30_pp', e => e.rs30], ['range_percentile', e => e.pct], ['close_beyond_atr', e => e.close], ['body_share', e => e.body], ['volume_x', e => e.vol], ['with_trend', e => e.withTrend == null ? '' : e.withTrend ? 1 : 0]]}
 };
-const SU_ORD = ['15m', '1h', '4h', '1d', 'Long (a low was swept)', 'Short (a high was swept)', 'Long (crowd was short)', 'Short (crowd was long)', 'under 0.25', '0.25 to 0.5', '0.5 to 1', '1 to 2', '1 or more', '2 or more', 'under 0.5', 'under 40%', '40 to 60%', '60% or more',
+SU_KINDS.cfg = {name: 'Indicator settings', stops: {a15: 'stop 1.5 ATR from the signal close'},
+  groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long' : 'Short'], ['Checks agreeing (of 4: DMI, RSI/EMA, RSI vs 50, OBV)', e => e.al === 4 ? 'All 4' : '3 of 4'],
+    ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
+  csv: [['settings', e => e.set], ['checks_agreeing', e => e.al], ['triggers', e => (e.trig || []).join('+')]]};
+const SU_ORD = ['Long', 'Short', 'All 4', '3 of 4', '15m', '1h', '4h', '1d', 'Long (a low was swept)', 'Short (a high was swept)', 'Long (crowd was short)', 'Short (crowd was long)', 'under 0.25', '0.25 to 0.5', '0.5 to 1', '1 to 2', '1 or more', '2 or more', 'under 0.5', 'under 40%', '40 to 60%', '60% or more',
   'under 1x', '1 to 2x', '2x or more', 'No', 'Yes', 'With the trend', 'Against the trend', '0.03 to 0.05', '0.05 to 0.1', '0.1 to 0.2', '0.2 or more', 'under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more', 'under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more', 'Long (uptrend)', 'Short (downtrend)', 'Long (broke up)', 'Short (broke down)', 'under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more', 'under 1', '2 to 4', '4 or more', '2 to 3x', '3x or more', 'under 60%', '60 to 80%', '80% or more', 'top 10', '11 to 20', '21 to 50', '51 to 70', '71 to 100', '101 to 200'];
 const suVars = k => { const o = {}; for (const sk of Object.keys(SU_KINDS[k].stops)) for (const m of SETUP_TARGETS) o[sk + '|' + m] = `${SU_KINDS[k].stops[sk][0].toUpperCase() + SU_KINDS[k].stops[sk].slice(1)}, target ${m}R`; return o; };
 const SU_RANK = ['Coin rank by volume', e => suB(e.rk, [11, 21, 51, 71, 101], ['top 10', '11 to 20', '21 to 50', '51 to 70', '71 to 100', '101 to 200'])];
-const suEv = () => (SU.ev[SU.kind] || []).filter(e => (!SU.since || e.t >= SU.since) && (!SU.top || (e.rk != null && e.rk <= SU.top)));
+const suEvBase = () => (SU.ev[SU.kind] || []).filter(e => (!SU.since || e.t >= SU.since) && (!SU.top || (e.rk != null && e.rk <= SU.top)));
+const SU_CFGV = cfgVariants();
+const suEv = () => { if (SU.kind !== 'cfg') return suEvBase();
+  const vi = Math.max(0, SU_CFGV.findIndex(v => v.name === SU.setSel)), bit = 1 << vi, out = [];
+  for (const e of suEvBase()) if (e.m & bit) out.push({...e, set: SU_CFGV[vi].name, al: e.a & bit ? 4 : 3, st: 'done', trig: [], sims: Object.fromEntries(SETUP_TARGETS.map((q, ix) => ['a15|' + q, {r: e.rs[ix], done: e.rs[ix] != null}]))});
+  return out; };
 const suTrades = vari => suEv().filter(e => e.sims && e.sims[vari] && e.sims[vari].done).sort((a, b) => a.t - b.t);
 async function suLoad(){ for (const k of Object.keys(SU_KINDS)){ const v = await Cache.get('setupStudy:' + k); if (v && Array.isArray(v.ev)){ SU.ev[k] = v.ev; SU.meta[k] = v.meta || null; } } suRender(); }
 async function suRates(sym){
@@ -4971,6 +5030,18 @@ function suRender(){
   h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Trade rule</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Total R</th><th>Deepest drawdown</th></tr></thead><tbody>';
   for (const k of Object.keys(VARS)){ const s = brkStats(suTrades(k).map(e => e.sims[k].r)); if (!s) continue; h += `<tr${k === vari ? ' style="background:var(--panel-2,rgba(255,255,255,.04))"' : ''}><td class="l">${VARS[k]}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td><td>${s.dd.toFixed(1)}R</td></tr>`; }
   h += '</tbody></table></div>';
+  if (SU.kind === 'cfg'){
+    const ri = SETUP_TARGETS.indexOf(+vari.split('|')[1]), base = suEvBase().filter(e => e.rs && e.rs[ri] != null), sets = SU_CFGV.map(v => v.name), tA = base.length ? Math.min(...base.map(e => e.t)) : 0, tB = base.length ? Math.max(...base.map(e => e.t)) : 0, mid = (tA + tB) / 2;
+    if (!SU.setSel || !sets.includes(SU.setSel)) SU.setSel = sets[0];
+    const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null, mom = l => { const g = new Map(); for (const e of l){ const k = e.tf + '|' + e.t + '|' + e.dir; (g.get(k) || g.set(k, []).get(k)).push(e.rs[ri]); } return avg([...g.values()].map(avg)); };
+    const rowsC = sets.map((nm, vi) => { const bit = 1 << vi, l = base.filter(e => e.m & bit), rr = x => x.rs[ri]; return {nm, n: l.length, win: l.length ? 100 * l.filter(e => rr(e) > 0).length / l.length : 0, avg: avg(l.map(rr)), mom: mom(l), tf: ['1h', '4h', '1d'].map(t => { const q = l.filter(e => e.tf === t); return q.length >= 10 ? avg(q.map(rr)) : null; }), h1: avg(l.filter(e => e.t < mid).map(rr)), h2: avg(l.filter(e => e.t >= mid).map(rr))}; }).filter(r => r.n);
+    const b0 = rowsC[0], f = v => v == null ? '–' : f2(v) + 'R';
+    h += `<div class="mu" style="font-size:12px;margin:12px 0 4px"><b>Settings compared</b> (selected trade rule above). Each row is the same screener rule replayed with one setting changed; the first row is the default. A setting is only better if it beats the default clearly <u>and</u> in both halves <u>and</u> on the other coin set (run coins 101 to 200 as a holdout). Rows with fewer than 30 trades are dimmed.</div>`;
+    h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Setting</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Per moment</th><th>vs default</th><th>1H</th><th>4H</th><th>1D</th><th>1st half</th><th>2nd half</th></tr></thead><tbody>';
+    for (const r of rowsC){ const dd = r === b0 || r.mom == null || b0.mom == null ? null : r.mom - b0.mom;
+      h += `<tr${r.n < 30 ? ' style="opacity:.5"' : ''}><td class="l">${esc(r.nm)}</td><td>${r.n}</td><td>${r.win.toFixed(0)}%</td><td class="${cls(r.avg)}">${f2(r.avg)}</td><td class="${cls(r.mom)}">${r.mom == null ? '–' : f2(r.mom)}</td><td class="${dd == null ? '' : cls(dd)}">${dd == null ? '–' : f2(dd)}</td>${r.tf.map(v => `<td class="${v == null ? '' : cls(v)}">${v == null ? '–' : f2(v)}</td>`).join('')}<td class="${r.h1 == null ? '' : cls(r.h1)}">${f(r.h1)}</td><td class="${r.h2 == null ? '' : cls(r.h2)}">${f(r.h2)}</td></tr>`; }
+    h += `</tbody></table></div><div class="row" style="margin:8px 0"><label>Break down one setting below <select id="suSet">${sets.map(nm => `<option value="${esc(nm)}"${nm === SU.setSel ? ' selected' : ''}>${esc(nm)}</option>`).join('')}</select></label></div>`;
+  }
   if (st){
     const half = Math.floor(tr.length / 2), a = brkStats(tr.slice(0, half).map(e => e.sims[vari].r)), b = brkStats(tr.slice(half).map(e => e.sims[vari].r));
     h += `<div class="mu" style="font-size:12px;margin:10px 0">Selected rule: cluster-adjusted average <b class="${cls(mo.avg)}">${f2(mo.avg)}R</b> per moment (plain average ${f2(st.avg)}R). First half of the period ${a ? f2(a.avg) + 'R' : '–'}, second half ${b ? f2(b.avg) + 'R' : '–'} (a real edge should show in both). A clearly negative result means price tended to keep going the other way; that is information too, but it is not the same as a profitable mirror trade (stops and targets differ).</div>`;
@@ -4984,6 +5055,7 @@ function suRender(){
   }
   h += '</tbody></table></div><div class="mu" style="font-size:12px;margin-top:6px">Rows with fewer than 10 trades are dimmed. Entry at the open after the signal; stop checked before the target on a candle that touches both; trades not finished in 48 candles close at market; no fees or slippage. Compare any bucket with the whole-table result, and trust it only if the other coin set and both halves of the period agree. ' + (SU.kind === 'sweep' ? 'Baseline: on pure random price data the sweep rules score about -0.1 to -0.2R with the stop at the wick extreme (the stop is tight, so it is often hit on the very next candle) and about 0 to -0.03R with the stop 0.5 ATR beyond it, so judge against those, not against zero.' : 'Baseline: on pure random price data this rule scores about 0R to slightly below, so a positive result here is already a difference. Note that the market has drifted up over this period, so longs with the trend get a tailwind that shorts do not: compare the two sides separately.') + '</div>';
   out.innerHTML = h; $('suVar').onchange = ev => { SU.vari = ev.target.value; suRender(); };
+  if ($('suSet')) $('suSet').onchange = ev => { SU.setSel = ev.target.value; suRender(); };
 }
 async function suRun(){
   if (SU.running){ SU.cancel = true; return; }
@@ -5000,11 +5072,14 @@ async function suRun(){
         try {
           const cd = await getKlines(sym, tf, true, KDEEP);
           let found;
-          if (kind === 'sweep') found = sweepScan(cd);
+          if (kind === 'cfg') found = cfgScan(cd, SU_CFGV);
+          else if (kind === 'sweep') found = sweepScan(cd);
           else if (kind === 'fund') found = fundScan(cd, await suRates(sym), {thr});
           else { const btc = await getKlines('BTCUSDT', tf, true, KDEEP); found = (kind === 'pull' ? pullScan : rangeScan)(cd, btc); }
           for (const b of found){
-            const r = setupSim(cd, b), rec = {sym, tf, rk, t: b.t, dir: b.dir, st: r.status, riskAtr: r.risk != null && b.atr > 0 ? r.risk / b.atr : null, sims: r.status === 'done' || r.status === 'open' ? r.sims : null};
+            const r = setupSim(cd, b);
+            if (kind === 'cfg'){ if (r.status !== 'skip') ev.push({sym, tf, rk, t: b.t, dir: b.dir, riskAtr: r.risk != null && b.atr > 0 ? +(r.risk / b.atr).toFixed(2) : null, m: b.m, a: b.a, rs: SETUP_TARGETS.map(q => { const z = r.sims['a15|' + q]; return z && z.done ? +z.r.toFixed(3) : null; })}); continue; }
+            const rec = {sym, tf, rk, t: b.t, dir: b.dir, st: r.status, riskAtr: r.risk != null && b.atr > 0 ? r.risk / b.atr : null, sims: r.status === 'done' || r.status === 'open' ? r.sims : null};
             if (kind === 'sweep') Object.assign(rec, {depth: b.depth, reclaim: b.reclaim, wick: b.wick, vol: b.vol, big: b.big, withTrend: b.withTrend});
             else if (kind === 'fund') Object.assign(rec, {fr: b.fr, ch24: b.ch24, atrPct: b.atrPct, withTrend: b.withTrend});
             else if (kind === 'pull') Object.assign(rec, {rs30: b.rs30, depth: b.depth, reach50: b.reach50, slope: b.slope, vol: b.vol});
@@ -5026,6 +5101,11 @@ async function suRun(){
 }
 function suCsv(){
   const raw = SU.ev[SU.kind] || []; if (!raw.length){ toast('Run the study first.'); return; }
+  if (SU.kind === 'cfg'){
+    const names = e => SU_CFGV.map((v, i) => e.m & (1 << i) ? i : -1).filter(i => i >= 0), lines = ['time_utc,pair,volume_rank,tf,side,stop_atr,settings_that_fired,settings_with_all4_checks,R_target_1,R_target_2,R_target_3'];
+    for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.rk, e.tf, e.dir > 0 ? 'long' : 'short', e.riskAtr ?? '', '"' + names(e).map(i => SU_CFGV[i].name).join(' + ') + '"', '"' + SU_CFGV.map((v, i) => e.a & (1 << i) ? v.name : '').filter(Boolean).join(' + ') + '"'].concat(e.rs.map(r => r ?? '')).join(','));
+    downloadText(lines.join('\n'), `setup-cfg-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv'); return;
+  }
   const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), keys = Object.keys(VARS), head = ['time_utc', 'pair', 'volume_rank', 'tf', 'side', 'status', 'stop_atr'].concat(K.csv.map(c => c[0]));
   keys.forEach(k => head.push(k.replace('|', '_target_') + 'R_result'));
   const q = v => v == null ? '' : typeof v === 'number' ? +v.toFixed(5) : v, lines = [head.join(',')];
