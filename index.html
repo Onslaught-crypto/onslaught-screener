@@ -4848,12 +4848,13 @@ function brkRender(){
   if ($('brkVar')) $('brkVar').onchange = ev => { BRK.vari = ev.target.value; brkRender(); };
 }
 /* Macro regime of each past day, from the Macro tab's daily series; an event at time t uses the last completed day before it (no look-ahead). */
-function macroDayLookup(){
+function macroDayInfo(){      // for a time t: the regime key and the stablecoin-dominance direction as of the day before
   const M = S.macro, SER = M && M.series; if (!SER || SER.length < 31) return () => null;
-  const days = [], names = [];
-  for (let i = 29; i < SER.length; i++){ const r = macroRegime(SER.slice(0, i + 1), 1, 30); days.push(SER[i].t); names.push(r ? r.name : null); }
-  return t => { const d = Math.floor(t / 864e5) * 864e5; let lo = 0, hi = days.length - 1, k = -1; while (lo <= hi){ const m = (lo + hi) >> 1; if (days[m] < d){ k = m; lo = m + 1; } else hi = m - 1; } return k >= 0 ? names[k] : null; };
+  const days = [], info = [];
+  for (let i = 29; i < SER.length; i++){ const r = macroRegime(SER.slice(0, i + 1), 1, 30); days.push(SER[i].t); info.push(r ? {key: r.key, name: r.name, sd: r.tr.stD.dir, bd: r.tr.btcD.dir, t3: r.tr.t3es.dir} : null); }
+  return t => { const d = Math.floor(t / 864e5) * 864e5; let lo = 0, hi = days.length - 1, k = -1; while (lo <= hi){ const m = (lo + hi) >> 1; if (days[m] < d){ k = m; lo = m + 1; } else hi = m - 1; } return k >= 0 ? info[k] : null; };
 }
+function macroDayLookup(){ const f = macroDayInfo(); return t => { const x = f(t); return x ? x.name : null; }; }
 async function brkRun(){
   if (BRK.running){ BRK.cancel = true; return; }
   const tfs = [...document.querySelectorAll('.brkTf:checked')].map(x => x.value), coinSel = $('brkN').value, topN = coinSel === '101-200' ? 200 : +coinSel || 100;
@@ -4996,8 +4997,12 @@ const SU_KINDS = {
 };
 SU_KINDS.cfg = {name: 'Indicator settings', stops: {a15: 'stop 1.5 ATR from the signal close'},
   groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long' : 'Short'], ['Checks agreeing (of 4: DMI, RSI/EMA, RSI vs 50, OBV)', e => e.al === 4 ? 'All 4' : '3 of 4'],
+    ['Stablecoin dominance (USDT.D + USDC.D), day before, by side', e => e.sd == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · stables ' + (e.sd > 0 ? 'rising' : e.sd < 0 ? 'falling' : 'flat')],
+    ['Alts money flow (TOTAL3ES), day before, by side', e => e.t3 == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · alts ' + (e.t3 > 0 ? 'rising' : e.t3 < 0 ? 'falling' : 'flat')],
+    ['BTC dominance, day before, by side', e => e.bd == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · BTC.D ' + (e.bd > 0 ? 'rising' : e.bd < 0 ? 'falling' : 'flat')],
+    ['Macro regime, day before, by side', e => e.mk == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · ' + MACRO_REGIMES[e.mk][0]],
     ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
-  csv: [['settings', e => e.set], ['checks_agreeing', e => e.al], ['triggers', e => (e.trig || []).join('+')]]};
+  csv: [['stables_trend', e => e.sd], ['alts_trend', e => e.t3], ['btcd_trend', e => e.bd], ['macro_regime', e => e.mk], ['settings', e => e.set], ['checks_agreeing', e => e.al], ['triggers', e => (e.trig || []).join('+')]]};
 const SU_ORD = ['Long', 'Short', 'All 4', '3 of 4', '15m', '1h', '4h', '1d', 'Long (a low was swept)', 'Short (a high was swept)', 'Long (crowd was short)', 'Short (crowd was long)', 'under 0.25', '0.25 to 0.5', '0.5 to 1', '1 to 2', '1 or more', '2 or more', 'under 0.5', 'under 40%', '40 to 60%', '60% or more',
   'under 1x', '1 to 2x', '2x or more', 'No', 'Yes', 'With the trend', 'Against the trend', '0.03 to 0.05', '0.05 to 0.1', '0.1 to 0.2', '0.2 or more', 'under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more', 'under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more', 'Long (uptrend)', 'Short (downtrend)', 'Long (broke up)', 'Short (broke down)', 'under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more', 'under 1', '2 to 4', '4 or more', '2 to 3x', '3x or more', 'under 60%', '60 to 80%', '80% or more', 'top 10', '11 to 20', '21 to 50', '51 to 70', '71 to 100', '101 to 200'];
 const suVars = k => { const o = {}; for (const sk of Object.keys(SU_KINDS[k].stops)) for (const m of SETUP_TARGETS) o[sk + '|' + m] = `${SU_KINDS[k].stops[sk][0].toUpperCase() + SU_KINDS[k].stops[sk].slice(1)}, target ${m}R`; return o; };
@@ -5068,7 +5073,8 @@ async function suRun(){
   try {
     stt.textContent = 'Loading the coin list…';
     const uni = (await getUniverse()).slice(coinSel === '101-200' ? 100 : 0, topN), tasks = [], rk0 = coinSel === '101-200' ? 100 : 0; uni.forEach((u, ix) => { for (const tf of tfs) tasks.push([u.sym, tf, rk0 + ix + 1]); });
-    const ev = []; let done = 0, i = 0;
+    const ev = []; let done = 0, i = 0, macI = () => null;
+    if (kind === 'cfg'){ stt.textContent = 'Loading the macro regime…'; if (!S.macro){ try { await loadMacro(false); } catch {} } macI = macroDayInfo(); }
     async function worker(){
       while (i < tasks.length && !SU.cancel){
         const [sym, tf, rk] = tasks[i++];
@@ -5081,7 +5087,7 @@ async function suRun(){
           else { const btc = await getKlines('BTCUSDT', tf, true, KDEEP); found = (kind === 'pull' ? pullScan : rangeScan)(cd, btc); }
           for (const b of found){
             const r = setupSim(cd, b);
-            if (kind === 'cfg'){ if (r.status !== 'skip') ev.push({sym, tf, rk, t: b.t, dir: b.dir, riskAtr: r.risk != null && b.atr > 0 ? +(r.risk / b.atr).toFixed(2) : null, m: b.m, a: b.a, rs: SETUP_TARGETS.map(q => { const z = r.sims['a15|' + q]; return z && z.done ? +z.r.toFixed(3) : null; })}); continue; }
+            if (kind === 'cfg'){ const mi = macI(b.t + TF_MS[tf]); if (r.status !== 'skip') ev.push({sym, tf, rk, t: b.t, dir: b.dir, mk: mi ? mi.key : null, sd: mi ? mi.sd : null, bd: mi ? mi.bd : null, t3: mi ? mi.t3 : null, riskAtr: r.risk != null && b.atr > 0 ? +(r.risk / b.atr).toFixed(2) : null, m: b.m, a: b.a, rs: SETUP_TARGETS.map(q => { const z = r.sims['a15|' + q]; return z && z.done ? +z.r.toFixed(3) : null; })}); continue; }
             const rec = {sym, tf, rk, t: b.t, dir: b.dir, st: r.status, riskAtr: r.risk != null && b.atr > 0 ? r.risk / b.atr : null, sims: r.status === 'done' || r.status === 'open' ? r.sims : null};
             if (kind === 'sweep') Object.assign(rec, {depth: b.depth, reclaim: b.reclaim, wick: b.wick, vol: b.vol, big: b.big, withTrend: b.withTrend});
             else if (kind === 'fund') Object.assign(rec, {fr: b.fr, ch24: b.ch24, atrPct: b.atrPct, withTrend: b.withTrend});
@@ -5105,8 +5111,8 @@ async function suRun(){
 function suCsv(){
   const raw = SU.ev[SU.kind] || []; if (!raw.length){ toast('Run the study first.'); return; }
   if (SU.kind === 'cfg'){
-    const names = e => SU_CFGV.map((v, i) => e.m & (1 << i) ? i : -1).filter(i => i >= 0), lines = ['time_utc,pair,volume_rank,tf,side,stop_atr,settings_that_fired,settings_with_all4_checks,R_target_1,R_target_2,R_target_3'];
-    for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.rk, e.tf, e.dir > 0 ? 'long' : 'short', e.riskAtr ?? '', '"' + names(e).map(i => SU_CFGV[i].name).join(' + ') + '"', '"' + SU_CFGV.map((v, i) => e.a & (1 << i) ? v.name : '').filter(Boolean).join(' + ') + '"'].concat(e.rs.map(r => r ?? '')).join(','));
+    const names = e => SU_CFGV.map((v, i) => e.m & (1 << i) ? i : -1).filter(i => i >= 0), lines = ['time_utc,pair,volume_rank,tf,side,stop_atr,macro_regime,stables_trend,alts_trend,btcd_trend,settings_that_fired,settings_with_all4_checks,R_target_1,R_target_2,R_target_3'];
+    for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.rk, e.tf, e.dir > 0 ? 'long' : 'short', e.riskAtr ?? '', e.mk ?? '', e.sd ?? '', e.t3 ?? '', e.bd ?? '', '"' + names(e).map(i => SU_CFGV[i].name).join(' + ') + '"', '"' + SU_CFGV.map((v, i) => e.a & (1 << i) ? v.name : '').filter(Boolean).join(' + ') + '"'].concat(e.rs.map(r => r ?? '')).join(','));
     downloadText(lines.join('\n'), `setup-cfg-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv'); return;
   }
   const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), keys = Object.keys(VARS), head = ['time_utc', 'pair', 'volume_rank', 'tf', 'side', 'status', 'stop_atr'].concat(K.csv.map(c => c[0]));
