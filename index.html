@@ -905,7 +905,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <summary>Setup study</summary>
       <div class="mu" style="font-size:12px;margin:6px 0">Tests a trading idea on up to 1000 candles of history per coin, with the same rules every time, so ideas can be compared fairly. The trade is taken at the open of the candle after the signal; every stop is tried with targets of 1R, 2R and 3R; a trade that reaches neither within 48 candles is closed at market; the stop wins when a candle touches both; no fees. Judge a result by the cluster-adjusted average (signals at the same moment count once), and by whether both halves of the period agree. <b>Liquidity sweep</b>: price trades beyond the highest high / lowest low of the last 20 candles and closes back inside; the trade is against the sweep. <b>Funding extreme</b>: at a funding settlement the rate is far from normal; the trade is against the crowd (a very positive rate = short, a very negative rate = long). <b>Trend pullback</b>: EMA21 above EMA50 above EMA200 (reverse for shorts), the candle dips to the EMA21 and closes back on the trend side; the trade goes with the trend. <b>Tight-range breakout</b>: the last 20 candles' range was among the narrowest 20% of the last 100, and the candle closes beyond that range; the trade goes with the break. Both record the coin's strength against BTC over the last 30 candles.</div>
       <div class="row">
-        <label>Setup <select id="suKind"><option value="sweep">Liquidity sweep (20 candles)</option><option value="fund">Funding extreme (against the crowd)</option><option value="pull">Trend pullback to the EMA21 (with the trend)</option><option value="range">Breakout from a tight range (with the break)</option><option value="cfg">Indicator settings (screener setups, compare settings)</option></select></label>
+        <label>Setup <select id="suKind"><option value="sweep">Liquidity sweep (20 candles)</option><option value="fund">Funding extreme (against the crowd)</option><option value="pull">Trend pullback to the EMA21 (with the trend)</option><option value="range">Breakout from a tight range (with the break)</option><option value="classic">Classic signals (EMA crosses, EMA200 reclaim, Donchian 55)</option><option value="cfg">Indicator settings (screener setups, compare settings)</option></select></label>
         <label><input type="checkbox" class="suTf" value="15m"> 15m</label>
         <label><input type="checkbox" class="suTf" value="1h" checked> 1h</label>
         <label><input type="checkbox" class="suTf" value="4h" checked> 4h</label>
@@ -941,7 +941,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li>Every block below can be collapsed by clicking its title (remembered in this browser). Clustered signals count as one market bet: this journal usually holds far fewer independent moments than signals, so judge filters only after several weeks and at least 30 moments.</li>
       <li><b>Where is the edge?</b> splits the results by grade, side, timeframe, regime, funding and so on. <b>Loss review</b> shows what stopped-out signals have in common and has <b>What if I had skipped…</b>: tick filters (grade, regime direction, stretched, funding, market cap under $1B or over $10B, did not pass my alerts, outside the best 5 per moment) and see the same signals without them. Market cap is recorded from 13 October 2026 on; nothing is changed in your alerts.</li>
       <li><b>Four tabs.</b> <b>Scoreboard</b> (start here): every tested strategy in one table, same footing, with a verdict. <b>Live log</b>: the signals this browser logged. <b>Study lab</b>: the detailed history studies. <b>Runner results</b>: how your server's alerts really did. The tab you were on is remembered.</li>
-      <li><b>Scoreboard</b> shows the per-moment average R (signals on the same candle and side count once), computed per timeframe and then averaged with equal weight, so a short 1H history cannot dominate. Compare it with <b>Chance</b>, which is what random entries earn with the same stop, target, side, timeframe and period (the Random entries rows, built by Run all tests; a * means no baseline yet and the fixed −0.04R is used), and with the noise ± column; the verdict is Promising only if it is well above chance and both halves of the period agree. Rows flagged ⚠ were run with less than a year of history. <b>Run all tests</b> reloads one year of candles per timeframe (first run for 100 coins can take several minutes; later runs reuse what is stored) and runs every study in turn.</li>
+      <li><b>Scoreboard</b> shows the per-moment average R (signals on the same candle and side count once), computed per timeframe and then averaged with equal weight, so a short 1H history cannot dominate. Compare it with <b>Chance</b>, which is what random entries earn with the same stop, target, side, timeframe and period (the Random entries rows, built by Run all tests; a * means no baseline yet and the fixed −0.04R is used), and with the noise ± column; the verdict is Promising only if it is well above chance and both halves of the period agree. Rows flagged ⚠ were run with less than a year of history. <b>Run all tests</b> reloads one year of candles per timeframe (first run for 100 coins can take several minutes; later runs reuse what is stored) and runs every study in turn, including <b>Classic signals</b> (EMA50 x EMA200, EMA20 x EMA50, close back over the EMA200, Donchian 55 breakout) and the random-entry baseline. For sweeps, pullbacks and ranges, whose stop is the candle's far end, the baseline uses a random-entry stop of about the same size in ATR (shown in the trade rule).</li>
       <li>The <b>Breaker candle study</b> and the <b>Setup study</b> replay rules on one year of history per timeframe for each coin (study only, no alerts). The Setup study covers liquidity sweeps, funding extremes, trend pullbacks, tight-range breakouts and <b>Indicator settings</b>, which replays the screener's setup for different RSI, DMI, ADX and OBV settings to see whether any setting beats the default. History has no open interest, market cap or grade, so those can only be judged here in the journal.</li>
       <li>The Alert results box (above the Setup study) is only for people who run the Onslaught runner server: load the files it saves (send /export to its Telegram bot) to see how its alerts really did. It is not needed to use the Journal.</li>
       <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
@@ -1992,6 +1992,29 @@ function rsVsBtc(cd, btc, i, look){
 }
 /* Trend pullback: EMA21 above EMA50 above EMA200 (mirror for shorts), the candle's low reaches the EMA21 and closes back above it on a green candle. At most one signal per 5 candles.
    Stops: the signal candle's far end, or 1.5 ATR from the close. */
+/* Classic signals: four mechanical rules everyone knows. Variants: EMA50 crossing EMA200, EMA20 crossing EMA50, the close coming back over (under) the EMA200 after 20 closes on the other side,
+   and a close beyond the highest high (lowest low) of the previous 55 candles (Donchian). One signal per variant and side every 10 candles. Stops: 2 ATR or 3 ATR from the close. */
+const CLASSIC_VARIANTS = ['EMA50 x EMA200', 'EMA20 x EMA50', 'Close back over EMA200', 'Donchian 55 breakout'];
+function classicScan(cd){
+  const n = cd.length, out = []; if (n < 260) return out;
+  const hh = cd.map(k => k[2]), ll = cd.map(k => k[3]), cc = cd.map(k => k[4]), at = atr(hh, ll, cc, 14), e20 = ema(cc, 20), e50 = ema(cc, 50), e200 = ema(cc, 200), last = {};
+  const push = (v, i, dir) => { const key = v + dir; if (i - (last[key] ?? -99) < 10) return; last[key] = i; const a = at[i], C = cc[i]; if (!(a > 0)) return;
+    out.push({i, t: cd[i][0], dir, variant: v, stops: {a20: dir > 0 ? C - 2 * a : C + 2 * a, a30: dir > 0 ? C - 3 * a : C + 3 * a}, atr: a}); };
+  for (let i = 210; i < n; i++){
+    if (!(e50[i] > 0 && e200[i] > 0 && e20[i] > 0 && e50[i - 1] > 0)) continue;
+    if (e50[i - 1] <= e200[i - 1] && e50[i] > e200[i]) push(CLASSIC_VARIANTS[0], i, 1);
+    if (e50[i - 1] >= e200[i - 1] && e50[i] < e200[i]) push(CLASSIC_VARIANTS[0], i, -1);
+    if (e20[i - 1] <= e50[i - 1] && e20[i] > e50[i]) push(CLASSIC_VARIANTS[1], i, 1);
+    if (e20[i - 1] >= e50[i - 1] && e20[i] < e50[i]) push(CLASSIC_VARIANTS[1], i, -1);
+    let below = true, above = true; for (let j = i - 20; j < i; j++){ if (cc[j] >= e200[j]) below = false; if (cc[j] <= e200[j]) above = false; }
+    if (below && cc[i] > e200[i]) push(CLASSIC_VARIANTS[2], i, 1);
+    if (above && cc[i] < e200[i]) push(CLASSIC_VARIANTS[2], i, -1);
+    let hi = -Infinity, lo = Infinity; for (let j = i - 55; j < i; j++){ if (hh[j] > hi) hi = hh[j]; if (ll[j] < lo) lo = ll[j]; }
+    if (cc[i] > hi) push(CLASSIC_VARIANTS[3], i, 1);
+    if (cc[i] < lo) push(CLASSIC_VARIANTS[3], i, -1);
+  }
+  return out;
+}
 function pullScan(cd, btc, o){
   o = o || {};
   const n = cd.length, out = [];
@@ -5094,6 +5117,10 @@ const SU_KINDS = {
     csv: [['rs30_pp', e => e.rs30], ['range_percentile', e => e.pct], ['close_beyond_atr', e => e.close], ['body_share', e => e.body], ['volume_x', e => e.vol], ['with_trend', e => e.withTrend == null ? '' : e.withTrend ? 1 : 0]]}
 };
 const SU_CFG_STOPS = ['a10', 'a15', 'a20', 'a30', 'a40', 'sw'];
+SU_KINDS.classic = {name: 'Classic signals', stops: {a20: 'stop 2 ATR from the close', a30: 'stop 3 ATR from the close'},
+  groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long' : 'Short'], ['Rule', e => e.variant], ['Rule and timeframe', e => e.variant + ' ' + e.tf.toUpperCase()],
+    ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
+  csv: [['rule', e => e.variant]]};
 SU_KINDS.cfg = {name: 'Indicator settings', stops: {a10: 'stop 1 ATR from the signal close', a15: 'stop 1.5 ATR from the signal close', a20: 'stop 2 ATR from the signal close', a30: 'stop 3 ATR from the signal close', a40: 'stop 4 ATR from the signal close', sw: 'stop beyond the 10-candle swing (0.25 ATR past it)'},
   groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long' : 'Short'], ['Checks agreeing (of 4: DMI, RSI/EMA, RSI vs 50, OBV)', e => e.al === 4 ? 'All 4' : '3 of 4'],
     ['Stablecoin dominance (USDT.D + USDC.D), day before, by side', e => e.sd == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · stables ' + (e.sd > 0 ? 'rising' : e.sd < 0 ? 'falling' : 'flat')],
@@ -5217,6 +5244,7 @@ async function suRun(){
           if (kind === 'cfg') found = cfgScan(cd, SU_CFGV);
           else if (kind === 'sweep') found = sweepScan(cd);
           else if (kind === 'fund') found = fundScan(cd, await suRates(sym), {thr});
+          else if (kind === 'classic') found = classicScan(cd);
           else { const btc = await getKlinesYear('BTCUSDT', tf); found = (kind === 'pull' ? pullScan : rangeScan)(cd, btc); }
           for (const b0 of found){
             const b = flip ? suFlip(b0, cd) : b0, r = setupSim(cd, b);
@@ -5225,6 +5253,7 @@ async function suRun(){
             if (kind === 'sweep') Object.assign(rec, {depth: b.depth, reclaim: b.reclaim, wick: b.wick, vol: b.vol, big: b.big, withTrend: b.withTrend});
             else if (kind === 'fund') Object.assign(rec, {fr: b.fr, ch24: b.ch24, atrPct: b.atrPct, withTrend: b.withTrend});
             else if (kind === 'pull') Object.assign(rec, {rs30: b.rs30, depth: b.depth, reach50: b.reach50, slope: b.slope, vol: b.vol});
+            else if (kind === 'classic') rec.variant = b.variant;
             else Object.assign(rec, {rs30: b.rs30, pct: b.pct, close: b.close, body: b.body, vol: b.vol, withTrend: b.withTrend});
             ev.push(rec);
           }
@@ -5320,7 +5349,7 @@ function sbPer(trades){                                    // per timeframe: mom
 }
 /* Random-entry baseline: what entering at random candles (both sides, every few candles on a shared grid) earns with the same stop and target.
    RB.m[stop|target][tf][dir] = [[t, average R of that moment across coins], ...]. */
-const RB = {m: null, meta: null}, RB_KEYS = ['a10', 'a15', 'a20', 'a30', 'a40', 'sw', 'ext'], RB_GRID = {'1h': 6, '4h': 3, '1d': 2};
+const RB = {m: null, meta: null}, RB_KEYS = ['a05', 'a10', 'a15', 'a20', 'a30', 'a40', 'sw', 'ext'], RB_GRID = {'1h': 6, '4h': 3, '1d': 2};
 function sbBaseStat(key, tf, dir, t0, t1, mid){
   const L = RB.m && RB.m[key] && RB.m[key][tf] && RB.m[key][tf][dir]; if (!L) return null;
   const v = L.filter(x => x[0] >= t0 && x[0] <= t1); if (v.length < 30) return null;
@@ -5350,9 +5379,13 @@ function sbRowsData(){
   const cfg = SU.ev.cfg || [], flip = SU.meta.cfg && SU.meta.cfg.flip;
   if (cfg.length){ const base = cfg.filter(e => (e.m & 1) && e.rs && e.rs[ri] != null).map(e => ({tf: e.tf, t: e.t, dir: e.dir, r: e.rs[ri]}));
     for (const [sd, d] of [['Long', 1], ['Short', -1]]) add('Triggered setups' + (flip ? ' (opposite-side run)' : ''), sd, 'History', `${stopTxt} stop, ${tgt}R`, base.filter(t => t.dir === d), flip ? null : stop); }
-  for (const kind of ['sweep', 'fund', 'pull', 'range']){ const ev = SU.ev[kind] || []; if (!ev.length) continue; const key = Object.keys(SU_KINDS[kind].stops)[0] + '|' + tgt;
-    const tr = ev.filter(e => e.sims && e.sims[key] && e.sims[key].done).map(e => ({tf: e.tf, t: e.t, dir: e.dir, r: e.sims[key].r}));
-    for (const [sd, d] of [['Long', 1], ['Short', -1]]) add(SU_KINDS[kind].name, sd, 'History', `${SU_KINDS[kind].stops[Object.keys(SU_KINDS[kind].stops)[0]]}, ${tgt}R`, tr.filter(t => t.dir === d), Object.keys(SU_KINDS[kind].stops)[0]); }
+  const nearAtr = ev => { const v = ev.map(e => e.riskAtr).filter(Number.isFinite).sort((a, b) => a - b); if (!v.length) return null; const med = v[v.length >> 1]; return [['a05', .5], ['a10', 1], ['a15', 1.5], ['a20', 2], ['a30', 3], ['a40', 4]].reduce((b, x) => Math.abs(x[1] - med) < Math.abs(b[1] - med) ? x : b); };
+  for (const kind of ['sweep', 'fund', 'pull', 'range', 'classic']){ const ev = SU.ev[kind] || []; if (!ev.length) continue; const sk0 = Object.keys(SU_KINDS[kind].stops)[0], key = sk0 + '|' + tgt, ne = /^a\d+$/.test(sk0) ? [sk0] : nearAtr(ev), bkey = ne ? ne[0] : null;
+    const ruleTxt = SU_KINDS[kind].stops[sk0] + (/^a\d+$/.test(sk0) || !ne ? '' : ` (chance: random entries, ${ne[1]} ATR stop)`);
+    const groups = kind === 'classic' ? CLASSIC_VARIANTS : [null];
+    for (const vr of groups){ const ev2 = vr ? ev.filter(e => e.variant === vr) : ev; if (!ev2.length) continue;
+      const tr = ev2.filter(e => e.sims && e.sims[key] && e.sims[key].done).map(e => ({tf: e.tf, t: e.t, dir: e.dir, r: e.sims[key].r}));
+      for (const [sd, d] of [['Long', 1], ['Short', -1]]) add(vr ? 'Classic: ' + vr : SU_KINDS[kind].name, sd, 'History', `${ruleTxt}, ${tgt}R`, tr.filter(t => t.dir === d), bkey); } }
   if (RB.m) for (const [sd, d] of [['Long', 1], ['Short', -1]]){ const L = RB.m[stop + '|' + tgt], tr = []; if (L) for (const tf of Object.keys(L)) for (const x of (L[tf][d] || [])) tr.push({tf, t: x[0], dir: d, r: x[1]}); if (tr.length) add('Random entries (baseline)', sd, 'Baseline', `${stopTxt} stop, ${tgt}R`, tr); }
   if (BRK.ev.length){ const tr = BRK.ev.filter(brkFrozen).filter(e => e.st === 'filled' && e.sims && e.sims['plan|0'] && e.sims['plan|0'].done).map(e => ({tf: e.tf, t: e.t, dir: 1, r: e.sims['plan|0'].r})); add('Breaker candle (frozen rule)', 'Long', 'History', 'limit at 50%, thirds at 1.618 / 2 / 2.272', tr); }
   const je = (J.entries || []).filter(e => e.out && e.out.res && Number.isFinite(e.out.rr));
@@ -5372,7 +5405,7 @@ function sbRender(){
     h += `<tr${hd ? '' : ' style="opacity:.6"'}><td class="l">${esc(r.name)}</td><td class="l">${r.side}</td><td class="l">${r.src}</td><td class="l mu">${esc(r.rule)}</td><td>${n}</td><td class="${hd ? cls(hd.m) : ''}">${hd ? f2(hd.m) : '–'}</td><td class="mu" title="${hd && !hd.real ? 'No random-entry baseline for this row yet: the fixed -0.04R is used. Press Run all tests.' : 'Random entries, same rule'}">${hd ? f2(hd.ch) + (hd.real ? '' : '*') : '–'}</td><td class="${hd && r.src !== 'Baseline' ? cls(hd.ex) : ''}">${hd && r.src !== 'Baseline' ? f2(hd.ex) : '–'}</td><td>${hd ? '±' + (2 * hd.se).toFixed(2) : '–'}</td>${tfv(r.per, '1h')}${tfv(r.per, '4h')}${tfv(r.per, '1d')}<td class="${hd ? cls(hd.h1) : ''}">${hd ? f2(hd.h1) : '–'}</td><td class="${hd ? cls(hd.h2) : ''}">${hd ? f2(hd.h2) : '–'}</td><td class="l ${vc}">${vt}</td></tr>`;
   }
   h += '</tbody></table></div>';
-  const cov = []; for (const [k, nm] of [['cfg', 'Triggered setups'], ['sweep', 'Sweeps'], ['fund', 'Funding'], ['pull', 'Pullbacks'], ['range', 'Ranges']]){ const ev = SU.ev[k] || []; if (!ev.length) continue; const parts = [];
+  const cov = []; for (const [k, nm] of [['cfg', 'Triggered setups'], ['sweep', 'Sweeps'], ['fund', 'Funding'], ['pull', 'Pullbacks'], ['range', 'Ranges'], ['classic', 'Classic signals']]){ const ev = SU.ev[k] || []; if (!ev.length) continue; const parts = [];
     for (const tf of ['1h', '4h', '1d']){ const ts = ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (amax(ts) - amin(ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`${nm}: ${parts.join(', ')}`); }
   if (BRK.ev.length){ const parts = []; for (const tf of ['1h', '4h', '1d']){ const ts = BRK.ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (amax(ts) - amin(ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`Breaker: ${parts.join(', ')}`); }
   h += `<div class="mu" style="font-size:12px;margin:8px 0"><b>How to read:</b> "Chance" is what random entries earn with the same stop, target, side, timeframe and period (the Random entries rows; * = no baseline yet, the fixed -0.04R is used). "vs chance" is the average minus that. "Noise ±" is about two standard errors: a result only counts if it is bigger than that. <b>Promising</b> = well above chance (2.5 noise units) and above it in both halves of the period; <b>Unproven</b> = above chance but not convincingly or the halves disagree; <b>No edge</b> = within the noise; <b>Worse than chance</b> = clearly negative; <b>Too few</b> = under 30 moments. Timeframe cells show that timeframe alone (hover for moments and days; dimmed under 10). History = replays on old candles; Live journal = signals this browser logged (1.5 ATR, 1.5R); Runner = trades your server followed (load them in Runner results). Different sources use different trade rules, so compare within a source first. With this many rows, one or two will look good by luck alone: trust a Promising row only if it also holds in a different coin set, a later period, or your live results.</div>`;
@@ -5393,7 +5426,7 @@ async function rbRun(tfs){
         for (let q = 140; q < cd.length - 2; q++){
           if (Math.round(cd[q][0] / ms) % g !== 0 || !(at[q] > 0)) continue;
           for (const dir of [1, -1]){
-            const st = {a10: 1, a15: 1.5, a20: 2, a30: 3, a40: 4}, stops = {};
+            const st = {a05: 0.5, a10: 1, a15: 1.5, a20: 2, a30: 3, a40: 4}, stops = {};
             for (const k of Object.keys(st)) stops[k] = dir > 0 ? c[q] - st[k] * at[q] : c[q] + st[k] * at[q];
             let sw = dir > 0 ? Infinity : -Infinity; for (let z = Math.max(0, q - 9); z <= q; z++) sw = dir > 0 ? Math.min(sw, l[z]) : Math.max(sw, h[z]);
             stops.sw = dir > 0 ? sw - 0.25 * at[q] : sw + 0.25 * at[q]; stops.ext = dir > 0 ? l[q] : h[q];
@@ -5419,7 +5452,7 @@ $('sbRun').onclick = async () => {
   try {
     for (const c of document.querySelectorAll('.suTf')) c.checked = tfs.includes(c.value); for (const c of document.querySelectorAll('.brkTf')) c.checked = tfs.includes(c.value);
     $('suN').value = $('sbN').value; $('brkN').value = $('sbN').value;
-    const steps = [['cfg', 'Triggered setups'], ['sweep', 'Liquidity sweeps'], ['fund', 'Funding extremes'], ['pull', 'Trend pullbacks'], ['range', 'Range breakouts'], ['brk', 'Breaker candles'], ['rand', 'Random-entry baseline']];
+    const steps = [['cfg', 'Triggered setups'], ['sweep', 'Liquidity sweeps'], ['fund', 'Funding extremes'], ['pull', 'Trend pullbacks'], ['range', 'Range breakouts'], ['classic', 'Classic signals'], ['brk', 'Breaker candles'], ['rand', 'Random-entry baseline']];
     for (const [i, [kind, nm]] of steps.entries()){
       if (SU.cancel || BRK.cancel) break;
       st.textContent = `Step ${i + 1} of ${steps.length}: ${nm}…`;
@@ -5780,7 +5813,7 @@ journal: ['Como funciona o journal', `<ul>
 <li>Todos os blocos abaixo recolhem-se ao clicar no título (fica guardado neste browser). Sinais agrupados contam como uma só aposta de mercado: este journal tem normalmente muito menos momentos independentes do que sinais, por isso só julga filtros após várias semanas e pelo menos 30 momentos.</li>
 <li><b>Where is the edge?</b> divide os resultados por grade, lado, timeframe, regime, funding, etc. <b>Loss review</b> mostra o que os sinais parados têm em comum e tem <b>What if I had skipped…</b>: marca filtros (grade, direção do regime, esticado, funding, market cap abaixo de $1B ou acima de $10B, não passou nos meus alertas, fora dos melhores 5 por momento) e vê os mesmos sinais sem eles. O market cap é registado a partir de 13 de outubro de 2026; nada muda nos teus alertas.</li>
 <li><b>Quatro separadores.</b> <b>Scoreboard</b> (começa aqui): todas as estratégias testadas numa tabela, com o mesmo critério e um veredicto. <b>Live log</b>: os sinais que este browser registou. <b>Study lab</b>: os estudos detalhados com histórico. <b>Runner results</b>: como os alertas do teu servidor correram de facto. O separador em que estavas fica guardado.</li>
-<li>O <b>Scoreboard</b> mostra o R médio por momento (sinais na mesma vela e lado contam uma vez), calculado por timeframe e depois com média de pesos iguais, para um histórico curto de 1H não dominar. Compara com a coluna <b>Chance</b>, que é o que entradas aleatórias ganham com o mesmo stop, alvo, lado, timeframe e período (as linhas Random entries, criadas pelo Run all tests; um * significa que ainda não há baseline e usa-se o −0,04R fixo), e com a coluna de ruído ±; o veredicto só é Promising se estiver bem acima do acaso e as duas metades do período concordarem. Linhas com ⚠ foram corridas com menos de um ano de histórico. <b>Run all tests</b> carrega um ano de velas por timeframe (a primeira vez com 100 moedas pode demorar vários minutos; as seguintes reutilizam o que está guardado) e corre todos os estudos em sequência.</li>
+<li>O <b>Scoreboard</b> mostra o R médio por momento (sinais na mesma vela e lado contam uma vez), calculado por timeframe e depois com média de pesos iguais, para um histórico curto de 1H não dominar. Compara com a coluna <b>Chance</b>, que é o que entradas aleatórias ganham com o mesmo stop, alvo, lado, timeframe e período (as linhas Random entries, criadas pelo Run all tests; um * significa que ainda não há baseline e usa-se o −0,04R fixo), e com a coluna de ruído ±; o veredicto só é Promising se estiver bem acima do acaso e as duas metades do período concordarem. Linhas com ⚠ foram corridas com menos de um ano de histórico. <b>Run all tests</b> carrega um ano de velas por timeframe (a primeira vez com 100 moedas pode demorar vários minutos; as seguintes reutilizam o que está guardado) e corre todos os estudos em sequência, incluindo os <b>Classic signals</b> (EMA50 x EMA200, EMA20 x EMA50, fecho de volta acima da EMA200, rutura Donchian 55) e o baseline de entradas aleatórias. Nos sweeps, pullbacks e ranges, cujo stop é a ponta da vela, o baseline usa um stop aleatório com tamanho parecido em ATR (indicado na regra).</li>
 <li>O <b>Breaker candle study</b> e o <b>Setup study</b> repetem regras com um ano de histórico por timeframe e por moeda (só estudo, sem alertas). O Setup study cobre varrimentos de liquidez, funding extremo, pullbacks de tendência, rompimentos de range apertado e <b>Indicator settings</b>, que repete o setup do screener com diferentes definições de RSI, DMI, ADX e OBV para ver se alguma bate a predefinida. O histórico não tem open interest, market cap nem grade, por isso estes só se avaliam aqui no journal.</li>
 <li>A caixa Alert results (acima do Setup study) serve apenas para quem usa o servidor runner da Onslaught: carrega os ficheiros que ele guarda (envia /export ao bot de Telegram) para ver como os alertas correram na realidade. Não é preciso para usar o Journal.</li>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
