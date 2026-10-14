@@ -825,7 +825,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li>Every block below can be collapsed by clicking its title (remembered in this browser). Clustered signals count as one market bet: this journal usually holds far fewer independent moments than signals, so judge filters only after several weeks and at least 30 moments.</li>
       <li><b>Where is the edge?</b> splits the results by grade, side, timeframe, regime, funding and so on. <b>Loss review</b> shows what stopped-out signals have in common and has <b>What if I had skipped…</b>: tick filters (grade, regime direction, stretched, funding, market cap under $1B or over $10B, did not pass my alerts, outside the best 5 per moment) and see the same signals without them. Market cap is recorded from 13 October 2026 on; nothing is changed in your alerts.</li>
       <li>The <b>Breaker candle study</b> and the <b>Setup study</b> replay rules on up to 1000 candles of history per coin (study only, no alerts). The Setup study covers liquidity sweeps, funding extremes, trend pullbacks, tight-range breakouts and <b>Indicator settings</b>, which replays the screener's setup for different RSI, DMI, ADX and OBV settings to see whether any setting beats the default. History has no open interest, market cap or grade, so those can only be judged here in the journal.</li>
-      <li>The Advanced: Onslaught server check box at the bottom is only for assessing the Onslaught runner server (load its trades.csv); it is not needed to use the Journal.</li>
+      <li>The Alert results box (above the Setup study) is only for people who run the Onslaught runner server: load the files it saves (send /export to its Telegram bot) to see how its alerts really did. It is not needed to use the Journal.</li>
       <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
     </ul></details></div>
     <div class="mu" id="jShowNote" style="font-size:12px;margin:-4px 2px 8px"></div>
@@ -888,13 +888,14 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </details>
     <details class="panel jfold" data-fold="alerts">
       <summary>Alert results (from the runner)</summary>
-      <div class="mu" style="font-size:12px;margin:6px 0">Analyse the trades your runner followed after each alert (setups, divergences, breakers). Send <code>/export</code> to the Telegram bot, save the files it sends (<code>trades.csv</code> and <code>breaker-trades.csv</code>), and load them here. Everything is calculated in your browser; nothing is uploaded. Trades are the simulated plan from each alert: thirds at each target, stop to entry after TP1, 48 candles at most, before fees.</div>
+      <div class="mu" style="font-size:12px;margin:6px 0">Analyse the trades your runner followed after each alert (setups, divergences, breakers). Send <code>/export</code> to the Telegram bot, save the files it sends (<code>trades.csv</code> and <code>breaker-trades.csv</code>), and load them here. Everything is calculated in your browser and kept in it until you press Clear; nothing is uploaded. Only useful if you run the Onslaught runner on a server: with the page's own Telegram alerts only, your results are in the Journal above. Trades are the simulated plan from each alert: thirds at each target, stop to entry after TP1, 48 candles at most, before fees.</div>
       <div class="row">
         <label>Files <input type="file" id="alFiles" accept=".csv" multiple></label>
         <label>Start $ <input type="number" id="alStart" value="10000" min="100" step="100" style="width:90px"></label>
         <label>Risk per trade % <input type="number" id="alRisk" value="1" min="0.1" max="10" step="0.1" style="width:60px"></label>
         <label>Type <select id="alType"><option value="all">All together</option><option value="setup">Setups</option><option value="divergence">Divergences</option><option value="breaker">Breakers</option></select></label>
       </div>
+      <div class="row"><button id="alClear">Clear</button><span class="mu" id="alStatus" style="font-size:12px"></span></div>
       <div id="alOut"></div>
     </details>
     <details class="panel jfold" data-fold="setup">
@@ -912,12 +913,6 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label title="Trade every signal the other way: a long signal becomes a short, a short becomes a long, same stop distance and targets. Tells you whether a losing side would have won if reversed. Run it separately and compare with the normal run."><input type="checkbox" id="suFlip"> Opposite side</label><label>From <input id="suSince" type="date"></label><button id="suRun" class="primary">Run study</button><button id="suCsv">Export CSV</button><span class="mu" id="suStatus" style="font-size:12px"></span>
       </div>
       <div id="suOut"></div>
-    </details>
-    <details class="panel" style="margin-top:12px" id="jRunPanel">
-      <summary style="cursor:pointer">Advanced: Onslaught server check <span class="mu">Only for assessing the Onslaught web-based runner server: how successful its alerted signals were. Not needed for normal use.</span></summary>
-      <div class="mu" style="font-size:12px;margin-top:8px">Load the <code>trades.csv</code> from the runner folder to see what the runner really alerted and followed with its own plan (three targets, stop to entry after TP1). The numbers are kept in this browser; Clear removes them.</div>
-      <div class="row" style="margin-top:8px"><label class="filebtn">Load trades.csv<input id="jRunFile" type="file" accept=".csv,text/csv" hidden></label><button id="jRunClear">Clear</button><span class="mu" id="jRunStatus" style="font-size:12px"></span></div>
-      <div id="jRunOut"></div>
     </details>
   </div><!-- /viewJournal -->
 
@@ -2916,7 +2911,7 @@ function renderJournal(){
     + card('Win rate', st.win == null ? '—' : st.win.toFixed(0) + '%', 'target before stop', st.win >= 50 ? 'bull' : '')
     + card('Expectancy', st.avgR == null ? '—' : fR(st.avgR), 'average R per signal', st.avgR > 0 ? 'bull' : st.avgR < 0 ? 'bear' : '')
     + card('Avg +12 candles', st.r12 == null ? '—' : fmtPct(st.r12), 'return in your favour', st.r12 > 0 ? 'bull' : st.r12 < 0 ? 'bear' : '');
-  jEquity(es); renderLoss(es); renderRun();
+  jEquity(es); renderLoss(es); 
   const groups = edgeGroups(es), maxR = Math.max(0.5, ...groups.map(g => Math.abs(g.avgR || 0)));
   let lastG = '';
   $('jEdge').innerHTML = groups.length ? groups.map(g => { const first = g.group !== lastG; lastG = g.group; const w = 50 * Math.abs(g.avgR || 0) / maxR;
@@ -2940,29 +2935,6 @@ function renderJournal(){
       <td><button class="jdel" data-jdel="${e.id}" title="Delete this entry" aria-label="Delete entry">✕</button></td></tr>`; }).join('')
     : '<tr><td class="empty" colspan="16">The log is empty.</td></tr>';
   $('jPager').innerHTML = pages > 1 ? `<span class="pinfo">${list.length} signals</span>` + Array.from({length: pages}, (_, i) => `<button data-jp="${i}" class="${i === J.page ? 'on' : ''}">${i * size + 1}–${Math.min((i + 1) * size, list.length)}</button>`).join('') : '';
-}
-/* Runner results: the runner's own trades.csv (what it alerted and followed with the real plan), loaded by hand because the runner lives on another machine. */
-const RUN = {rows: []};
-async function runLoad(){ const v = await Cache.get('runnerTrades'); RUN.rows = Array.isArray(v) ? v : []; renderRun(); }
-function runParse(text){
-  const L = text.split(/\r?\n/).filter(Boolean), h = (L.shift() || '').split(','), ix = n => h.indexOf(n);
-  if (ix('r_multiple') < 0 || ix('pair') < 0) throw new Error("That does not look like the runner's trades.csv.");
-  return L.map(l => { const c = l.split(','); return {open: c[ix('opened')], close: c[ix('closed')], sym: c[ix('pair')], tf: c[ix('tf')], side: c[ix('side')], grade: c[ix('grade')] || '?', res: c[ix('result')], hit: +c[ix('targets_hit')], r: +c[ix('r_multiple')], bars: +c[ix('candles')]}; }).filter(r => Number.isFinite(r.r) && r.open);
-}
-function renderRun(){
-  const box = $('jRunOut'); if (!box) return; const d = RUN.rows;
-  if (!d.length){ box.innerHTML = '<div class="mu" style="padding:6px 0">Nothing loaded yet. On the server the file is ~/onslaught-runner/trades.csv; copy it to your PC with scp and load it here.</div>'; return; }
-  const sum = l => l.reduce((t, r) => t + r.r, 0), st = l => ({n: l.length, win: l.length ? 100 * l.filter(r => r.r > 0).length / l.length : null, avg: l.length ? sum(l) / l.length : null, tot: sum(l)});
-  const mom = new Set(d.map(r => r.tf + '|' + r.open + '|' + r.side)).size, byClose = d.slice().sort((a, b) => a.close < b.close ? -1 : 1);
-  let run = 0, pk = 0, dd = 0; for (const r of byClose){ run += r.r; pk = Math.max(pk, run); dd = Math.max(dd, pk - run); }
-  const a = st(d), grp = [['All alerts', d]];
-  for (const g of ['A', 'B', 'C']){ const l = d.filter(r => r.grade === g); if (l.length) grp.push(['Grade ' + g, l]); }
-  for (const sd of ['long', 'short']){ const l = d.filter(r => r.side === sd); if (l.length) grp.push([sd === 'long' ? 'Long' : 'Short', l]); }
-  for (const tf of TFS){ const l = d.filter(r => r.tf === tf); if (l.length) grp.push(['Timeframe ' + tf.toUpperCase(), l]); }
-  for (const [k, t] of [['stop', 'Stopped'], ['breakeven', 'Back to entry after TP1'], ['target', 'All 3 targets'], ['time', 'Closed on time']]){ const l = d.filter(r => r.res === k); if (l.length) grp.push(['Ended: ' + t, l]); }
-  const f = v => v == null ? '—' : fR(v);
-  box.innerHTML = `<div class="lossnote"><b>${a.n}</b> completed alerts from <b>${mom}</b> separate moments · win rate ${a.win.toFixed(0)}% (any profit) · average ${f(a.avg)} · total <b class="${cls(a.tot)}">${fR(a.tot)}</b> · deepest drawdown <b class="dn">−${dd.toFixed(1)}R</b>${a.n < 30 ? '<br><span class="dn">Fewer than 30 completed alerts: this can easily be luck.</span>' : ''}</div>
-    <div class="tablewrap" style="border:0;margin-top:8px"><table class="jedge"><thead><tr><th class="l">Group</th><th>Alerts</th><th>Win rate</th><th>Avg R</th><th>Total R</th></tr></thead><tbody>${grp.map(([n, l]) => { const s2 = st(l); return `<tr class="${l.length < 10 ? 'low' : ''}"><td class="l">${n}</td><td>${s2.n}</td><td>${s2.win.toFixed(0)}%</td><td class="${cls(s2.avg)}">${f(s2.avg)}</td><td class="${cls(s2.tot)}">${fR(s2.tot)}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 function journalCSV(){
   const head = ['signal_time','pair','tf','side','kind','score','triggers','regime','mtf','ext_atr','positioning','funding_crowded','entry','atr','r4_pct','r12_pct','r24_pct','mfe_pct','mae_pct','result','r_multiple','bars_to_result','grade','grade_pts','rs7_vs_btc_pp','wave_size','peak_r_before_stop','target_hit_after_stop','macro','alerted','plan_result','plan_r','stables_7d_pct','stables_30d_pct','btcd_7d_pct','total3es_7d_pct','market_cap'];
@@ -5021,7 +4993,7 @@ $('brkTop').onchange = () => { BRK.top = +$('brkTop').value; brkRender(); };
 $('brkSince').onchange = () => { const v = $('brkSince').value; BRK.since = v ? Date.parse(v + 'T00:00:00Z') : 0; brkRender(); };
 $('brkFwd').onclick = () => { $('brkSince').value = '2026-10-12'; BRK.view = 'frozen'; $('brkSince').onchange(); };
 $('brkRun').onclick = brkRun; $('brkCsv').onclick = brkCsv;
-loadJournal(); runLoad(); brkLoad();
+loadJournal(); brkLoad();
 /* ---------- Setup study (Journal tab): sweeps and funding extremes, same trade rules for each idea ---------- */
 const FRLIM = {win: 300000, cap: 400, log: []};
 const SU = {kind: 'sweep', ev: {}, meta: {}, running: false, cancel: false, vari: 'ext|2', since: 0, setSel: ''};
@@ -5260,10 +5232,12 @@ function alRender(){
   h += `<div class="mu" style="font-size:12px;margin:8px 0">First half of the period ${sa ? f2(sa.avg) + 'R (' + sa.n + ' trades)' : '–'}, second half ${sb ? f2(sb.avg) + 'R (' + sb.n + ' trades)' : '–'}. Rows with fewer than 10 trades are dimmed: too few to read. Open trades are not included until they close. A side that loses clearly is information, but reversing it is not automatically a winner: use the Setup study's "Opposite side" option to test that on history.</div>`;
   out.innerHTML = h;
 }
-$('alFiles').onchange = async ev => { AL.rows = []; for (const f of ev.target.files){ try { AL.rows.push(...alParse(f.name, await f.text())); } catch {} } const seen = new Set(); AL.rows = AL.rows.filter(t => { const k = t.kind + t.sym + t.tf + t.op + t.dir; if (seen.has(k)) return false; seen.add(k); return true; }); alRender(); };
+$('alFiles').onchange = async ev => { AL.rows = []; for (const f of ev.target.files){ try { AL.rows.push(...alParse(f.name, await f.text())); } catch {} } const seen = new Set(); AL.rows = AL.rows.filter(t => { const k = t.kind + t.sym + t.tf + t.op + t.dir; if (seen.has(k)) return false; seen.add(k); return true; }); try { await Cache.set('alertRows', AL.rows); } catch {} $('alStatus').textContent = AL.rows.length + ' trades loaded'; alRender(); };
 for (const id of ['alStart', 'alRisk']) $(id).onchange = alRender;
 $('alType').onchange = ev => { AL.type = ev.target.value; alRender(); };
-alRender();
+async function alLoad(){ try { const v = await Cache.get('alertRows'); AL.rows = Array.isArray(v) ? v : []; } catch { AL.rows = []; } alRender(); }
+$('alClear').onclick = async () => { AL.rows = []; try { await Cache.set('alertRows', []); } catch {} $('alStatus').textContent = ''; alRender(); };
+alLoad();
 $('suKind').onchange = () => { SU.kind = $('suKind').value; $('suThrL').hidden = SU.kind !== 'fund'; suRender(); };
 $('suTop').onchange = () => { SU.top = +$('suTop').value; suRender(); };
 $('suSince').onchange = () => { const v = $('suSince').value; SU.since = v ? Date.parse(v + 'T00:00:00Z') : 0; suRender(); };
@@ -5280,10 +5254,6 @@ $('jRestore').onchange = async e => { const f = e.target.files[0]; if (!f) retur
     for (const x of add) if (x && x.id && !ids.has(x.id)){ J.entries.push(x); n++; }
     J.entries.sort((a, b) => a.ct - b.ct); await saveJournal(); renderJournal(); toast(`Restored ${n} new journal entries.`); }
   catch { toast('That file is not a valid journal backup.'); } e.target.value = ''; };
-$('jRunFile').onchange = async e => { const f = e.target.files[0]; if (!f) return;
-  try { RUN.rows = runParse(await f.text()); await Cache.set('runnerTrades', RUN.rows); renderRun(); $('jRunStatus').textContent = `Loaded ${RUN.rows.length} completed alerts.`; }
-  catch (err) { toast(err.message); } e.target.value = ''; };
-$('jRunClear').onclick = async () => { RUN.rows = []; await Cache.set('runnerTrades', []); renderRun(); $('jRunStatus').textContent = ''; };
 $('jClear').onclick = async () => { if (!confirm('Delete all journal entries? Consider a Backup first.')) return; J.entries = []; await saveJournal(); renderJournal(); };
 $('jBody').onclick = async e => { const d = e.target.closest('[data-jdel]'); if (d){ J.entries = J.entries.filter(x => x.id !== d.dataset.jdel); await saveJournal(); renderJournal(); return; }
   const o = e.target.closest('[data-jsym]'); if (o){ if (S.rows.find(r => r.sym === o.dataset.jsym)) openDrawer(o.dataset.jsym); else toast('Scan a universe that includes this pair to open its trade plan.'); } };
@@ -5614,7 +5584,7 @@ journal: ['Como funciona o journal', `<ul>
 <li>Todos os blocos abaixo recolhem-se ao clicar no título (fica guardado neste browser). Sinais agrupados contam como uma só aposta de mercado: este journal tem normalmente muito menos momentos independentes do que sinais, por isso só julga filtros após várias semanas e pelo menos 30 momentos.</li>
 <li><b>Where is the edge?</b> divide os resultados por grade, lado, timeframe, regime, funding, etc. <b>Loss review</b> mostra o que os sinais parados têm em comum e tem <b>What if I had skipped…</b>: marca filtros (grade, direção do regime, esticado, funding, market cap abaixo de $1B ou acima de $10B, não passou nos meus alertas, fora dos melhores 5 por momento) e vê os mesmos sinais sem eles. O market cap é registado a partir de 13 de outubro de 2026; nada muda nos teus alertas.</li>
 <li>O <b>Breaker candle study</b> e o <b>Setup study</b> repetem regras em até 1000 velas de histórico por moeda (só estudo, sem alertas). O Setup study cobre varrimentos de liquidez, funding extremo, pullbacks de tendência, rompimentos de range apertado e <b>Indicator settings</b>, que repete o setup do screener com diferentes definições de RSI, DMI, ADX e OBV para ver se alguma bate a predefinida. O histórico não tem open interest, market cap nem grade, por isso estes só se avaliam aqui no journal.</li>
-<li>A caixa Advanced: Onslaught server check no fim serve apenas para avaliar o servidor runner da Onslaught (carregar o trades.csv); não é preciso para usar o Journal.</li>
+<li>A caixa Alert results (acima do Setup study) serve apenas para quem usa o servidor runner da Onslaught: carrega os ficheiros que ele guarda (envia /export ao bot de Telegram) para ver como os alertas correram na realidade. Não é preciso para usar o Journal.</li>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
 </ul>`]
 };
