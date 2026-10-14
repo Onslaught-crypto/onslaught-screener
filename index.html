@@ -941,7 +941,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li>Every block below can be collapsed by clicking its title (remembered in this browser). Clustered signals count as one market bet: this journal usually holds far fewer independent moments than signals, so judge filters only after several weeks and at least 30 moments.</li>
       <li><b>Where is the edge?</b> splits the results by grade, side, timeframe, regime, funding and so on. <b>Loss review</b> shows what stopped-out signals have in common and has <b>What if I had skipped…</b>: tick filters (grade, regime direction, stretched, funding, market cap under $1B or over $10B, did not pass my alerts, outside the best 5 per moment) and see the same signals without them. Market cap is recorded from 13 October 2026 on; nothing is changed in your alerts.</li>
       <li><b>Four tabs.</b> <b>Scoreboard</b> (start here): every tested strategy in one table, same footing, with a verdict. <b>Live log</b>: the signals this browser logged. <b>Study lab</b>: the detailed history studies. <b>Runner results</b>: how your server's alerts really did. The tab you were on is remembered.</li>
-      <li><b>Scoreboard</b> shows the per-moment average R (signals on the same candle and side count once), computed per timeframe and then averaged with equal weight, so a short 1H history cannot dominate. Compare it with chance (about −0.04R) and the noise ± column; the verdict is Promising only if it is well above chance and both halves of the period agree. Rows flagged ⚠ were run with less than a year of history. <b>Run all tests</b> reloads one year of candles per timeframe (first run for 100 coins can take several minutes; later runs reuse what is stored) and runs every study in turn.</li>
+      <li><b>Scoreboard</b> shows the per-moment average R (signals on the same candle and side count once), computed per timeframe and then averaged with equal weight, so a short 1H history cannot dominate. Compare it with <b>Chance</b>, which is what random entries earn with the same stop, target, side, timeframe and period (the Random entries rows, built by Run all tests; a * means no baseline yet and the fixed −0.04R is used), and with the noise ± column; the verdict is Promising only if it is well above chance and both halves of the period agree. Rows flagged ⚠ were run with less than a year of history. <b>Run all tests</b> reloads one year of candles per timeframe (first run for 100 coins can take several minutes; later runs reuse what is stored) and runs every study in turn.</li>
       <li>The <b>Breaker candle study</b> and the <b>Setup study</b> replay rules on one year of history per timeframe for each coin (study only, no alerts). The Setup study covers liquidity sweeps, funding extremes, trend pullbacks, tight-range breakouts and <b>Indicator settings</b>, which replays the screener's setup for different RSI, DMI, ADX and OBV settings to see whether any setting beats the default. History has no open interest, market cap or grade, so those can only be judged here in the journal.</li>
       <li>The Alert results box (above the Setup study) is only for people who run the Onslaught runner server: load the files it saves (send /export to its Telegram bot) to see how its alerts really did. It is not needed to use the Journal.</li>
       <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
@@ -5314,19 +5314,31 @@ function sbPer(trades){                                    // per timeframe: mom
     const v = [...by[tf].values()].map(o => ({t: o.t, v: sbAvg(o.a)})), n = v.length; if (!n) continue;
     const ts = v.map(x => x.t), t0 = amin(ts), t1 = amax(ts), mid = (t0 + t1) / 2, m = sbAvg(v.map(x => x.v));
     const sd = n > 1 ? Math.sqrt(v.reduce((a, x) => a + (x.v - m) ** 2, 0) / (n - 1)) : null;
-    out.push({tf, n, m, se: sd == null ? null : sd / Math.sqrt(n), h1: sbAvg(v.filter(x => x.t < mid).map(x => x.v)), h2: sbAvg(v.filter(x => x.t >= mid).map(x => x.v)), days: (t1 - t0) / 864e5});
+    out.push({tf, n, m, se: sd == null ? null : sd / Math.sqrt(n), h1: sbAvg(v.filter(x => x.t < mid).map(x => x.v)), h2: sbAvg(v.filter(x => x.t >= mid).map(x => x.v)), days: (t1 - t0) / 864e5, t0, t1, mid});
   }
   return out;
 }
-function sbHead(per){                                       // equal weight over the timeframes that have at least 10 moments
+/* Random-entry baseline: what entering at random candles (both sides, every few candles on a shared grid) earns with the same stop and target.
+   RB.m[stop|target][tf][dir] = [[t, average R of that moment across coins], ...]. */
+const RB = {m: null, meta: null}, RB_KEYS = ['a10', 'a15', 'a20', 'a30', 'a40', 'sw', 'ext'], RB_GRID = {'1h': 6, '4h': 3, '1d': 2};
+function sbBaseStat(key, tf, dir, t0, t1, mid){
+  const L = RB.m && RB.m[key] && RB.m[key][tf] && RB.m[key][tf][dir]; if (!L) return null;
+  const v = L.filter(x => x[0] >= t0 && x[0] <= t1); if (v.length < 30) return null;
+  const m = sbAvg(v.map(x => x[1])), sd = Math.sqrt(v.reduce((a, x) => a + (x[1] - m) ** 2, 0) / (v.length - 1)), a1 = v.filter(x => x[0] < mid).map(x => x[1]), a2 = v.filter(x => x[0] >= mid).map(x => x[1]);
+  return {n: v.length, m, se: sd / Math.sqrt(v.length), h1: a1.length ? sbAvg(a1) : m, h2: a2.length ? sbAvg(a2) : m};
+}
+function sbHead(per, bk){                                   // equal weight over the timeframes that have at least 10 moments; chance = the random-entry baseline for the same rule, period and side when there is one
   const use = per.filter(p => p.n >= 10 && p.se != null); if (!use.length) return null;
-  const k = use.length, m = sbAvg(use.map(p => p.m)), se = Math.sqrt(use.reduce((a, p) => a + p.se ** 2, 0)) / k;
+  const k = use.length, rows = use.map(p => { const b = bk ? sbBaseStat(bk.key, p.tf, bk.dir, p.t0, p.t1, p.mid) : null;
+    return b ? {p, ch: b.m, c1: b.h1, c2: b.h2, se: Math.sqrt(p.se ** 2 + b.se ** 2), real: 1} : {p, ch: SB_BASE, c1: SB_BASE, c2: SB_BASE, se: p.se, real: 0}; });
+  const m = sbAvg(use.map(p => p.m)), ch = sbAvg(rows.map(r => r.ch)), se = Math.sqrt(rows.reduce((a, r) => a + r.se ** 2, 0)) / k;
   const h1 = sbAvg(use.filter(p => p.h1 != null).map(p => p.h1)), h2 = sbAvg(use.filter(p => p.h2 != null).map(p => p.h2));
-  return {n: use.reduce((a, p) => a + p.n, 0), tfs: k, m, se, h1, h2, z: (m - SB_BASE) / se};
+  const x1 = rows.filter(r => r.p.h1 != null).map(r => r.p.h1 - r.c1), x2 = rows.filter(r => r.p.h2 != null).map(r => r.p.h2 - r.c2);
+  return {n: use.reduce((a, p) => a + p.n, 0), tfs: k, m, ch, ex: m - ch, se, h1, h2, x1: x1.length ? sbAvg(x1) : null, x2: x2.length ? sbAvg(x2) : null, real: rows.every(r => r.real), z: (m - ch) / se};
 }
 function sbVerdict(h){
   if (!h || h.n < 30) return ['Too few', 'mu'];
-  const both = h.h1 != null && h.h2 != null && h.h1 > SB_BASE && h.h2 > SB_BASE;
+  const both = h.x1 != null && h.x2 != null && h.x1 > 0 && h.x2 > 0;
   if (h.z >= 2.5 && both) return ['Promising', 'up'];
   if (h.z >= 2) return ['Unproven', 'warn'];
   if (h.z <= -2) return ['Worse than chance', 'dn'];
@@ -5334,13 +5346,14 @@ function sbVerdict(h){
 }
 function sbRowsData(){
   const stop = $('sbStop').value, tgt = +$('sbTgt').value, ri = SU_CFG_STOPS.indexOf(stop) * 3 + SETUP_TARGETS.indexOf(tgt), stopTxt = $('sbStop').selectedOptions[0].textContent, rows = [];
-  const add = (name, side, src, rule, tr) => rows.push({name, side, src, rule, per: sbPer(tr)});
+  const add = (name, side, src, rule, tr, bk) => rows.push({name, side, src, rule, per: sbPer(tr), bk: bk && RB.m ? {key: bk + '|' + tgt, dir: side === 'Long' ? 1 : -1} : null});
   const cfg = SU.ev.cfg || [], flip = SU.meta.cfg && SU.meta.cfg.flip;
   if (cfg.length){ const base = cfg.filter(e => (e.m & 1) && e.rs && e.rs[ri] != null).map(e => ({tf: e.tf, t: e.t, dir: e.dir, r: e.rs[ri]}));
-    for (const [sd, d] of [['Long', 1], ['Short', -1]]) add('Triggered setups' + (flip ? ' (opposite-side run)' : ''), sd, 'History', `${stopTxt} stop, ${tgt}R`, base.filter(t => t.dir === d)); }
+    for (const [sd, d] of [['Long', 1], ['Short', -1]]) add('Triggered setups' + (flip ? ' (opposite-side run)' : ''), sd, 'History', `${stopTxt} stop, ${tgt}R`, base.filter(t => t.dir === d), flip ? null : stop); }
   for (const kind of ['sweep', 'fund', 'pull', 'range']){ const ev = SU.ev[kind] || []; if (!ev.length) continue; const key = Object.keys(SU_KINDS[kind].stops)[0] + '|' + tgt;
     const tr = ev.filter(e => e.sims && e.sims[key] && e.sims[key].done).map(e => ({tf: e.tf, t: e.t, dir: e.dir, r: e.sims[key].r}));
-    for (const [sd, d] of [['Long', 1], ['Short', -1]]) add(SU_KINDS[kind].name, sd, 'History', `${SU_KINDS[kind].stops[Object.keys(SU_KINDS[kind].stops)[0]]}, ${tgt}R`, tr.filter(t => t.dir === d)); }
+    for (const [sd, d] of [['Long', 1], ['Short', -1]]) add(SU_KINDS[kind].name, sd, 'History', `${SU_KINDS[kind].stops[Object.keys(SU_KINDS[kind].stops)[0]]}, ${tgt}R`, tr.filter(t => t.dir === d), Object.keys(SU_KINDS[kind].stops)[0]); }
+  if (RB.m) for (const [sd, d] of [['Long', 1], ['Short', -1]]){ const L = RB.m[stop + '|' + tgt], tr = []; if (L) for (const tf of Object.keys(L)) for (const x of (L[tf][d] || [])) tr.push({tf, t: x[0], dir: d, r: x[1]}); if (tr.length) add('Random entries (baseline)', sd, 'Baseline', `${stopTxt} stop, ${tgt}R`, tr); }
   if (BRK.ev.length){ const tr = BRK.ev.filter(brkFrozen).filter(e => e.st === 'filled' && e.sims && e.sims['plan|0'] && e.sims['plan|0'].done).map(e => ({tf: e.tf, t: e.t, dir: 1, r: e.sims['plan|0'].r})); add('Breaker candle (frozen rule)', 'Long', 'History', 'limit at 50%, thirds at 1.618 / 2 / 2.272', tr); }
   const je = (J.entries || []).filter(e => e.out && e.out.res && Number.isFinite(e.out.rr));
   for (const [kind, nm] of [['setup', 'Triggered setups'], ['div', 'Divergences']]) for (const [sd, d] of [['Long', 1], ['Short', -1]]){ const tr = je.filter(e => e.kind === kind && e.dir === d).map(e => ({tf: e.tf, t: e.ct, dir: e.dir, r: e.out.rr})); if (tr.length) add(nm, sd, 'Live journal', '1.5 ATR stop, 1.5R, 24 candles', tr); }
@@ -5351,23 +5364,54 @@ function sbRender(){
   const out = $('sbOut'); if (!out) return;
   const rows = sbRowsData(), f2 = x => x == null ? '–' : (x >= 0 ? '+' : '') + x.toFixed(2), cls = x => x == null ? '' : x > 0.02 ? 'up' : x < -0.02 ? 'dn' : '';
   if (!rows.length){ out.innerHTML = '<div class="mu" style="padding:8px 0">Nothing to show yet. Press <b>Run all tests</b> below to build the history tests, or use the Journal and Runner tabs.</div>'; return; }
-  let h = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Strategy</th><th class="l">Side</th><th class="l">Source</th><th class="l">Trade rule</th><th>Moments</th><th>Avg R per moment</th><th>vs chance</th><th>Noise ±</th><th>1H</th><th>4H</th><th>1D</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>';
+  let h = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Strategy</th><th class="l">Side</th><th class="l">Source</th><th class="l">Trade rule</th><th>Moments</th><th>Avg R per moment</th><th title="What random entries earn with the same stop, target, side and period">Chance</th><th>vs chance</th><th>Noise ±</th><th>1H</th><th>4H</th><th>1D</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>';
   const tfv = (per, tf) => { const p = per.find(x => x.tf === tf); return p ? `<td class="${p.n < 10 ? 'mu' : cls(p.m)}" title="${p.n} moments over ${Math.round(p.days)} days">${f2(p.m)}</td>` : '<td class="mu">–</td>'; };
-  const order = {History: 0, 'Live journal': 1, Runner: 2};
+  const order = {History: 0, Baseline: 1, 'Live journal': 2, Runner: 3};
   for (const r of rows.slice().sort((a, b) => order[a.src] - order[b.src])){
-    const hd = sbHead(r.per), [vt, vc] = sbVerdict(hd), n = r.per.reduce((a, p) => a + p.n, 0);
-    h += `<tr${hd ? '' : ' style="opacity:.6"'}><td class="l">${esc(r.name)}</td><td class="l">${r.side}</td><td class="l">${r.src}</td><td class="l mu">${esc(r.rule)}</td><td>${n}</td><td class="${hd ? cls(hd.m) : ''}">${hd ? f2(hd.m) : '–'}</td><td class="${hd ? cls(hd.m - SB_BASE) : ''}">${hd ? f2(hd.m - SB_BASE) : '–'}</td><td>${hd ? '±' + (2 * hd.se).toFixed(2) : '–'}</td>${tfv(r.per, '1h')}${tfv(r.per, '4h')}${tfv(r.per, '1d')}<td class="${hd ? cls(hd.h1) : ''}">${hd ? f2(hd.h1) : '–'}</td><td class="${hd ? cls(hd.h2) : ''}">${hd ? f2(hd.h2) : '–'}</td><td class="l ${vc}">${vt}</td></tr>`;
+    const hd = sbHead(r.per, r.bk), [vt0, vc0] = r.src === 'Baseline' ? ['Baseline', 'mu'] : sbVerdict(hd), vt = vt0, vc = vc0, n = r.per.reduce((a, p) => a + p.n, 0);
+    h += `<tr${hd ? '' : ' style="opacity:.6"'}><td class="l">${esc(r.name)}</td><td class="l">${r.side}</td><td class="l">${r.src}</td><td class="l mu">${esc(r.rule)}</td><td>${n}</td><td class="${hd ? cls(hd.m) : ''}">${hd ? f2(hd.m) : '–'}</td><td class="mu" title="${hd && !hd.real ? 'No random-entry baseline for this row yet: the fixed -0.04R is used. Press Run all tests.' : 'Random entries, same rule'}">${hd ? f2(hd.ch) + (hd.real ? '' : '*') : '–'}</td><td class="${hd && r.src !== 'Baseline' ? cls(hd.ex) : ''}">${hd && r.src !== 'Baseline' ? f2(hd.ex) : '–'}</td><td>${hd ? '±' + (2 * hd.se).toFixed(2) : '–'}</td>${tfv(r.per, '1h')}${tfv(r.per, '4h')}${tfv(r.per, '1d')}<td class="${hd ? cls(hd.h1) : ''}">${hd ? f2(hd.h1) : '–'}</td><td class="${hd ? cls(hd.h2) : ''}">${hd ? f2(hd.h2) : '–'}</td><td class="l ${vc}">${vt}</td></tr>`;
   }
   h += '</tbody></table></div>';
   const cov = []; for (const [k, nm] of [['cfg', 'Triggered setups'], ['sweep', 'Sweeps'], ['fund', 'Funding'], ['pull', 'Pullbacks'], ['range', 'Ranges']]){ const ev = SU.ev[k] || []; if (!ev.length) continue; const parts = [];
     for (const tf of ['1h', '4h', '1d']){ const ts = ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (amax(ts) - amin(ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`${nm}: ${parts.join(', ')}`); }
   if (BRK.ev.length){ const parts = []; for (const tf of ['1h', '4h', '1d']){ const ts = BRK.ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (amax(ts) - amin(ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`Breaker: ${parts.join(', ')}`); }
-  h += `<div class="mu" style="font-size:12px;margin:8px 0"><b>How to read:</b> "vs chance" is the average minus -0.04R (what random entries earn with these rules). "Noise ±" is about two standard errors: a result only counts if it is bigger than that. <b>Promising</b> = well above chance (2.5 noise units) and above it in both halves of the period; <b>Unproven</b> = above chance but not convincingly or the halves disagree; <b>No edge</b> = within the noise; <b>Worse than chance</b> = clearly negative; <b>Too few</b> = under 30 moments. Timeframe cells show that timeframe alone (hover for moments and days; dimmed under 10). History = replays on old candles; Live journal = signals this browser logged (1.5 ATR, 1.5R); Runner = trades your server followed (load them in Runner results). Different sources use different trade rules, so compare within a source first. With this many rows, one or two will look good by luck alone: trust a Promising row only if it also holds in a different coin set, a later period, or your live results.</div>`;
+  h += `<div class="mu" style="font-size:12px;margin:8px 0"><b>How to read:</b> "Chance" is what random entries earn with the same stop, target, side, timeframe and period (the Random entries rows; * = no baseline yet, the fixed -0.04R is used). "vs chance" is the average minus that. "Noise ±" is about two standard errors: a result only counts if it is bigger than that. <b>Promising</b> = well above chance (2.5 noise units) and above it in both halves of the period; <b>Unproven</b> = above chance but not convincingly or the halves disagree; <b>No edge</b> = within the noise; <b>Worse than chance</b> = clearly negative; <b>Too few</b> = under 30 moments. Timeframe cells show that timeframe alone (hover for moments and days; dimmed under 10). History = replays on old candles; Live journal = signals this browser logged (1.5 ATR, 1.5R); Runner = trades your server followed (load them in Runner results). Different sources use different trade rules, so compare within a source first. With this many rows, one or two will look good by luck alone: trust a Promising row only if it also holds in a different coin set, a later period, or your live results.</div>`;
   if (cov.length) h += `<div class="mu" style="font-size:12px;margin:4px 0">History covered (days between the first and last signal): ${cov.join(' · ')}.${cov.some(c => c.includes('⚠')) ? ' <b>⚠ = under a year</b>: that test was run with an older, shorter history. Press Run all tests below to refresh it with a full year.' : ''}</div>`;
   out.innerHTML = h;
 }
 for (const id of ['sbStop', 'sbTgt']) $(id).onchange = sbRender;
 let sbBusy = false;
+async function rbRun(tfs){
+  const coinSel = $('suN').value, topN = coinSel === '101-200' ? 200 : +coinSel || 100, stt = $('suStatus');
+  const uni = (await getUniverse()).slice(coinSel === '101-200' ? 100 : 0, topN), tasks = []; uni.forEach(u => { for (const tf of tfs) if (RB_GRID[tf]) tasks.push([u.sym, tf]); });
+  const acc = {}; let i = 0, done = 0;
+  async function worker(){
+    while (i < tasks.length && !SU.cancel){
+      const [sym, tf] = tasks[i++], g = RB_GRID[tf], ms = TF_MS[tf];
+      try {
+        const cd = await getKlinesYear(sym, tf), h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), at = atr(h, l, c, 14);
+        for (let q = 140; q < cd.length - 2; q++){
+          if (Math.round(cd[q][0] / ms) % g !== 0 || !(at[q] > 0)) continue;
+          for (const dir of [1, -1]){
+            const st = {a10: 1, a15: 1.5, a20: 2, a30: 3, a40: 4}, stops = {};
+            for (const k of Object.keys(st)) stops[k] = dir > 0 ? c[q] - st[k] * at[q] : c[q] + st[k] * at[q];
+            let sw = dir > 0 ? Infinity : -Infinity; for (let z = Math.max(0, q - 9); z <= q; z++) sw = dir > 0 ? Math.min(sw, l[z]) : Math.max(sw, h[z]);
+            stops.sw = dir > 0 ? sw - 0.25 * at[q] : sw + 0.25 * at[q]; stops.ext = dir > 0 ? l[q] : h[q];
+            const r = setupSim(cd, {i: q, dir, stops});
+            for (const [k, x] of Object.entries(r.sims)){ if (!x.done) continue; const a = ((acc[k] || (acc[k] = {}))[tf] || (acc[k][tf] = {}))[dir] || (acc[k][tf][dir] = new Map()); const o = a.get(cd[q][0]) || a.set(cd[q][0], [0, 0]).get(cd[q][0]); o[0] += x.r; o[1]++; }
+          }
+        }
+      } catch {}
+      done++; stt.textContent = `Random baseline: ${done} of ${tasks.length}`;
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  if (SU.cancel) return;
+  const m = {}; for (const [k, byTf] of Object.entries(acc)){ m[k] = {}; for (const [tf, byDir] of Object.entries(byTf)){ m[k][tf] = {}; for (const [d, mp] of Object.entries(byDir)) m[k][tf][d] = [...mp.entries()].sort((a, b) => a[0] - b[0]).map(([t, o]) => [t, +(o[0] / o[1]).toFixed(4)]); } }
+  RB.m = m; RB.meta = {ts: Date.now(), tfs, coins: uni.length}; try { await Cache.set('randBase', {m, meta: RB.meta}); } catch {}
+}
+async function rbLoad(){ try { const v = await Cache.get('randBase'); if (v && v.m){ RB.m = v.m; RB.meta = v.meta || null; } } catch {} sbRender(); }
 $('sbRun').onclick = async () => {
   if (sbBusy){ SU.cancel = true; BRK.cancel = true; return; }
   const tfs = [...document.querySelectorAll('.sbTf:checked')].map(x => x.value); if (!tfs.length){ toast('Pick at least one timeframe.'); return; }
@@ -5375,18 +5419,19 @@ $('sbRun').onclick = async () => {
   try {
     for (const c of document.querySelectorAll('.suTf')) c.checked = tfs.includes(c.value); for (const c of document.querySelectorAll('.brkTf')) c.checked = tfs.includes(c.value);
     $('suN').value = $('sbN').value; $('brkN').value = $('sbN').value;
-    const steps = [['cfg', 'Triggered setups'], ['sweep', 'Liquidity sweeps'], ['fund', 'Funding extremes'], ['pull', 'Trend pullbacks'], ['range', 'Range breakouts'], ['brk', 'Breaker candles']];
+    const steps = [['cfg', 'Triggered setups'], ['sweep', 'Liquidity sweeps'], ['fund', 'Funding extremes'], ['pull', 'Trend pullbacks'], ['range', 'Range breakouts'], ['brk', 'Breaker candles'], ['rand', 'Random-entry baseline']];
     for (const [i, [kind, nm]] of steps.entries()){
       if (SU.cancel || BRK.cancel) break;
       st.textContent = `Step ${i + 1} of ${steps.length}: ${nm}…`;
       tick = setInterval(() => { const t = (kind === 'brk' ? $('brkStatus') : $('suStatus')).textContent; if (t) st.textContent = `Step ${i + 1} of ${steps.length}: ${nm}. ${t}`; }, 1000);
-      if (kind === 'brk'){ BRK.cancel = false; await brkRun(); } else { $('suKind').value = kind; SU.kind = kind; SU.cancel = false; $('suFlip').checked = kind === 'cfg' && $('sbFlip').checked; await suRun(); }
+      if (kind === 'rand'){ SU.cancel = false; await rbRun(tfs); } else if (kind === 'brk'){ BRK.cancel = false; await brkRun(); } else { $('suKind').value = kind; SU.kind = kind; SU.cancel = false; $('suFlip').checked = kind === 'cfg' && $('sbFlip').checked; await suRun(); }
       clearInterval(tick); tick = null; sbRender();
     }
     st.textContent = SU.cancel || BRK.cancel ? 'Stopped.' : 'All tests done.';
   } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
   if (tick) clearInterval(tick); SU.cancel = false; BRK.cancel = false; sbBusy = false; $('sbRun').textContent = 'Run all tests'; sbRender();
 };
+rbLoad();
 for (const n of ['suRender', 'brkRender', 'alRender', 'renderJournal']){ const o = window[n]; if (typeof o === 'function') window[n] = function(){ const r = o.apply(this, arguments); try { if (!$('jtScore').hidden) sbRender(); } catch {} return r; }; }
 { let v = 'Score'; try { v = localStorage.getItem('onslaught-jtab') || 'Score'; } catch {} if (!document.getElementById('jt' + v)) v = 'Score'; jTab(v); }
 $('suKind').onchange = () => { SU.kind = $('suKind').value; $('suThrL').hidden = SU.kind !== 'fund'; suRender(); };
@@ -5735,7 +5780,7 @@ journal: ['Como funciona o journal', `<ul>
 <li>Todos os blocos abaixo recolhem-se ao clicar no título (fica guardado neste browser). Sinais agrupados contam como uma só aposta de mercado: este journal tem normalmente muito menos momentos independentes do que sinais, por isso só julga filtros após várias semanas e pelo menos 30 momentos.</li>
 <li><b>Where is the edge?</b> divide os resultados por grade, lado, timeframe, regime, funding, etc. <b>Loss review</b> mostra o que os sinais parados têm em comum e tem <b>What if I had skipped…</b>: marca filtros (grade, direção do regime, esticado, funding, market cap abaixo de $1B ou acima de $10B, não passou nos meus alertas, fora dos melhores 5 por momento) e vê os mesmos sinais sem eles. O market cap é registado a partir de 13 de outubro de 2026; nada muda nos teus alertas.</li>
 <li><b>Quatro separadores.</b> <b>Scoreboard</b> (começa aqui): todas as estratégias testadas numa tabela, com o mesmo critério e um veredicto. <b>Live log</b>: os sinais que este browser registou. <b>Study lab</b>: os estudos detalhados com histórico. <b>Runner results</b>: como os alertas do teu servidor correram de facto. O separador em que estavas fica guardado.</li>
-<li>O <b>Scoreboard</b> mostra o R médio por momento (sinais na mesma vela e lado contam uma vez), calculado por timeframe e depois com média de pesos iguais, para um histórico curto de 1H não dominar. Compara com o acaso (cerca de −0,04R) e a coluna de ruído ±; o veredicto só é Promising se estiver bem acima do acaso e as duas metades do período concordarem. Linhas com ⚠ foram corridas com menos de um ano de histórico. <b>Run all tests</b> carrega um ano de velas por timeframe (a primeira vez com 100 moedas pode demorar vários minutos; as seguintes reutilizam o que está guardado) e corre todos os estudos em sequência.</li>
+<li>O <b>Scoreboard</b> mostra o R médio por momento (sinais na mesma vela e lado contam uma vez), calculado por timeframe e depois com média de pesos iguais, para um histórico curto de 1H não dominar. Compara com a coluna <b>Chance</b>, que é o que entradas aleatórias ganham com o mesmo stop, alvo, lado, timeframe e período (as linhas Random entries, criadas pelo Run all tests; um * significa que ainda não há baseline e usa-se o −0,04R fixo), e com a coluna de ruído ±; o veredicto só é Promising se estiver bem acima do acaso e as duas metades do período concordarem. Linhas com ⚠ foram corridas com menos de um ano de histórico. <b>Run all tests</b> carrega um ano de velas por timeframe (a primeira vez com 100 moedas pode demorar vários minutos; as seguintes reutilizam o que está guardado) e corre todos os estudos em sequência.</li>
 <li>O <b>Breaker candle study</b> e o <b>Setup study</b> repetem regras com um ano de histórico por timeframe e por moeda (só estudo, sem alertas). O Setup study cobre varrimentos de liquidez, funding extremo, pullbacks de tendência, rompimentos de range apertado e <b>Indicator settings</b>, que repete o setup do screener com diferentes definições de RSI, DMI, ADX e OBV para ver se alguma bate a predefinida. O histórico não tem open interest, market cap nem grade, por isso estes só se avaliam aqui no journal.</li>
 <li>A caixa Alert results (acima do Setup study) serve apenas para quem usa o servidor runner da Onslaught: carrega os ficheiros que ele guarda (envia /export ao bot de Telegram) para ver como os alertas correram na realidade. Não é preciso para usar o Journal.</li>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
