@@ -699,6 +699,15 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div id="macVerdict"></div>
     <div class="maccards" id="macCards"></div>
     <div class="panel" id="macHistPanel"><div class="lqfh"><b>Regime history</b> <span class="mu" id="macHistNote">how the macro regime read on each past day, from the same rebuilt indices</span></div><div id="macHist"></div></div>
+    <details class="panel" id="macTimeP">
+      <summary><b>Macro timing study</b> <span class="mu">do early signs of a turn in the stablecoin or BTC dominance precede the alts' next move?</span></summary>
+      <div class="row" style="margin:8px 0">
+        <label>Series <select id="mtKey"><option value="stD">Stablecoin dominance (USDT.D + USDC.D)</option><option value="btcD">BTC dominance</option></select></label>
+        <label>Look ahead <select id="mtH"><option value="7">7 days</option><option value="14">14 days</option></select></label>
+        <button id="mtRun" class="primary">Run</button>
+      </div>
+      <div id="mtOut" class="mu" style="font-size:12px">Uses the daily macro history already loaded (about a year). For every day it checks simple indicator states on the series, then measures how TOTAL3ES (all alts) moved over the next days. Readings within the look-ahead window count as one episode.</div>
+    </details>
     <div class="macbottom">
       <div class="panel"><div class="lqfh"><b>Macro regimes</b> <span class="mu">how the four indices combine · current one highlighted</span></div><div id="macMatrix"></div></div>
       <div class="panel macchart"><div class="row" style="margin-bottom:8px"><b>TradingView</b><div class="seg" id="macTv"><button data-v="CRYPTOCAP:BTC.D" class="on">BTC.D</button><button data-v="CRYPTOCAP:USDT.D+CRYPTOCAP:USDC.D">USDT.D+USDC.D</button><button data-v="CRYPTOCAP:USDT.D">USDT.D</button><button data-v="CRYPTOCAP:USDC.D">USDC.D</button><button data-v="CRYPTOCAP:TOTAL3ES">TOTAL3ES</button><button data-v="CRYPTOCAP:OTHERS.D">OTHERS.D</button><button data-v="CRYPTOCAP:TOTAL">TOTAL</button></div><span class="mu">official indices, draw your own levels</span></div><div id="macTvBox" class="mactv"></div></div>
@@ -2035,6 +2044,7 @@ function cfgVariants(){
 }
 /* Returns one event per signal candle and side (the stop depends only on the candle, so it is shared by every setting):
    {i, t, dir, atr, stops, m: bitmask of the settings that fired it, a: bitmask of those where all 4 checks agreed}. */
+const CFG_STOPS = [['a10', 1], ['a15', 1.5], ['a20', 2], ['a30', 3], ['a40', 4]];     // stop distances in ATR; 'sw' (10-candle swing) is added in cfgScan
 function cfgScan(cd, variants, o){
   o = o || {};
   const n = cd.length, i0 = o.start || 140, cool = o.cool || 6, U = new Map();
@@ -2049,7 +2059,11 @@ function cfgScan(cd, variants, o){
       const tr = triggers(cd, ind, f, i).filter(t => t.dir === dir && t.ago < f.trigN); if (!tr.length) continue;
       last[dir] = i;
       const key = i * 2 + (dir > 0 ? 1 : 0); let e = U.get(key);
-      if (!e){ e = {i, t: cd[i][0], dir, atr: at[i], stops: {a15: dir > 0 ? c[i] - 1.5 * at[i] : c[i] + 1.5 * at[i]}, m: 0, a: 0}; U.set(key, e); }
+      if (!e){
+        const st = {}; for (const [k, mlt] of CFG_STOPS) st[k] = dir > 0 ? c[i] - mlt * at[i] : c[i] + mlt * at[i];
+        let sw = dir > 0 ? Infinity : -Infinity; for (let q = Math.max(0, i - 9); q <= i; q++) sw = dir > 0 ? Math.min(sw, l[q]) : Math.max(sw, h[q]);   // swing stop: lowest low (highest high) of the last 10 candles, 0.25 ATR beyond
+        st.sw = dir > 0 ? sw - 0.25 * at[i] : sw + 0.25 * at[i];
+        e = {i, t: cd[i][0], dir, atr: at[i], stops: st, m: 0, a: 0}; U.set(key, e); }
       e.m |= 1 << vi; if ((dir > 0 ? ta.bull : ta.bear) === 4) e.a |= 1 << vi;
     }
   });
@@ -3503,6 +3517,33 @@ const MAC_METRICS = [
   {k: 'stD', name: 'USDT.D + USDC.D', sub: 'stablecoin dominance (cash)', fmt: v => v.toFixed(2) + '%', tone: d => d > 0 ? 'r' : d < 0 ? 'g' : 'n', words: ['rising: risk-off', 'falling: risk-on']},
   {k: 't3es', name: 'TOTAL3ES', sub: 'alts excl. BTC, ETH, stables', fmt: v => '$' + fmtBig(v), tone: d => d > 0 ? 'g' : d < 0 ? 'r' : 'n', words: ['rising: money into alts', 'falling: alts draining']},
   {k: 'othD', name: 'OTHERS.D', sub: 'share outside the top 10', fmt: v => v.toFixed(2) + '%', tone: d => d > 0 ? 'g' : d < 0 ? 'r' : 'n', words: ['rising: small caps bid', 'falling: flight to large caps']}];
+/* ---------- Macro timing study: do early signs of a turn in stablecoin / BTC dominance precede the alts' next move? ---------- */
+function macroTiming(series, key, H){
+  const n = series.length; if (n < 120) return null;
+  const v = series.map(x => x[key]), a = series.map(x => x.t3es), r = rsi(v, 14);
+  const e12 = ema(v, 12), e26 = ema(v, 26), md = e12.map((x, i) => x - e26[i]), sg = ema(md.map(x => Number.isFinite(x) ? x : NaN), 9);
+  const m20 = sma(v, 20), s20 = stdev(v, 20), z = v.map((x, i) => s20[i] > 0 ? (x - m20[i]) / s20[i] : NaN), E20 = ema(v, 20);
+  const hi = (i, k) => Math.max(...v.slice(i - k, i)), lo = (i, k) => Math.min(...v.slice(i - k, i)), rhi = (i, k) => Math.max(...r.slice(i - k, i)), rlo = (i, k) => Math.min(...r.slice(i - k, i));
+  const slope = i => E20[i] - E20[i - 3];
+  const S = [   // [label, test(i), what the idea expects for the alts: +1 up, -1 down]
+    ['Overbought: RSI above 70', i => r[i] > 70, 1], ['Oversold: RSI below 30', i => r[i] < 30, -1],
+    ['Stretched above its 20-day mean (more than 2 deviations)', i => z[i] > 2, 1], ['Stretched below its 20-day mean (more than 2 deviations)', i => z[i] < -2, -1],
+    ['MACD crosses down', i => md[i] < sg[i] && md[i - 1] >= sg[i - 1], 1], ['MACD crosses up', i => md[i] > sg[i] && md[i - 1] <= sg[i - 1], -1],
+    ['Rolled over: a 30-day high within the last 5 days, now 2% below it', i => v[i] <= Math.max(...v.slice(i - 5, i + 1)) * 0.98 && Math.max(...v.slice(i - 5, i + 1)) >= hi(i - 5, 30) && v[i - 5] >= hi(i - 5, 30) * 0.99, 1],
+    ['Bounced: a 30-day low within the last 5 days, now 2% above it', i => v[i] >= Math.min(...v.slice(i - 5, i + 1)) * 1.02 && Math.min(...v.slice(i - 5, i + 1)) <= lo(i - 5, 30) && v[i - 5] <= lo(i - 5, 30) * 1.01, -1],
+    ['Breaks above its 30-day high', i => v[i] > hi(i, 30), -1], ['Breaks below its 30-day low', i => v[i] < lo(i, 30), 1],
+    ['Bearish RSI divergence: new 20-day high, RSI lower', i => v[i] >= hi(i, 20) && r[i] < rhi(i, 20) - 5, 1], ['Bullish RSI divergence: new 20-day low, RSI higher', i => v[i] <= lo(i, 20) && r[i] > rlo(i, 20) + 5, -1],
+    ['20-day average turns down', i => slope(i) < 0 && slope(i - 1) >= 0, 1], ['20-day average turns up', i => slope(i) > 0 && slope(i - 1) <= 0, -1]];
+  const days = []; for (let i = 60; i + H < n; i++) days.push(i);
+  const fw = i => (a[i + H] / a[i] - 1) * 100, base = days.reduce((t, i) => t + fw(i), 0) / days.length, mid = days[Math.floor(days.length / 2)];
+  const rows = S.map(([name, f, exp]) => {
+    const hit = days.filter(i => { try { return f(i); } catch { return false; } });
+    const ep = []; for (const i of hit) if (!ep.length || i - ep.at(-1) >= H) ep.push(i);      // one reading per episode: later days within H candles are the same event
+    const rets = ep.map(fw), avg = rets.length ? rets.reduce((t, x) => t + x, 0) / rets.length : null, h1 = rets.filter((x, k) => ep[k] < mid), h2 = rets.filter((x, k) => ep[k] >= mid), mean = l => l.length ? l.reduce((t, x) => t + x, 0) / l.length : null;
+    return {name, exp, days: hit.length, ep: ep.length, avg, ex: avg == null ? null : avg - base, win: rets.length ? 100 * rets.filter(x => x * exp > 0).length / rets.length : null, h1: mean(h1), h2: mean(h2), n1: h1.length, n2: h2.length};
+  });
+  return {rows, base, n: days.length, H};
+}
 function macStatus(t){ const e = $('macStatus'); if (e) e.textContent = t || ''; }
 let cgChain = Promise.resolve(), cgLast = 0;
 const cgKey = () => '';   // keyless CoinGecko API; requests are spaced so they stay within its free limit
@@ -5011,7 +5052,8 @@ const SU_KINDS = {
       ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
     csv: [['rs30_pp', e => e.rs30], ['range_percentile', e => e.pct], ['close_beyond_atr', e => e.close], ['body_share', e => e.body], ['volume_x', e => e.vol], ['with_trend', e => e.withTrend == null ? '' : e.withTrend ? 1 : 0]]}
 };
-SU_KINDS.cfg = {name: 'Indicator settings', stops: {a15: 'stop 1.5 ATR from the signal close'},
+const SU_CFG_STOPS = ['a10', 'a15', 'a20', 'a30', 'a40', 'sw'];
+SU_KINDS.cfg = {name: 'Indicator settings', stops: {a10: 'stop 1 ATR from the signal close', a15: 'stop 1.5 ATR from the signal close', a20: 'stop 2 ATR from the signal close', a30: 'stop 3 ATR from the signal close', a40: 'stop 4 ATR from the signal close', sw: 'stop beyond the 10-candle swing (0.25 ATR past it)'},
   groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long' : 'Short'], ['Checks agreeing (of 4: DMI, RSI/EMA, RSI vs 50, OBV)', e => e.al === 4 ? 'All 4' : '3 of 4'],
     ['Stablecoin dominance (USDT.D + USDC.D), day before, by side', e => e.sd == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · stables ' + (e.sd > 0 ? 'rising' : e.sd < 0 ? 'falling' : 'flat')],
     ['Stablecoin dominance change over 7 days (%), by side', e => e.s7 == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · stables 7d ' + suB(e.s7, [-5, -2, 2, 5], ['under -5%', '-5 to -2%', '-2 to +2%', '+2 to +5%', 'over +5%'])],
@@ -5022,7 +5064,7 @@ SU_KINDS.cfg = {name: 'Indicator settings', stops: {a15: 'stop 1.5 ATR from the 
     ['Alts money flow (TOTAL3ES), day before, by side', e => e.t3 == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · alts ' + (e.t3 > 0 ? 'rising' : e.t3 < 0 ? 'falling' : 'flat')],
     ['BTC dominance, day before, by side', e => e.bd == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · BTC.D ' + (e.bd > 0 ? 'rising' : e.bd < 0 ? 'falling' : 'flat')],
     ['Macro regime, day before, by side', e => e.mk == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · ' + MACRO_REGIMES[e.mk][0]],
-    ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
+    ['Distance of the 10-candle swing stop (ATR)', e => suB(e.swAtr, [1, 2, 3, 5], ['under 1', '1 to 2', '2 to 3', '3 to 5', '5 or more'])]],
   csv: [['btcd_7d_pct', e => e.b7], ['total3es_7d_pct', e => e.t7], ['stables_7d_pct', e => e.s7], ['stables_30d_pct', e => e.s30], ['stables_trend', e => e.sd], ['alts_trend', e => e.t3], ['btcd_trend', e => e.bd], ['macro_regime', e => e.mk], ['settings', e => e.set], ['checks_agreeing', e => e.al], ['triggers', e => (e.trig || []).join('+')]]};
 const SU_ORD = ['Long', 'Short', 'All 4', '3 of 4', '15m', '1h', '4h', '1d', 'Long (a low was swept)', 'Short (a high was swept)', 'Long (crowd was short)', 'Short (crowd was long)', 'under 0.25', '0.25 to 0.5', '0.5 to 1', '1 to 2', '1 or more', '2 or more', 'under 0.5', 'under 40%', '40 to 60%', '60% or more',
   'under 1x', '1 to 2x', '2x or more', 'No', 'Yes', 'With the trend', 'Against the trend', '0.03 to 0.05', '0.05 to 0.1', '0.1 to 0.2', '0.2 or more', 'under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more', 'under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more', 'Long (uptrend)', 'Short (downtrend)', 'Long (broke up)', 'Short (broke down)', 'under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more', 'under 1', '2 to 4', '4 or more', '2 to 3x', '3x or more', 'under 60%', '60 to 80%', '80% or more', 'top 10', '11 to 20', '21 to 50', '51 to 70', '71 to 100', '101 to 200'];
@@ -5032,7 +5074,7 @@ const suEvBase = () => (SU.ev[SU.kind] || []).filter(e => (!SU.since || e.t >= S
 const SU_CFGV = cfgVariants();
 const suEv = () => { if (SU.kind !== 'cfg') return suEvBase();
   const vi = Math.max(0, SU_CFGV.findIndex(v => v.name === SU.setSel)), bit = 1 << vi, out = [];
-  for (const e of suEvBase()) if (e.m & bit) out.push({...e, set: SU_CFGV[vi].name, al: e.a & bit ? 4 : 3, st: 'done', trig: [], sims: Object.fromEntries(SETUP_TARGETS.map((q, ix) => ['a15|' + q, {r: e.rs[ix], done: e.rs[ix] != null}]))});
+  for (const e of suEvBase()) if (e.m & bit) out.push({...e, set: SU_CFGV[vi].name, al: e.a & bit ? 4 : 3, st: 'done', trig: [], sims: Object.fromEntries(SU_CFG_STOPS.flatMap((sk, si) => SETUP_TARGETS.map((q, ix) => [sk + '|' + q, {r: e.rs[si * 3 + ix], done: e.rs[si * 3 + ix] != null}])))});
   return out; };
 const suTrades = vari => suEv().filter(e => e.sims && e.sims[vari] && e.sims[vari].done).sort((a, b) => a.t - b.t);
 async function suLoad(){ for (const k of Object.keys(SU_KINDS)){ const v = await Cache.get('setupStudy:' + k); if (v && Array.isArray(v.ev)){ SU.ev[k] = v.ev; SU.meta[k] = v.meta || null; } } suRender(); }
@@ -5046,7 +5088,7 @@ async function suRates(sym){
 function suRender(){
   const out = $('suOut'); if (!out) return;
   const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), raw = SU.ev[SU.kind] || [];
-  if (!VARS[SU.vari]) SU.vari = Object.keys(VARS)[1];
+  if (!VARS[SU.vari]) SU.vari = VARS['a15|2'] ? 'a15|2' : Object.keys(VARS)[1];
   if (!raw.length){ out.innerHTML = '<div class="mu" style="margin-top:8px">No study run yet for this setup. Pick timeframes and press Run study.</div>'; return; }
   const vari = SU.vari, all = suEv(), tr = suTrades(vari), meta = SU.meta[SU.kind] || {};
   const f2 = x => (x >= 0 ? '+' : '') + x.toFixed(2), cls = x => x > 0.02 ? 'up' : x < -0.02 ? 'dn' : '';
@@ -5060,7 +5102,7 @@ function suRender(){
   for (const k of Object.keys(VARS)){ const s = brkStats(suTrades(k).map(e => e.sims[k].r)); if (!s) continue; h += `<tr${k === vari ? ' style="background:var(--panel-2,rgba(255,255,255,.04))"' : ''}><td class="l">${VARS[k]}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td><td>${s.dd.toFixed(1)}R</td></tr>`; }
   h += '</tbody></table></div>';
   if (SU.kind === 'cfg'){
-    const ri = SETUP_TARGETS.indexOf(+vari.split('|')[1]), base = suEvBase().filter(e => e.rs && e.rs[ri] != null), sets = SU_CFGV.map(v => v.name), tA = base.length ? Math.min(...base.map(e => e.t)) : 0, tB = base.length ? Math.max(...base.map(e => e.t)) : 0, mid = (tA + tB) / 2;
+    const ri = SU_CFG_STOPS.indexOf(vari.split('|')[0]) * 3 + SETUP_TARGETS.indexOf(+vari.split('|')[1]), base = suEvBase().filter(e => e.rs && e.rs[ri] != null), sets = SU_CFGV.map(v => v.name), tA = base.length ? Math.min(...base.map(e => e.t)) : 0, tB = base.length ? Math.max(...base.map(e => e.t)) : 0, mid = (tA + tB) / 2;
     if (!SU.setSel || !sets.includes(SU.setSel)) SU.setSel = sets[0];
     const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null, mom = l => { const g = new Map(); for (const e of l){ const k = e.tf + '|' + e.t + '|' + e.dir; (g.get(k) || g.set(k, []).get(k)).push(e.rs[ri]); } return avg([...g.values()].map(avg)); };
     const rowsC = sets.map((nm, vi) => { const bit = 1 << vi, l = base.filter(e => e.m & bit), rr = x => x.rs[ri]; return {nm, n: l.length, win: l.length ? 100 * l.filter(e => rr(e) > 0).length / l.length : 0, avg: avg(l.map(rr)), mom: mom(l), tf: ['1h', '4h', '1d'].map(t => { const q = l.filter(e => e.tf === t); return q.length >= 10 ? avg(q.map(rr)) : null; }), h1: avg(l.filter(e => e.t < mid).map(rr)), h2: avg(l.filter(e => e.t >= mid).map(rr))}; }).filter(r => r.n);
@@ -5108,7 +5150,7 @@ async function suRun(){
           else { const btc = await getKlines('BTCUSDT', tf, true, KDEEP); found = (kind === 'pull' ? pullScan : rangeScan)(cd, btc); }
           for (const b of found){
             const r = setupSim(cd, b);
-            if (kind === 'cfg'){ const mi = macI(b.t + TF_MS[tf]); if (r.status !== 'skip') ev.push({sym, tf, rk, t: b.t, dir: b.dir, mk: mi ? mi.key : null, sd: mi ? mi.sd : null, s7: mi ? +mi.s7.toFixed(2) : null, s30: mi ? +mi.s30.toFixed(2) : null, b7: mi ? +mi.b7.toFixed(2) : null, t7: mi ? +mi.t7.toFixed(2) : null, bd: mi ? mi.bd : null, t3: mi ? mi.t3 : null, riskAtr: r.risk != null && b.atr > 0 ? +(r.risk / b.atr).toFixed(2) : null, m: b.m, a: b.a, rs: SETUP_TARGETS.map(q => { const z = r.sims['a15|' + q]; return z && z.done ? +z.r.toFixed(3) : null; })}); continue; }
+            if (kind === 'cfg'){ const mi = macI(b.t + TF_MS[tf]); if (r.status !== 'skip') ev.push({sym, tf, rk, t: b.t, dir: b.dir, mk: mi ? mi.key : null, sd: mi ? mi.sd : null, s7: mi ? +mi.s7.toFixed(2) : null, s30: mi ? +mi.s30.toFixed(2) : null, b7: mi ? +mi.b7.toFixed(2) : null, t7: mi ? +mi.t7.toFixed(2) : null, bd: mi ? mi.bd : null, t3: mi ? mi.t3 : null, riskAtr: b.atr > 0 && r.entry != null ? +(Math.abs(r.entry - b.stops.a15) / b.atr).toFixed(2) : null, swAtr: b.atr > 0 && r.entry != null ? +(Math.abs(r.entry - b.stops.sw) / b.atr).toFixed(2) : null, m: b.m, a: b.a, rs: SU_CFG_STOPS.flatMap(sk => SETUP_TARGETS.map(q => { const z = r.sims[sk + '|' + q]; return z && z.done ? +z.r.toFixed(2) : null; }))}); continue; }
             const rec = {sym, tf, rk, t: b.t, dir: b.dir, st: r.status, riskAtr: r.risk != null && b.atr > 0 ? r.risk / b.atr : null, sims: r.status === 'done' || r.status === 'open' ? r.sims : null};
             if (kind === 'sweep') Object.assign(rec, {depth: b.depth, reclaim: b.reclaim, wick: b.wick, vol: b.vol, big: b.big, withTrend: b.withTrend});
             else if (kind === 'fund') Object.assign(rec, {fr: b.fr, ch24: b.ch24, atrPct: b.atrPct, withTrend: b.withTrend});
@@ -5132,8 +5174,8 @@ async function suRun(){
 function suCsv(){
   const raw = SU.ev[SU.kind] || []; if (!raw.length){ toast('Run the study first.'); return; }
   if (SU.kind === 'cfg'){
-    const names = e => SU_CFGV.map((v, i) => e.m & (1 << i) ? i : -1).filter(i => i >= 0), lines = ['time_utc,pair,volume_rank,tf,side,stop_atr,macro_regime,stables_trend,btcd_7d_pct,total3es_7d_pct,stables_7d_pct,stables_30d_pct,alts_trend,btcd_trend,settings_that_fired,settings_with_all4_checks,R_target_1,R_target_2,R_target_3'];
-    for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.rk, e.tf, e.dir > 0 ? 'long' : 'short', e.riskAtr ?? '', e.mk ?? '', e.sd ?? '', e.b7 ?? '', e.t7 ?? '', e.s7 ?? '', e.s30 ?? '', e.t3 ?? '', e.bd ?? '', '"' + names(e).map(i => SU_CFGV[i].name).join(' + ') + '"', '"' + SU_CFGV.map((v, i) => e.a & (1 << i) ? v.name : '').filter(Boolean).join(' + ') + '"'].concat(e.rs.map(r => r ?? '')).join(','));
+    const names = e => SU_CFGV.map((v, i) => e.m & (1 << i) ? i : -1).filter(i => i >= 0), lines = ['time_utc,pair,volume_rank,tf,side,stop_atr,macro_regime,stables_trend,btcd_7d_pct,total3es_7d_pct,stables_7d_pct,stables_30d_pct,alts_trend,btcd_trend,settings_that_fired,settings_with_all4_checks,R_target_1,R_target_2,R_target_3,' + SU_CFG_STOPS.filter(k => k !== 'a15').flatMap(k => SETUP_TARGETS.map(q => k + '_R' + q)).join(',')];
+    for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.rk, e.tf, e.dir > 0 ? 'long' : 'short', e.riskAtr ?? '', e.mk ?? '', e.sd ?? '', e.b7 ?? '', e.t7 ?? '', e.s7 ?? '', e.s30 ?? '', e.t3 ?? '', e.bd ?? '', '"' + names(e).map(i => SU_CFGV[i].name).join(' + ') + '"', '"' + SU_CFGV.map((v, i) => e.a & (1 << i) ? v.name : '').filter(Boolean).join(' + ') + '"'].concat(SU_CFG_STOPS.map((k, si) => k === 'a15' ? si : -1).filter(x => x >= 0).flatMap(si => e.rs.slice(si * 3, si * 3 + 3)).concat(SU_CFG_STOPS.flatMap((k, si) => k === 'a15' ? [] : e.rs.slice(si * 3, si * 3 + 3))).map(r => r ?? '')).join(','));
     downloadText(lines.join('\n'), `setup-cfg-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv'); return;
   }
   const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), keys = Object.keys(VARS), head = ['time_utc', 'pair', 'volume_rank', 'tf', 'side', 'status', 'stop_atr'].concat(K.csv.map(c => c[0]));
@@ -5194,6 +5236,15 @@ $('lqTf').onclick = e => { const b = e.target.closest('button'); if (!b) return;
 $('lqRange').onclick = e => { const b = e.target.closest('button'); if (!b) return; LQ.range = +b.dataset.v; [...$('lqRange').children].forEach(x => x.classList.toggle('on', x === b)); buildLiq(); renderLiq(); };
 $('lqLev').onchange = () => { buildLiq(); renderLiq(); };
 $('lqLoad').onclick = loadLiq;
+function mtRender(){
+  const out = $('mtOut'), M = S.macro; if (!M || !M.series){ out.textContent = 'Load the macro data first (Refresh).'; return; }
+  const key = $('mtKey').value, H = +$('mtH').value, R = macroTiming(M.series, key, H); if (!R){ out.textContent = 'Not enough macro history yet (needs about 120 days).'; return; }
+  const f = x => x == null ? '–' : (x >= 0 ? '+' : '') + x.toFixed(1) + '%', c = x => x == null ? '' : x > 0.3 ? 'up' : x < -0.3 ? 'dn' : '';
+  out.innerHTML = `<div style="margin-bottom:6px">${R.n} days tested · average ${H}-day move of TOTAL3ES on any day: <b>${f(R.base)}</b>. "Expected" is what the turn idea predicts for the alts (a reversal in ${key === 'stD' ? 'stablecoins' : 'BTC dominance'} should send the alts the other way). "Right" is the share of episodes where the alts moved that way. Fewer than 6 episodes: ignore.</div>
+    <div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">State on the series</th><th>Expected alts</th><th>Days</th><th>Episodes</th><th>Avg ${H}d alts</th><th>vs any day</th><th>Right</th><th>1st half</th><th>2nd half</th></tr></thead><tbody>${R.rows.map(r => `<tr${r.ep < 6 ? ' style="opacity:.5"' : ''}><td class="l">${esc(r.name)}</td><td>${r.exp > 0 ? '▲ up' : '▼ down'}</td><td>${r.days}</td><td>${r.ep}</td><td class="${c(r.avg)}">${f(r.avg)}</td><td class="${c(r.ex == null ? null : r.ex * r.exp)}">${f(r.ex)}</td><td>${r.win == null ? '–' : r.win.toFixed(0) + '%'}</td><td class="${c(r.h1)}">${f(r.h1)}<span class="mu"> (${r.n1})</span></td><td class="${c(r.h2)}">${f(r.h2)}<span class="mu"> (${r.n2})</span></td></tr>`).join('')}</tbody></table></div>
+    <div style="margin-top:6px">A real signal needs to be right clearly more than half the time, beat "any day" in the expected direction, and agree in both halves. With about a year of history there are only a handful of episodes per state, so use this to discard ideas, not to confirm them.</div>`;
+}
+$('mtRun').onclick = mtRender;
 $('macLoad').onclick = () => loadMacro(true);
 
 $('macWin').onclick = e => { const b = e.target.closest('button'); if (!b) return; MAC.win = +b.dataset.v; renderMacro(); };
