@@ -5085,6 +5085,31 @@ async function suRates(sym){
   const rates = (Array.isArray(d) ? d : []).map(x => ({t: +x.fundingTime, r: +x.fundingRate * 100})).filter(x => Number.isFinite(x.r)).sort((a, b) => a.t - b.t);
   await Cache.set(key, {at: Date.now(), rates}); return rates;
 }
+function suCompare(VARS, f2, cls){
+  const keys = Object.keys(VARS); if (keys.length < 2) return '';
+  if (!SU.cmpA || !VARS[SU.cmpA]) SU.cmpA = VARS['a15|2'] ? 'a15|2' : keys[0];
+  if (!SU.cmpB || !VARS[SU.cmpB]) SU.cmpB = VARS['a40|3'] ? 'a40|3' : keys[keys.length - 1];
+  const side = SU.cmpSide || 'all', pick = k => suTrades(k).filter(e => side === 'all' || (side === 'long' ? e.dir > 0 : e.dir < 0));
+  const mm = k => { const g = new Map(); for (const e of pick(k)){ const q = e.tf + '|' + e.t + '|' + e.dir, o = g.get(q) || {a: [], t: e.t}; o.a.push(e.sims[k].r); g.set(q, o); } const r = new Map(); for (const [q, o] of g) r.set(q, {v: o.a.reduce((x, y) => x + y, 0) / o.a.length, t: o.t}); return r; };
+  const A = mm(SU.cmpA), B = mm(SU.cmpB), ts = [...A.values(), ...B.values()].map(x => x.t); if (!ts.length) return '';
+  const mid = (Math.min(...ts) + Math.max(...ts)) / 2, avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null, sd = a => { if (a.length < 2) return null; const m = avg(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / (a.length - 1)); };
+  const stat = M => { const v = [...M.values()]; return {n: v.length, m: avg(v.map(x => x.v)), h1: avg(v.filter(x => x.t < mid).map(x => x.v)), h2: avg(v.filter(x => x.t >= mid).map(x => x.v)), se: v.length > 1 ? sd(v.map(x => x.v)) / Math.sqrt(v.length) : null}; };
+  const a = stat(A), b = stat(B), common = [...A.keys()].filter(q => B.has(q)), d = common.map(q => B.get(q).v - A.get(q).v), dm = avg(d), dse = d.length > 1 ? sd(d) / Math.sqrt(d.length) : null, f = v => v == null ? '–' : f2(v) + 'R', BASE = -0.04;
+  const sel = (id, cur) => `<select id="${id}">${keys.map(k => `<option value="${k}"${k === cur ? ' selected' : ''}>${VARS[k]}</option>`).join('')}</select>`;
+  let h = '<div class="mu" style="font-size:12px;margin:12px 0 4px"><b>Compare two trade rules</b> on the same signals. The difference only counts if it is bigger than its noise range (about 2 standard errors) and has the same sign in both halves. Pure chance gives about -0.04R, so judge each rule against that, not against zero.</div>';
+  h += `<div class="row" style="margin:6px 0"><label>A ${sel('suCA', SU.cmpA)}</label><label>B ${sel('suCB', SU.cmpB)}</label><label>Side <select id="suCS"><option value="all"${side === 'all' ? ' selected' : ''}>Longs and shorts</option><option value="long"${side === 'long' ? ' selected' : ''}>Longs only</option><option value="short"${side === 'short' ? ' selected' : ''}>Shorts only</option></select></label></div>`;
+  h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Rule</th><th>Moments</th><th>Per moment</th><th>vs chance (-0.04R)</th><th>Noise ±</th><th>1st half</th><th>2nd half</th></tr></thead><tbody>';
+  for (const [nm, x] of [[VARS[SU.cmpA], a], [VARS[SU.cmpB], b]]) h += `<tr><td class="l">${esc(nm)}</td><td>${x.n}</td><td class="${x.m == null ? '' : cls(x.m)}">${f(x.m)}</td><td class="${x.m == null ? '' : cls(x.m - BASE)}">${x.m == null ? '–' : f2(x.m - BASE) + 'R'}</td><td>${x.se == null ? '–' : '±' + (2 * x.se).toFixed(3)}</td><td class="${x.h1 == null ? '' : cls(x.h1)}">${f(x.h1)}</td><td class="${x.h2 == null ? '' : cls(x.h2)}">${f(x.h2)}</td></tr>`;
+  h += '</tbody></table></div>';
+  let v;
+  if (SU.cmpA === SU.cmpB) v = 'Pick two different rules.';
+  else if (dm == null || dse == null || common.length < 30) v = 'Too few shared moments to compare (need 30 or more).';
+  else {
+    const h1 = avg(common.filter(q => A.get(q).t < mid).map(q => B.get(q).v - A.get(q).v)), h2 = avg(common.filter(q => A.get(q).t >= mid).map(q => B.get(q).v - A.get(q).v)), big = Math.abs(dm) > 2 * dse, same = h1 != null && h2 != null && Math.sign(h1) === Math.sign(h2) && Math.sign(h1) === Math.sign(dm);
+    v = `B minus A: <b class="${cls(dm)}">${f2(dm)}R</b> per moment (noise ±${(2 * dse).toFixed(3)}; 1st half ${f(h1)}, 2nd half ${f(h2)}). ` + (big && same ? `<b>${dm > 0 ? 'B' : 'A'} is better</b>: the gap is larger than the noise and holds in both halves. Confirm it on coins 101 to 200 before trusting it.` : big ? 'The gap is larger than the noise but does not hold in both halves: treat it as unproven.' : 'The gap is within the noise: no evidence that one is better.');
+  }
+  return h + `<div class="mu" style="font-size:12px;margin:6px 0">${v}</div>`;
+}
 function suRender(){
   const out = $('suOut'); if (!out) return;
   const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), raw = SU.ev[SU.kind] || [];
@@ -5113,6 +5138,7 @@ function suRender(){
       h += `<tr${r.n < 30 ? ' style="opacity:.5"' : ''}><td class="l">${esc(r.nm)}</td><td>${r.n}</td><td>${r.win.toFixed(0)}%</td><td class="${cls(r.avg)}">${f2(r.avg)}</td><td class="${cls(r.mom)}">${r.mom == null ? '–' : f2(r.mom)}</td><td class="${dd == null ? '' : cls(dd)}">${dd == null ? '–' : f2(dd)}</td>${r.tf.map(v => `<td class="${v == null ? '' : cls(v)}">${v == null ? '–' : f2(v)}</td>`).join('')}<td class="${r.h1 == null ? '' : cls(r.h1)}">${f(r.h1)}</td><td class="${r.h2 == null ? '' : cls(r.h2)}">${f(r.h2)}</td></tr>`; }
     h += `</tbody></table></div><div class="row" style="margin:8px 0"><label>Break down one setting below <select id="suSet">${sets.map(nm => `<option value="${esc(nm)}"${nm === SU.setSel ? ' selected' : ''}>${esc(nm)}</option>`).join('')}</select></label></div>`;
   }
+  h += suCompare(VARS, f2, cls);
   if (st){
     const half = Math.floor(tr.length / 2), a = brkStats(tr.slice(0, half).map(e => e.sims[vari].r)), b = brkStats(tr.slice(half).map(e => e.sims[vari].r));
     h += `<div class="mu" style="font-size:12px;margin:10px 0">Selected rule: cluster-adjusted average <b class="${cls(mo.avg)}">${f2(mo.avg)}R</b> per moment (plain average ${f2(st.avg)}R). First half of the period ${a ? f2(a.avg) + 'R' : '–'}, second half ${b ? f2(b.avg) + 'R' : '–'} (a real edge should show in both). A clearly negative result means price tended to keep going the other way; that is information too, but it is not the same as a profitable mirror trade (stops and targets differ).</div>`;
@@ -5127,6 +5153,7 @@ function suRender(){
   h += '</tbody></table></div><div class="mu" style="font-size:12px;margin-top:6px">Rows with fewer than 10 trades are dimmed. Entry at the open after the signal; stop checked before the target on a candle that touches both; trades not finished in 48 candles close at market; no fees or slippage. Compare any bucket with the whole-table result, and trust it only if the other coin set and both halves of the period agree. ' + (SU.kind === 'sweep' ? 'Baseline: on pure random price data the sweep rules score about -0.1 to -0.2R with the stop at the wick extreme (the stop is tight, so it is often hit on the very next candle) and about 0 to -0.03R with the stop 0.5 ATR beyond it, so judge against those, not against zero.' : 'Baseline: on pure random price data this rule scores about 0R to slightly below, so a positive result here is already a difference. Note that the market has drifted up over this period, so longs with the trend get a tailwind that shorts do not: compare the two sides separately.') + '</div>';
   out.innerHTML = h; $('suVar').onchange = ev => { SU.vari = ev.target.value; suRender(); };
   if ($('suSet')) $('suSet').onchange = ev => { SU.setSel = ev.target.value; suRender(); };
+  for (const [id, key] of [['suCA', 'cmpA'], ['suCB', 'cmpB'], ['suCS', 'cmpSide']]) if ($(id)) $(id).onchange = ev => { SU[key] = ev.target.value; suRender(); };
 }
 async function suRun(){
   if (SU.running){ SU.cancel = true; return; }
