@@ -699,15 +699,6 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div id="macVerdict"></div>
     <div class="maccards" id="macCards"></div>
     <div class="panel" id="macHistPanel"><div class="lqfh"><b>Regime history</b> <span class="mu" id="macHistNote">how the macro regime read on each past day, from the same rebuilt indices</span></div><div id="macHist"></div></div>
-    <details class="panel" id="macTimeP">
-      <summary><b>Macro timing study</b> <span class="mu">do early signs of a turn in the stablecoin or BTC dominance precede the alts' next move?</span></summary>
-      <div class="row" style="margin:8px 0">
-        <label>Series <select id="mtKey"><option value="stD">Stablecoin dominance (USDT.D + USDC.D)</option><option value="btcD">BTC dominance</option></select></label>
-        <label>Look ahead <select id="mtH"><option value="7">7 days</option><option value="14">14 days</option></select></label>
-        <button id="mtRun" class="primary">Run</button>
-      </div>
-      <div id="mtOut" class="mu" style="font-size:12px">Uses the daily macro history already loaded (about a year). For every day it checks simple indicator states on the series, then measures how TOTAL3ES (all alts) moved over the next days. Readings within the look-ahead window count as one episode.</div>
-    </details>
     <div class="macbottom">
       <div class="panel"><div class="lqfh"><b>Macro regimes</b> <span class="mu">how the four indices combine · current one highlighted</span></div><div id="macMatrix"></div></div>
       <div class="panel macchart"><div class="row" style="margin-bottom:8px"><b>TradingView</b><div class="seg" id="macTv"><button data-v="CRYPTOCAP:BTC.D" class="on">BTC.D</button><button data-v="CRYPTOCAP:USDT.D+CRYPTOCAP:USDC.D">USDT.D+USDC.D</button><button data-v="CRYPTOCAP:USDT.D">USDT.D</button><button data-v="CRYPTOCAP:USDC.D">USDC.D</button><button data-v="CRYPTOCAP:TOTAL3ES">TOTAL3ES</button><button data-v="CRYPTOCAP:OTHERS.D">OTHERS.D</button><button data-v="CRYPTOCAP:TOTAL">TOTAL</button></div><span class="mu">official indices, draw your own levels</span></div><div id="macTvBox" class="mactv"></div></div>
@@ -721,6 +712,15 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li>The regime adds or removes grade points: for example −2 for alt longs in Risk-off, +1 in Alt season. The points appear in each grade's tooltip and in the trade plan.</li>
       <li>Numbers are rebuilt from CoinGecko (today's market caps and the BTC, ETH, USDT and USDC history) and Binance daily prices (everything else, assuming supply stays constant over the window). They run a few tenths off TradingView's indices because the coin universe differs; the direction is what counts. The TradingView chart shows the official ones.</li>
     </ul></details></div>
+    <details class="panel" id="macTimeP">
+      <summary><b>Macro timing study</b> <span class="mu">do early signs of a turn in the stablecoin or BTC dominance precede the alts' next move?</span></summary>
+      <div class="row" style="margin:8px 0">
+        <label>Series <select id="mtKey"><option value="stD">Stablecoin dominance (USDT.D + USDC.D)</option><option value="btcD">BTC dominance</option></select></label>
+        <label>Look ahead <select id="mtH"><option value="7">7 days</option><option value="14">14 days</option></select></label>
+        <button id="mtRun" class="primary">Run</button>
+      </div>
+      <div id="mtOut" class="mu" style="font-size:12px">Uses the daily macro history already loaded (about a year). For every day it checks simple indicator states on the series, then measures how TOTAL3ES (all alts) moved over the next days. Readings within the look-ahead window count as one episode.</div>
+    </details>
   </div><!-- /viewMacro -->
 
   <div id="viewDiv" hidden>
