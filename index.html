@@ -845,6 +845,9 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input type="checkbox" data-wi="mcBig"> Market cap over $10B</label>
         <label><input type="checkbox" data-wi="fundAny"> Funding hot or cold (either side)</label>
         <label><input type="checkbox" data-wi="notal"> Did not pass my alert settings</label>
+        <label title="Stablecoin dominance (USDT.D + USDC.D) fell more than 5% over the last 7 days. Recorded on signals from this version on."><input type="checkbox" data-wi="shortStFall"> Shorts while stablecoins are draining (7d under -5%)</label>
+        <label title="Stablecoin dominance, BTC dominance and TOTAL3ES over 7 days: 2 or 3 of them point against the signal's side (for a long: stables rising, BTC.D rising, TOTAL3ES falling). Recorded on signals from this version on."><input type="checkbox" data-wi="macAgainst"> Macro confluence against my side</label>
+        <label title="2 or 3 of stablecoin dominance, BTC dominance and TOTAL3ES point with the signal's side"><input type="checkbox" data-wi="macWith"> Macro confluence with my side</label>
         <label title="Keeps only the best 5 per side on each candle, like the wave guard"><input type="checkbox" data-wi="wave"> Outside the best 5 per moment</label>
       </div>
       <div id="jWhatOut" class="mu" style="margin-top:8px"></div>
@@ -2738,6 +2741,11 @@ const J = {entries: [], page: 0, busy: false};
 const J_MAX = 3000;
 async function loadJournal(){ const v = await Cache.get('journal'); J.entries = Array.isArray(v) ? v : []; if (S.view === 'journal') renderJournal(); if (S.view === 'div') dvRecord(); }
 async function saveJournal(){ if (J.entries.length > J_MAX) J.entries = J.entries.slice(-J_MAX); await Cache.set('journal', J.entries); }
+function macroNums(){      // stablecoin dominance, BTC dominance and TOTAL3ES changes (7 days), and stablecoin dominance over 30 days, as of the last macro reading
+  const tr = S.macro && S.macro.reg && S.macro.reg.tr; if (!tr) return {};
+  const f = x => Number.isFinite(x) ? +x.toFixed(2) : null;
+  return {ms7: f(tr.stD.r7), ms30: f(tr.stD.r30), mb7: f(tr.btcD.r7), mt7: f(tr.t3es.r7)};
+}
 async function journalLog(tf){
   const c = cfg();
   if (!$('jOn').checked || !c.closed) return;
@@ -2755,7 +2763,7 @@ async function journalLog(tf){
       if (kind === 'setup' && lastBy.has(key) && x.d.lastTime - lastBy.get(key) < 6 * ms) continue;
       J.entries.push({id, key, sym: r.sym, tf, kind, dir, ct: x.d.lastTime, price: x.d.lastClose, atr: x.d.atr,
         score: dir > 0 ? x.bull : x.bear, rs7: x.rs?.b7 ?? null, pts: x.G ? x.G.pts : null, grade: x.G && (x.setup === dir || (!x.setup && (dir > 0 ? x.bull : x.bear) >= 4)) ? x.G.grade : null, trig: x.trig.filter(t => t.dir === dir).map(t => t.t),
-        mc: r.mcap > 0 ? r.mcap : null, qv: r.qv ?? null, regime: S.regimeDir || 0, mtf: r.mtf ? (x.mtfAll === dir ? 'all' : x.mtfAll === -dir ? 'against' : 'mixed') : null,
+        mc: r.mcap > 0 ? r.mcap : null, qv: r.qv ?? null, ...macroNums(), regime: S.regimeDir || 0, mtf: r.mtf ? (x.mtfAll === dir ? 'all' : x.mtfAll === -dir ? 'against' : 'mixed') : null,
         ext: x.ext, pos: x.pos, fFlag: x.fFlag, macro: S.macro && S.macro.reg ? S.macro.reg.name : null, out: null}); fresh.push(J.entries.at(-1));
       seen.add(id); lastBy.set(key, x.d.lastTime); added++;
     }
@@ -2812,6 +2820,7 @@ function edgeGroups(es){
   for (const tf of TFS) { const l = es.filter(e => e.tf === tf); if (l.length) add('Timeframe', tf.toUpperCase(), l); }
   add('Regime', 'With regime', es.filter(e => e.regime === e.dir)); add('Regime', 'Mixed', es.filter(e => !e.regime)); add('Regime', 'Against regime', es.filter(e => e.regime === -e.dir));
   { const names = [...new Set(es.map(e => e.macro).filter(Boolean))]; for (const nm of names) add('Macro', nm, es.filter(e => e.macro === nm)); }
+  { const l = es.filter(e => e.ms7 != null); if (l.length){ const cf = e => macConf(e.dir, e.ms7, e.mb7, e.mt7); add('Macro confluence (7d)', 'With my side (+2, +3)', l.filter(e => cf(e) >= 2)); add('Macro confluence (7d)', 'Mixed (-1 to +1)', l.filter(e => cf(e) > -2 && cf(e) < 2)); add('Macro confluence (7d)', 'Against my side (-2, -3)', l.filter(e => cf(e) <= -2)); } }
   add('MTF', 'All 3 agree', es.filter(e => e.mtf === 'all')); add('MTF', 'Mixed', es.filter(e => e.mtf === 'mixed')); add('MTF', 'All 3 against', es.filter(e => e.mtf === 'against'));
   add('Extension', 'Under 3 ATR', es.filter(e => e.ext != null && e.ext * e.dir < 3)); add('Extension', 'Stretched (3+ ATR)', es.filter(e => e.ext != null && e.ext * e.dir >= 3));
   for (const [k, [t]] of Object.entries(POS)) { const l = es.filter(e => e.pos === k); if (l.length) add('Positioning', t, l); }
@@ -2825,7 +2834,7 @@ const LOSS_COND = [
   ['Stretched (3+ ATR)', e => e.ext != null && e.ext * e.dir >= 3], ['Crowded funding', e => e.fFlag === e.dir], ['Aligned (no trigger)', e => e.kind === 'aligned'],
   ['Long', e => e.dir > 0], ['Short', e => e.dir < 0], ['Leader against its side (RS)', e => e.rs7 != null && e.rs7 * e.dir <= -2]
 ];
-const WI = {regWith: e => e.regime !== 0 && e.regime === e.dir, gradeB: e => e.grade === 'B' || e.grade === 'C', mcSmall: e => e.mc != null && e.mc < 1e9, mcBig: e => e.mc != null && e.mc >= 1e10, fundAny: e => e.fFlag !== 0 && e.fFlag != null, notal: e => e.al === 0, wave: () => false, grade: e => e.grade === 'C', regime: e => e.regime === -e.dir, mtf: e => e.mtf === 'against', ext: e => e.ext != null && e.ext * e.dir >= 3, fund: e => e.fFlag === e.dir, aligned: e => e.kind === 'aligned'};
+const WI = {macAgainst: e => { const c = macConf(e.dir, e.ms7, e.mb7, e.mt7); return c != null && c <= -2; }, macWith: e => { const c = macConf(e.dir, e.ms7, e.mb7, e.mt7); return c != null && c >= 2; }, shortStFall: e => e.dir < 0 && e.ms7 != null && e.ms7 <= -5, regWith: e => e.regime !== 0 && e.regime === e.dir, gradeB: e => e.grade === 'B' || e.grade === 'C', mcSmall: e => e.mc != null && e.mc < 1e9, mcBig: e => e.mc != null && e.mc >= 1e10, fundAny: e => e.fFlag !== 0 && e.fFlag != null, notal: e => e.al === 0, wave: () => false, grade: e => e.grade === 'C', regime: e => e.regime === -e.dir, mtf: e => e.mtf === 'against', ext: e => e.ext != null && e.ext * e.dir >= 3, fund: e => e.fFlag === e.dir, aligned: e => e.kind === 'aligned'};
 function renderLoss(es){
   const done = es.filter(e => e.out && e.out.res), L = done.filter(e => e.out.res === 'loss'), box = $('jLoss');
   if (!box) return;
@@ -2931,9 +2940,9 @@ function renderRun(){
     <div class="tablewrap" style="border:0;margin-top:8px"><table class="jedge"><thead><tr><th class="l">Group</th><th>Alerts</th><th>Win rate</th><th>Avg R</th><th>Total R</th></tr></thead><tbody>${grp.map(([n, l]) => { const s2 = st(l); return `<tr class="${l.length < 10 ? 'low' : ''}"><td class="l">${n}</td><td>${s2.n}</td><td>${s2.win.toFixed(0)}%</td><td class="${cls(s2.avg)}">${f(s2.avg)}</td><td class="${cls(s2.tot)}">${fR(s2.tot)}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 function journalCSV(){
-  const head = ['signal_time','pair','tf','side','kind','score','triggers','regime','mtf','ext_atr','positioning','funding_crowded','entry','atr','r4_pct','r12_pct','r24_pct','mfe_pct','mae_pct','result','r_multiple','bars_to_result','grade','grade_pts','rs7_vs_btc_pp','wave_size','peak_r_before_stop','target_hit_after_stop','macro','alerted','plan_result','plan_r'];
+  const head = ['signal_time','pair','tf','side','kind','score','triggers','regime','mtf','ext_atr','positioning','funding_crowded','entry','atr','r4_pct','r12_pct','r24_pct','mfe_pct','mae_pct','result','r_multiple','bars_to_result','grade','grade_pts','rs7_vs_btc_pp','wave_size','peak_r_before_stop','target_hit_after_stop','macro','alerted','plan_result','plan_r','stables_7d_pct','stables_30d_pct','btcd_7d_pct','total3es_7d_pct','market_cap'];
   const wv = new Map(); for (const e of J.entries) if (e.kind !== 'div'){ const k = e.tf + '|' + e.ct + '|' + e.kind + '|' + e.dir; wv.set(k, (wv.get(k) || 0) + 1); }   // older entries get their wave size counted from the log
-  const lines = [head.join(',')].concat(J.entries.map(e => { const o = e.out || {}; return [new Date(e.ct + TF_MS[e.tf]).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.kind, e.score, e.trig.join('|'), e.regime, e.mtf ?? '', e.ext?.toFixed(2) ?? '', e.pos ?? '', e.fFlag === e.dir ? 1 : 0, e.price, e.atr, o.r4?.toFixed(3) ?? '', o.r12?.toFixed(3) ?? '', o.r24?.toFixed(3) ?? '', o.mfe?.toFixed(3) ?? '', o.mae?.toFixed(3) ?? '', o.expired ? 'expired' : o.res ?? 'open', o.rr?.toFixed(3) ?? '', o.hitBar ?? '', e.grade ?? '', e.pts ?? '', e.rs7 != null ? e.rs7.toFixed(2) : '', e.wave ?? wv.get(e.tf + '|' + e.ct + '|' + e.kind + '|' + e.dir) ?? '', o.peakR != null ? o.peakR.toFixed(2) : '', o.rec == null ? '' : o.rec ? 1 : 0, e.macro ? '"' + e.macro + '"' : '', e.al == null ? '' : e.al, o.plan && o.plan.done ? o.plan.res : '', o.plan && o.plan.done ? o.plan.r.toFixed(3) : ''].join(','); }));
+  const lines = [head.join(',')].concat(J.entries.map(e => { const o = e.out || {}; return [new Date(e.ct + TF_MS[e.tf]).toISOString(), e.sym, e.tf, e.dir > 0 ? 'long' : 'short', e.kind, e.score, e.trig.join('|'), e.regime, e.mtf ?? '', e.ext?.toFixed(2) ?? '', e.pos ?? '', e.fFlag === e.dir ? 1 : 0, e.price, e.atr, o.r4?.toFixed(3) ?? '', o.r12?.toFixed(3) ?? '', o.r24?.toFixed(3) ?? '', o.mfe?.toFixed(3) ?? '', o.mae?.toFixed(3) ?? '', o.expired ? 'expired' : o.res ?? 'open', o.rr?.toFixed(3) ?? '', o.hitBar ?? '', e.grade ?? '', e.pts ?? '', e.rs7 != null ? e.rs7.toFixed(2) : '', e.wave ?? wv.get(e.tf + '|' + e.ct + '|' + e.kind + '|' + e.dir) ?? '', o.peakR != null ? o.peakR.toFixed(2) : '', o.rec == null ? '' : o.rec ? 1 : 0, e.macro ? '"' + e.macro + '"' : '', e.al == null ? '' : e.al, o.plan && o.plan.done ? o.plan.res : '', o.plan && o.plan.done ? o.plan.r.toFixed(3) : '', e.ms7 ?? '', e.ms30 ?? '', e.mb7 ?? '', e.mt7 ?? '', e.mc ?? ''].join(','); }));
   downloadText(lines.join('\n'), `signal-journal-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
 }
 function downloadText(text, name, type){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
@@ -4848,10 +4857,17 @@ function brkRender(){
   if ($('brkVar')) $('brkVar').onchange = ev => { BRK.vari = ev.target.value; brkRender(); };
 }
 /* Macro regime of each past day, from the Macro tab's daily series; an event at time t uses the last completed day before it (no look-ahead). */
+/* Macro confluence for a trade direction: stablecoin dominance, BTC dominance and TOTAL3ES over 7 days, thresholds as in the regime (3%, 1.5%, 4%).
+   +1 for each that helps alts in that direction, -1 for each that hurts; result -3..+3, null if unknown. */
+function macConf(dir, s7, b7, t7){
+  if (!dir || s7 == null || b7 == null || t7 == null) return null;
+  const st = s7 <= -3 ? 1 : s7 >= 3 ? -1 : 0, bd = b7 <= -1.5 ? 1 : b7 >= 1.5 ? -1 : 0, t3 = t7 >= 4 ? 1 : t7 <= -4 ? -1 : 0;
+  return dir * (st + bd + t3);
+}
 function macroDayInfo(){      // for a time t: the regime key and the stablecoin-dominance direction as of the day before
   const M = S.macro, SER = M && M.series; if (!SER || SER.length < 31) return () => null;
   const days = [], info = [];
-  for (let i = 29; i < SER.length; i++){ const r = macroRegime(SER.slice(0, i + 1), 1, 30); days.push(SER[i].t); info.push(r ? {key: r.key, name: r.name, sd: r.tr.stD.dir, s7: r.tr.stD.r7, s30: r.tr.stD.r30, bd: r.tr.btcD.dir, t3: r.tr.t3es.dir} : null); }
+  for (let i = 29; i < SER.length; i++){ const r = macroRegime(SER.slice(0, i + 1), 1, 30); days.push(SER[i].t); info.push(r ? {key: r.key, name: r.name, sd: r.tr.stD.dir, s7: r.tr.stD.r7, s30: r.tr.stD.r30, b7: r.tr.btcD.r7, t7: r.tr.t3es.r7, bd: r.tr.btcD.dir, t3: r.tr.t3es.dir} : null); }
   return t => { const d = Math.floor(t / 864e5) * 864e5; let lo = 0, hi = days.length - 1, k = -1; while (lo <= hi){ const m = (lo + hi) >> 1; if (days[m] < d){ k = m; lo = m + 1; } else hi = m - 1; } return k >= 0 ? info[k] : null; };
 }
 function macroDayLookup(){ const f = macroDayInfo(); return t => { const x = f(t); return x ? x.name : null; }; }
@@ -5000,11 +5016,14 @@ SU_KINDS.cfg = {name: 'Indicator settings', stops: {a15: 'stop 1.5 ATR from the 
     ['Stablecoin dominance (USDT.D + USDC.D), day before, by side', e => e.sd == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · stables ' + (e.sd > 0 ? 'rising' : e.sd < 0 ? 'falling' : 'flat')],
     ['Stablecoin dominance change over 7 days (%), by side', e => e.s7 == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · stables 7d ' + suB(e.s7, [-5, -2, 2, 5], ['under -5%', '-5 to -2%', '-2 to +2%', '+2 to +5%', 'over +5%'])],
     ['Stablecoin dominance change over 30 days (%), by side', e => e.s30 == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · stables 30d ' + suB(e.s30, [-10, -4, 4, 10], ['under -10%', '-10 to -4%', '-4 to +4%', '+4 to +10%', 'over +10%'])],
+    ['Macro confluence (stables + BTC.D + TOTAL3ES, 7 days): +3 all help this side, -3 all hurt it', e => { const c = macConf(e.dir, e.s7, e.b7, e.t7); return c == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · ' + (c <= -2 ? 'against (-3, -2)' : c === -1 ? '-1' : c === 0 ? '0' : c === 1 ? '+1' : 'with (+2, +3)'); }],
+    ['BTC dominance change over 7 days (%), by side', e => e.b7 == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · BTC.D 7d ' + suB(e.b7, [-3, -1.5, 1.5, 3], ['under -3%', '-3 to -1.5%', '-1.5 to +1.5%', '+1.5 to +3%', 'over +3%'])],
+    ['TOTAL3ES change over 7 days (%), by side', e => e.t7 == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · TOTAL3ES 7d ' + suB(e.t7, [-8, -4, 4, 8], ['under -8%', '-8 to -4%', '-4 to +4%', '+4 to +8%', 'over +8%'])],
     ['Alts money flow (TOTAL3ES), day before, by side', e => e.t3 == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · alts ' + (e.t3 > 0 ? 'rising' : e.t3 < 0 ? 'falling' : 'flat')],
     ['BTC dominance, day before, by side', e => e.bd == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · BTC.D ' + (e.bd > 0 ? 'rising' : e.bd < 0 ? 'falling' : 'flat')],
     ['Macro regime, day before, by side', e => e.mk == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · ' + MACRO_REGIMES[e.mk][0]],
     ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
-  csv: [['stables_7d_pct', e => e.s7], ['stables_30d_pct', e => e.s30], ['stables_trend', e => e.sd], ['alts_trend', e => e.t3], ['btcd_trend', e => e.bd], ['macro_regime', e => e.mk], ['settings', e => e.set], ['checks_agreeing', e => e.al], ['triggers', e => (e.trig || []).join('+')]]};
+  csv: [['btcd_7d_pct', e => e.b7], ['total3es_7d_pct', e => e.t7], ['stables_7d_pct', e => e.s7], ['stables_30d_pct', e => e.s30], ['stables_trend', e => e.sd], ['alts_trend', e => e.t3], ['btcd_trend', e => e.bd], ['macro_regime', e => e.mk], ['settings', e => e.set], ['checks_agreeing', e => e.al], ['triggers', e => (e.trig || []).join('+')]]};
 const SU_ORD = ['Long', 'Short', 'All 4', '3 of 4', '15m', '1h', '4h', '1d', 'Long (a low was swept)', 'Short (a high was swept)', 'Long (crowd was short)', 'Short (crowd was long)', 'under 0.25', '0.25 to 0.5', '0.5 to 1', '1 to 2', '1 or more', '2 or more', 'under 0.5', 'under 40%', '40 to 60%', '60% or more',
   'under 1x', '1 to 2x', '2x or more', 'No', 'Yes', 'With the trend', 'Against the trend', '0.03 to 0.05', '0.05 to 0.1', '0.1 to 0.2', '0.2 or more', 'under -5%', '-5 to -2%', '-2 to 0%', '0 to 2%', '2 to 5%', '5% or more', 'under 0.5%', '0.5 to 1%', '1 to 2%', '2% or more', 'Long (uptrend)', 'Short (downtrend)', 'Long (broke up)', 'Short (broke down)', 'under -10', '-10 to -3', '-3 to 0', '0 to 3', '3 to 10', '10 or more', 'under 1', '2 to 4', '4 or more', '2 to 3x', '3x or more', 'under 60%', '60 to 80%', '80% or more', 'top 10', '11 to 20', '21 to 50', '51 to 70', '71 to 100', '101 to 200'];
 const suVars = k => { const o = {}; for (const sk of Object.keys(SU_KINDS[k].stops)) for (const m of SETUP_TARGETS) o[sk + '|' + m] = `${SU_KINDS[k].stops[sk][0].toUpperCase() + SU_KINDS[k].stops[sk].slice(1)}, target ${m}R`; return o; };
@@ -5089,7 +5108,7 @@ async function suRun(){
           else { const btc = await getKlines('BTCUSDT', tf, true, KDEEP); found = (kind === 'pull' ? pullScan : rangeScan)(cd, btc); }
           for (const b of found){
             const r = setupSim(cd, b);
-            if (kind === 'cfg'){ const mi = macI(b.t + TF_MS[tf]); if (r.status !== 'skip') ev.push({sym, tf, rk, t: b.t, dir: b.dir, mk: mi ? mi.key : null, sd: mi ? mi.sd : null, s7: mi ? +mi.s7.toFixed(2) : null, s30: mi ? +mi.s30.toFixed(2) : null, bd: mi ? mi.bd : null, t3: mi ? mi.t3 : null, riskAtr: r.risk != null && b.atr > 0 ? +(r.risk / b.atr).toFixed(2) : null, m: b.m, a: b.a, rs: SETUP_TARGETS.map(q => { const z = r.sims['a15|' + q]; return z && z.done ? +z.r.toFixed(3) : null; })}); continue; }
+            if (kind === 'cfg'){ const mi = macI(b.t + TF_MS[tf]); if (r.status !== 'skip') ev.push({sym, tf, rk, t: b.t, dir: b.dir, mk: mi ? mi.key : null, sd: mi ? mi.sd : null, s7: mi ? +mi.s7.toFixed(2) : null, s30: mi ? +mi.s30.toFixed(2) : null, b7: mi ? +mi.b7.toFixed(2) : null, t7: mi ? +mi.t7.toFixed(2) : null, bd: mi ? mi.bd : null, t3: mi ? mi.t3 : null, riskAtr: r.risk != null && b.atr > 0 ? +(r.risk / b.atr).toFixed(2) : null, m: b.m, a: b.a, rs: SETUP_TARGETS.map(q => { const z = r.sims['a15|' + q]; return z && z.done ? +z.r.toFixed(3) : null; })}); continue; }
             const rec = {sym, tf, rk, t: b.t, dir: b.dir, st: r.status, riskAtr: r.risk != null && b.atr > 0 ? r.risk / b.atr : null, sims: r.status === 'done' || r.status === 'open' ? r.sims : null};
             if (kind === 'sweep') Object.assign(rec, {depth: b.depth, reclaim: b.reclaim, wick: b.wick, vol: b.vol, big: b.big, withTrend: b.withTrend});
             else if (kind === 'fund') Object.assign(rec, {fr: b.fr, ch24: b.ch24, atrPct: b.atrPct, withTrend: b.withTrend});
@@ -5113,8 +5132,8 @@ async function suRun(){
 function suCsv(){
   const raw = SU.ev[SU.kind] || []; if (!raw.length){ toast('Run the study first.'); return; }
   if (SU.kind === 'cfg'){
-    const names = e => SU_CFGV.map((v, i) => e.m & (1 << i) ? i : -1).filter(i => i >= 0), lines = ['time_utc,pair,volume_rank,tf,side,stop_atr,macro_regime,stables_trend,stables_7d_pct,stables_30d_pct,alts_trend,btcd_trend,settings_that_fired,settings_with_all4_checks,R_target_1,R_target_2,R_target_3'];
-    for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.rk, e.tf, e.dir > 0 ? 'long' : 'short', e.riskAtr ?? '', e.mk ?? '', e.sd ?? '', e.s7 ?? '', e.s30 ?? '', e.t3 ?? '', e.bd ?? '', '"' + names(e).map(i => SU_CFGV[i].name).join(' + ') + '"', '"' + SU_CFGV.map((v, i) => e.a & (1 << i) ? v.name : '').filter(Boolean).join(' + ') + '"'].concat(e.rs.map(r => r ?? '')).join(','));
+    const names = e => SU_CFGV.map((v, i) => e.m & (1 << i) ? i : -1).filter(i => i >= 0), lines = ['time_utc,pair,volume_rank,tf,side,stop_atr,macro_regime,stables_trend,btcd_7d_pct,total3es_7d_pct,stables_7d_pct,stables_30d_pct,alts_trend,btcd_trend,settings_that_fired,settings_with_all4_checks,R_target_1,R_target_2,R_target_3'];
+    for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.rk, e.tf, e.dir > 0 ? 'long' : 'short', e.riskAtr ?? '', e.mk ?? '', e.sd ?? '', e.b7 ?? '', e.t7 ?? '', e.s7 ?? '', e.s30 ?? '', e.t3 ?? '', e.bd ?? '', '"' + names(e).map(i => SU_CFGV[i].name).join(' + ') + '"', '"' + SU_CFGV.map((v, i) => e.a & (1 << i) ? v.name : '').filter(Boolean).join(' + ') + '"'].concat(e.rs.map(r => r ?? '')).join(','));
     downloadText(lines.join('\n'), `setup-cfg-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv'); return;
   }
   const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), keys = Object.keys(VARS), head = ['time_utc', 'pair', 'volume_rank', 'tf', 'side', 'status', 'stop_atr'].concat(K.csv.map(c => c[0]));
