@@ -2262,6 +2262,7 @@ async function getKlines(sym, tf, closedOnly, LIM = KLIMIT){   // LIM = KDEEP gi
 
 /* One year of history per timeframe for the studies (Binance returns at most 1500 candles per request, so older pages are fetched backwards).
    Kept in the browser's database only (not in memory) and topped up on later runs. A coin listed less than a year ago simply has less. */
+const amin = a => { let m = Infinity; for (const x of a) if (x < m) m = x; return m; }, amax = a => { let m = -Infinity; for (const x of a) if (x > m) m = x; return m; };
 const YEAR_N = {'15m': 1000, '1h': 8760 + 300, '4h': 2190 + 100, '1d': 1000, '1w': 300};      // wanted candles: a year plus warm-up for the indicators
 const yearKey = (sym, tf) => `ky:${sym}:${tf}`;
 async function getKlinesYear(sym, tf, closedOnly = true){
@@ -4894,7 +4895,7 @@ function brkRender(){
   const pct = (a, b) => b ? (100 * a / b).toFixed(0) + '%' : '–', f2 = x => (x >= 0 ? '+' : '') + x.toFixed(2);
   const cls = x => x > 0.02 ? 'up' : x < -0.02 ? 'dn' : '';
   if (!all.length){ out.innerHTML = `<div class="row" style="margin:8px 0"><label>Show <select id="brkView"><option value="all">All breakers</option><option value="frozen" selected>Only the frozen long rule</option></select></label></div><div class="mu">No breakers match this view.</div>`; $('brkView').onchange = ev => { BRK.view = ev.target.value; brkRender(); }; return; }
-  const t0 = Math.min(...all.map(e => e.t)), t1 = Math.max(...all.map(e => e.t)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
+  const t0 = amin(all.map(e => e.t)), t1 = amax(all.map(e => e.t)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
   const ran = all.filter(e => e.st === 'ran').length, exp = all.filter(e => e.st === 'expired').length, mo = brkMoments(tr, vari), st = brkStats(tr.map(e => e.sims[vari].r));
   let h = `<div class="mu" style="font-size:12px;margin:8px 0">${all.length} breaker candles on ${BRK.meta ? BRK.meta.coins : '?'} coins${BRK.meta && BRK.meta.range ? ' ' + BRK.meta.range : ''} (${BRK.meta ? BRK.meta.tfs.join(', ') : ''}) over about ${days} days. The order at the 0.5 level filled in ${pct(filled.length, n)} of them (${filled.length}); in ${pct(ran, n)} price ran to the first target without coming back, ${pct(exp, n)} never came back within 6 candles. The ${tr.length} finished trades come from ${mo.n} separate market moments (same timeframe, candle and side). Moments count once each, so the cluster-adjusted average R below is the number to trust more.</div>`;
   h += `<div class="row" style="margin:6px 0"><label>Show <select id="brkView"><option value="all"${BRK.view === 'all' ? ' selected' : ''}>All breakers</option><option value="frozen"${BRK.view === 'frozen' ? ' selected' : ''}>Only the frozen long rule (long, close beyond the level, volume 1.5x+, body 60%+)</option></select></label> <label>Trade rule <select id="brkVar">${Object.keys(BRK_VARS).map(k => `<option value="${k}"${k === vari ? ' selected' : ''}>${BRK_VARS[k]}</option>`).join('')}</select></label></div>`;
@@ -5132,7 +5133,7 @@ function suCompare(VARS, f2, cls){
   const side = SU.cmpSide || 'all', pick = k => suTrades(k).filter(e => side === 'all' || (side === 'long' ? e.dir > 0 : e.dir < 0));
   const mm = k => { const g = new Map(); for (const e of pick(k)){ const q = e.tf + '|' + e.t + '|' + e.dir, o = g.get(q) || {a: [], t: e.t}; o.a.push(e.sims[k].r); g.set(q, o); } const r = new Map(); for (const [q, o] of g) r.set(q, {v: o.a.reduce((x, y) => x + y, 0) / o.a.length, t: o.t}); return r; };
   const A = mm(SU.cmpA), B = mm(SU.cmpB), ts = [...A.values(), ...B.values()].map(x => x.t); if (!ts.length) return '';
-  const mid = (Math.min(...ts) + Math.max(...ts)) / 2, avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null, sd = a => { if (a.length < 2) return null; const m = avg(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / (a.length - 1)); };
+  const mid = (amin(ts) + amax(ts)) / 2, avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null, sd = a => { if (a.length < 2) return null; const m = avg(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / (a.length - 1)); };
   const stat = M => { const v = [...M.values()]; return {n: v.length, m: avg(v.map(x => x.v)), h1: avg(v.filter(x => x.t < mid).map(x => x.v)), h2: avg(v.filter(x => x.t >= mid).map(x => x.v)), se: v.length > 1 ? sd(v.map(x => x.v)) / Math.sqrt(v.length) : null}; };
   const a = stat(A), b = stat(B), common = [...A.keys()].filter(q => B.has(q)), d = common.map(q => B.get(q).v - A.get(q).v), dm = avg(d), dse = d.length > 1 ? sd(d) / Math.sqrt(d.length) : null, f = v => v == null ? '–' : f2(v) + 'R', BASE = -0.04;
   const sel = (id, cur) => `<select id="${id}">${keys.map(k => `<option value="${k}"${k === cur ? ' selected' : ''}>${VARS[k]}</option>`).join('')}</select>`;
@@ -5160,7 +5161,7 @@ function suRender(){
   if (!all.length){ out.innerHTML = '<div class="mu" style="margin-top:8px">No signals from that date on.</div>'; return; }
   const m = new Map(); for (const e of tr){ const k = e.tf + '|' + e.t + '|' + e.dir, a = m.get(k) || []; a.push(e.sims[vari].r); m.set(k, a); }
   const mavg = [...m.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length), mo = {n: m.size, avg: mavg.length ? mavg.reduce((x, y) => x + y, 0) / mavg.length : 0}, st = brkStats(tr.map(e => e.sims[vari].r));
-  const t0 = Math.min(...all.map(e => e.t)), t1 = Math.max(...all.map(e => e.t)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
+  const t0 = amin(all.map(e => e.t)), t1 = amax(all.map(e => e.t)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
   let h = (meta.flip ? '<div class="mu" style="font-size:12px;margin:8px 0;color:var(--warn,#e0a030)"><b>Opposite side run:</b> every signal was traded the other way (long signals as shorts and the reverse, stop mirrored around the signal close). Side and macro-confluence groups below refer to the side actually traded.</div>' : '') + `<div class="mu" style="font-size:12px;margin:8px 0">${K.name}: ${all.length} signals on ${meta.coins || '?'} coins${meta.range ? ' ' + meta.range : ''} (${(meta.tfs || []).join(', ')}${meta.thr ? ', funding at least ' + meta.thr + '% per 8h' : ''}) over about ${days} days. ${tr.length} finished trades come from ${mo.n} separate market moments (same timeframe, candle and side). Moments count once each, so the cluster-adjusted average R is the number to trust more.</div>`;
   h += `<div class="row" style="margin:6px 0"><label>Trade rule <select id="suVar">${Object.keys(VARS).map(k => `<option value="${k}"${k === vari ? ' selected' : ''}>${VARS[k]}</option>`).join('')}</select></label></div>`;
   h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Trade rule</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Total R</th><th>Deepest drawdown</th></tr></thead><tbody>';
@@ -5274,7 +5275,7 @@ function alRender(){
   const mom = l => { const g = new Map(); for (const t of l){ const k = t.tf + '|' + t.op + '|' + t.dir; (g.get(k) || g.set(k, []).get(k)).push(t.r); } const v = [...g.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length); return {n: v.length, avg: v.length ? v.reduce((x, y) => x + y, 0) / v.length : null}; };
   const row = (label, l) => { if (!l.length) return ''; const s = brkStats(l.map(t => t.r)), m = mom(l), a = alSim(l, start, risk); return `<tr><td class="l">${esc(label)}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${m.avg == null ? '' : cls(m.avg)}">${m.avg == null ? '–' : f2(m.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td><td>${usd(a.eq)}</td><td class="${a.eq >= start ? 'up' : 'dn'}">${(100 * (a.eq / start - 1)).toFixed(1)}%</td><td>-${(100 * a.dd).toFixed(1)}%</td></tr>`; };
   const all = AL.rows, kinds = [['setup', 'Setups'], ['divergence', 'Divergences'], ['breaker', 'Breakers']], sel = AL.type === 'all' ? all : all.filter(t => t.kind === AL.type);
-  const t0 = Math.min(...all.map(t => t.cl)), t1 = Math.max(...all.map(t => t.cl)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
+  const t0 = amin(all.map(t => t.cl)), t1 = amax(all.map(t => t.cl)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
   let h = `<div class="mu" style="font-size:12px;margin:8px 0">${all.length} closed trades over about ${days} days, ${new Date(t0).toISOString().slice(0, 10)} to ${new Date(t1).toISOString().slice(0, 10)}. "Per moment" counts alerts of the same side and timeframe on the same candle once (they move together). Chance alone gives about -0.04R.</div>`;
   h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Type</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Per moment</th><th>Total R</th><th>Account</th><th>Return</th><th>Worst drop</th></tr></thead><tbody>';
   for (const [k, nm] of kinds) h += row(nm, all.filter(t => t.kind === k));
@@ -5289,7 +5290,7 @@ function alRender(){
   h += `<div class="mu" style="font-size:12px;margin:8px 0">First half of the period ${sa ? f2(sa.avg) + 'R (' + sa.n + ' trades)' : '–'}, second half ${sb ? f2(sb.avg) + 'R (' + sb.n + ' trades)' : '–'}. Rows with fewer than 10 trades are dimmed: too few to read. Open trades are not included until they close. A side that loses clearly is information, but reversing it is not automatically a winner: use the Setup study's "Opposite side" option to test that on history.</div>`;
   out.innerHTML = h;
 }
-$('alFiles').onchange = async ev => { AL.rows = []; for (const f of ev.target.files){ try { AL.rows.push(...alParse(f.name, await f.text())); } catch {} } const seen = new Set(); AL.rows = AL.rows.filter(t => { const k = t.kind + t.sym + t.tf + t.op + t.dir; if (seen.has(k)) return false; seen.add(k); return true; }); try { await Cache.set('alertRows', AL.rows); } catch {} $('alStatus').textContent = AL.rows.length + ' trades loaded'; alRender(); };
+$('alFiles').onchange = async ev => { AL.rows = []; for (const f of ev.target.files){ try { for (const r of alParse(f.name, await f.text())) AL.rows.push(r); } catch {} } const seen = new Set(); AL.rows = AL.rows.filter(t => { const k = t.kind + t.sym + t.tf + t.op + t.dir; if (seen.has(k)) return false; seen.add(k); return true; }); try { await Cache.set('alertRows', AL.rows); } catch {} $('alStatus').textContent = AL.rows.length + ' trades loaded'; alRender(); };
 for (const id of ['alStart', 'alRisk']) $(id).onchange = alRender;
 $('alType').onchange = ev => { AL.type = ev.target.value; alRender(); };
 async function alLoad(){ try { const v = await Cache.get('alertRows'); AL.rows = Array.isArray(v) ? v : []; } catch { AL.rows = []; } alRender(); }
@@ -5311,7 +5312,7 @@ function sbPer(trades){                                    // per timeframe: mom
   const out = [];
   for (const tf of Object.keys(by)){
     const v = [...by[tf].values()].map(o => ({t: o.t, v: sbAvg(o.a)})), n = v.length; if (!n) continue;
-    const ts = v.map(x => x.t), t0 = Math.min(...ts), t1 = Math.max(...ts), mid = (t0 + t1) / 2, m = sbAvg(v.map(x => x.v));
+    const ts = v.map(x => x.t), t0 = amin(ts), t1 = amax(ts), mid = (t0 + t1) / 2, m = sbAvg(v.map(x => x.v));
     const sd = n > 1 ? Math.sqrt(v.reduce((a, x) => a + (x.v - m) ** 2, 0) / (n - 1)) : null;
     out.push({tf, n, m, se: sd == null ? null : sd / Math.sqrt(n), h1: sbAvg(v.filter(x => x.t < mid).map(x => x.v)), h2: sbAvg(v.filter(x => x.t >= mid).map(x => x.v)), days: (t1 - t0) / 864e5});
   }
@@ -5359,8 +5360,8 @@ function sbRender(){
   }
   h += '</tbody></table></div>';
   const cov = []; for (const [k, nm] of [['cfg', 'Triggered setups'], ['sweep', 'Sweeps'], ['fund', 'Funding'], ['pull', 'Pullbacks'], ['range', 'Ranges']]){ const ev = SU.ev[k] || []; if (!ev.length) continue; const parts = [];
-    for (const tf of ['1h', '4h', '1d']){ const ts = ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (Math.max(...ts) - Math.min(...ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`${nm}: ${parts.join(', ')}`); }
-  if (BRK.ev.length){ const parts = []; for (const tf of ['1h', '4h', '1d']){ const ts = BRK.ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (Math.max(...ts) - Math.min(...ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`Breaker: ${parts.join(', ')}`); }
+    for (const tf of ['1h', '4h', '1d']){ const ts = ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (amax(ts) - amin(ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`${nm}: ${parts.join(', ')}`); }
+  if (BRK.ev.length){ const parts = []; for (const tf of ['1h', '4h', '1d']){ const ts = BRK.ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (amax(ts) - amin(ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`Breaker: ${parts.join(', ')}`); }
   h += `<div class="mu" style="font-size:12px;margin:8px 0"><b>How to read:</b> "vs chance" is the average minus -0.04R (what random entries earn with these rules). "Noise ±" is about two standard errors: a result only counts if it is bigger than that. <b>Promising</b> = well above chance (2.5 noise units) and above it in both halves of the period; <b>Unproven</b> = above chance but not convincingly or the halves disagree; <b>No edge</b> = within the noise; <b>Worse than chance</b> = clearly negative; <b>Too few</b> = under 30 moments. Timeframe cells show that timeframe alone (hover for moments and days; dimmed under 10). History = replays on old candles; Live journal = signals this browser logged (1.5 ATR, 1.5R); Runner = trades your server followed (load them in Runner results). Different sources use different trade rules, so compare within a source first. With this many rows, one or two will look good by luck alone: trust a Promising row only if it also holds in a different coin set, a later period, or your live results.</div>`;
   if (cov.length) h += `<div class="mu" style="font-size:12px;margin:4px 0">History covered (days between the first and last signal): ${cov.join(' · ')}.${cov.some(c => c.includes('⚠')) ? ' <b>⚠ = under a year</b>: that test was run with an older, shorter history. Press Run all tests below to refresh it with a full year.' : ''}</div>`;
   out.innerHTML = h;
