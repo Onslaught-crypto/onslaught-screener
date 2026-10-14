@@ -886,6 +886,17 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div id="brkOut"></div>
       <div id="rxOut"></div>
     </details>
+    <details class="panel jfold" data-fold="alerts">
+      <summary>Alert results (from the runner)</summary>
+      <div class="mu" style="font-size:12px;margin:6px 0">Analyse the trades your runner followed after each alert (setups, divergences, breakers). Send <code>/export</code> to the Telegram bot, save the files it sends (<code>trades.csv</code> and <code>breaker-trades.csv</code>), and load them here. Everything is calculated in your browser; nothing is uploaded. Trades are the simulated plan from each alert: thirds at each target, stop to entry after TP1, 48 candles at most, before fees.</div>
+      <div class="row">
+        <label>Files <input type="file" id="alFiles" accept=".csv" multiple></label>
+        <label>Start $ <input type="number" id="alStart" value="10000" min="100" step="100" style="width:90px"></label>
+        <label>Risk per trade % <input type="number" id="alRisk" value="1" min="0.1" max="10" step="0.1" style="width:60px"></label>
+        <label>Type <select id="alType"><option value="all">All together</option><option value="setup">Setups</option><option value="divergence">Divergences</option><option value="breaker">Breakers</option></select></label>
+      </div>
+      <div id="alOut"></div>
+    </details>
     <details class="panel jfold" data-fold="setup">
       <summary>Setup study</summary>
       <div class="mu" style="font-size:12px;margin:6px 0">Tests a trading idea on up to 1000 candles of history per coin, with the same rules every time, so ideas can be compared fairly. The trade is taken at the open of the candle after the signal; every stop is tried with targets of 1R, 2R and 3R; a trade that reaches neither within 48 candles is closed at market; the stop wins when a candle touches both; no fees. Judge a result by the cluster-adjusted average (signals at the same moment count once), and by whether both halves of the period agree. <b>Liquidity sweep</b>: price trades beyond the highest high / lowest low of the last 20 candles and closes back inside; the trade is against the sweep. <b>Funding extreme</b>: at a funding settlement the rate is far from normal; the trade is against the crowd (a very positive rate = short, a very negative rate = long). <b>Trend pullback</b>: EMA21 above EMA50 above EMA200 (reverse for shorts), the candle dips to the EMA21 and closes back on the trend side; the trade goes with the trend. <b>Tight-range breakout</b>: the last 20 candles' range was among the narrowest 20% of the last 100, and the candle closes beyond that range; the trade goes with the break. Both record the coin's strength against BTC over the last 30 candles.</div>
@@ -898,7 +909,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label>Coins <select id="suN"><option value="50">Top 50 by volume</option><option value="101-200">Coins ranked 101 to 200 (holdout test)</option><option value="100" selected>Top 100 by volume</option><option value="200">Top 200 by volume</option></select></label>
         <label id="suThrL" hidden>Funding at least <select id="suThr"><option value="0.03">0.03% per 8h</option><option value="0.05">0.05% per 8h</option><option value="0.1">0.1% per 8h</option></select></label>
         <label title="Count only the coins ranked this high by trading volume (today's ranking). Cumulative: Top 20 includes the top 10.">Show <select id="suTop"><option value="0">All coins run</option><option value="100">Top 100</option><option value="70">Top 70</option><option value="50">Top 50</option><option value="20">Top 20</option><option value="10">Top 10</option></select></label>
-        <label>From <input id="suSince" type="date"></label><button id="suRun" class="primary">Run study</button><button id="suCsv">Export CSV</button><span class="mu" id="suStatus" style="font-size:12px"></span>
+        <label title="Trade every signal the other way: a long signal becomes a short, a short becomes a long, same stop distance and targets. Tells you whether a losing side would have won if reversed. Run it separately and compare with the normal run."><input type="checkbox" id="suFlip"> Opposite side</label><label>From <input id="suSince" type="date"></label><button id="suRun" class="primary">Run study</button><button id="suCsv">Export CSV</button><span class="mu" id="suStatus" style="font-size:12px"></span>
       </div>
       <div id="suOut"></div>
     </details>
@@ -5121,7 +5132,7 @@ function suRender(){
   const m = new Map(); for (const e of tr){ const k = e.tf + '|' + e.t + '|' + e.dir, a = m.get(k) || []; a.push(e.sims[vari].r); m.set(k, a); }
   const mavg = [...m.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length), mo = {n: m.size, avg: mavg.length ? mavg.reduce((x, y) => x + y, 0) / mavg.length : 0}, st = brkStats(tr.map(e => e.sims[vari].r));
   const t0 = Math.min(...all.map(e => e.t)), t1 = Math.max(...all.map(e => e.t)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
-  let h = `<div class="mu" style="font-size:12px;margin:8px 0">${K.name}: ${all.length} signals on ${meta.coins || '?'} coins${meta.range ? ' ' + meta.range : ''} (${(meta.tfs || []).join(', ')}${meta.thr ? ', funding at least ' + meta.thr + '% per 8h' : ''}) over about ${days} days. ${tr.length} finished trades come from ${mo.n} separate market moments (same timeframe, candle and side). Moments count once each, so the cluster-adjusted average R is the number to trust more.</div>`;
+  let h = (meta.flip ? '<div class="mu" style="font-size:12px;margin:8px 0;color:var(--warn,#e0a030)"><b>Opposite side run:</b> every signal was traded the other way (long signals as shorts and the reverse, stop mirrored around the signal close). Side and macro-confluence groups below refer to the side actually traded.</div>' : '') + `<div class="mu" style="font-size:12px;margin:8px 0">${K.name}: ${all.length} signals on ${meta.coins || '?'} coins${meta.range ? ' ' + meta.range : ''} (${(meta.tfs || []).join(', ')}${meta.thr ? ', funding at least ' + meta.thr + '% per 8h' : ''}) over about ${days} days. ${tr.length} finished trades come from ${mo.n} separate market moments (same timeframe, candle and side). Moments count once each, so the cluster-adjusted average R is the number to trust more.</div>`;
   h += `<div class="row" style="margin:6px 0"><label>Trade rule <select id="suVar">${Object.keys(VARS).map(k => `<option value="${k}"${k === vari ? ' selected' : ''}>${VARS[k]}</option>`).join('')}</select></label></div>`;
   h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Trade rule</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Total R</th><th>Deepest drawdown</th></tr></thead><tbody>';
   for (const k of Object.keys(VARS)){ const s = brkStats(suTrades(k).map(e => e.sims[k].r)); if (!s) continue; h += `<tr${k === vari ? ' style="background:var(--panel-2,rgba(255,255,255,.04))"' : ''}><td class="l">${VARS[k]}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td><td>${s.dd.toFixed(1)}R</td></tr>`; }
@@ -5155,9 +5166,11 @@ function suRender(){
   if ($('suSet')) $('suSet').onchange = ev => { SU.setSel = ev.target.value; suRender(); };
   for (const [id, key] of [['suCA', 'cmpA'], ['suCB', 'cmpB'], ['suCS', 'cmpSide']]) if ($(id)) $(id).onchange = ev => { SU[key] = ev.target.value; suRender(); };
 }
+/* The opposite trade: same signal candle, other side, stop mirrored around the signal close (same distance in ATR). */
+function suFlip(b, cd){ const c = cd[b.i][4], st = {}; for (const k of Object.keys(b.stops)) st[k] = 2 * c - b.stops[k]; return {...b, dir: -b.dir, stops: st}; }
 async function suRun(){
   if (SU.running){ SU.cancel = true; return; }
-  const kind = $('suKind').value, tfs = [...document.querySelectorAll('.suTf:checked')].map(x => x.value), coinSel = $('suN').value, topN = coinSel === '101-200' ? 200 : +coinSel || 100, thr = +$('suThr').value || 0.03;
+  const kind = $('suKind').value, tfs = [...document.querySelectorAll('.suTf:checked')].map(x => x.value), coinSel = $('suN').value, topN = coinSel === '101-200' ? 200 : +coinSel || 100, thr = +$('suThr').value || 0.03, flip = !!($('suFlip') && $('suFlip').checked);
   if (!tfs.length){ toast('Pick at least one timeframe.'); return; }
   SU.kind = kind; SU.running = true; SU.cancel = false; $('suRun').textContent = 'Stop'; const stt = $('suStatus');
   try {
@@ -5175,8 +5188,8 @@ async function suRun(){
           else if (kind === 'sweep') found = sweepScan(cd);
           else if (kind === 'fund') found = fundScan(cd, await suRates(sym), {thr});
           else { const btc = await getKlines('BTCUSDT', tf, true, KDEEP); found = (kind === 'pull' ? pullScan : rangeScan)(cd, btc); }
-          for (const b of found){
-            const r = setupSim(cd, b);
+          for (const b0 of found){
+            const b = flip ? suFlip(b0, cd) : b0, r = setupSim(cd, b);
             if (kind === 'cfg'){ const mi = macI(b.t + TF_MS[tf]); if (r.status !== 'skip') ev.push({sym, tf, rk, t: b.t, dir: b.dir, mk: mi ? mi.key : null, sd: mi ? mi.sd : null, s7: mi ? +mi.s7.toFixed(2) : null, s30: mi ? +mi.s30.toFixed(2) : null, b7: mi ? +mi.b7.toFixed(2) : null, t7: mi ? +mi.t7.toFixed(2) : null, bd: mi ? mi.bd : null, t3: mi ? mi.t3 : null, riskAtr: b.atr > 0 && r.entry != null ? +(Math.abs(r.entry - b.stops.a15) / b.atr).toFixed(2) : null, swAtr: b.atr > 0 && r.entry != null ? +(Math.abs(r.entry - b.stops.sw) / b.atr).toFixed(2) : null, m: b.m, a: b.a, rs: SU_CFG_STOPS.flatMap(sk => SETUP_TARGETS.map(q => { const z = r.sims[sk + '|' + q]; return z && z.done ? +z.r.toFixed(2) : null; }))}); continue; }
             const rec = {sym, tf, rk, t: b.t, dir: b.dir, st: r.status, riskAtr: r.risk != null && b.atr > 0 ? r.risk / b.atr : null, sims: r.status === 'done' || r.status === 'open' ? r.sims : null};
             if (kind === 'sweep') Object.assign(rec, {depth: b.depth, reclaim: b.reclaim, wick: b.wick, vol: b.vol, big: b.big, withTrend: b.withTrend});
@@ -5192,7 +5205,7 @@ async function suRun(){
     await Promise.all(Array.from({length: kind === 'fund' ? 4 : 6}, worker));
     if (SU.cancel){ stt.textContent = 'Stopped.'; }
     else {
-      SU.ev[kind] = ev; SU.meta[kind] = {coins: uni.length, tfs, at: Date.now(), range: coinSel === '101-200' ? 'ranked 101 to 200' : '', thr: kind === 'fund' ? thr : null}; await Cache.set('setupStudy:' + kind, {ev, meta: SU.meta[kind]});
+      SU.ev[kind] = ev; SU.meta[kind] = {coins: uni.length, tfs, at: Date.now(), range: coinSel === '101-200' ? 'ranked 101 to 200' : '', thr: kind === 'fund' ? thr : null, flip}; await Cache.set('setupStudy:' + kind, {ev, meta: SU.meta[kind]});
       stt.textContent = `Done: ${ev.length} signals.`; suRender();
     }
   } catch (e){ stt.textContent = 'Failed: ' + (e && e.message || e); }
@@ -5211,6 +5224,46 @@ function suCsv(){
   for (const e of raw.slice().sort((a, b) => a.t - b.t)) lines.push([new Date(e.t).toISOString(), e.sym, e.rk == null ? '' : e.rk, e.tf, e.dir > 0 ? 'long' : 'short', e.st, q(e.riskAtr)].concat(K.csv.map(c => q(c[1](e)))).concat(keys.map(k => e.sims && e.sims[k] && e.sims[k].done ? +e.sims[k].r.toFixed(3) : '')).join(','));
   downloadText(lines.join('\n'), `setup-${SU.kind}-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv');
 }
+/* ---- Alert results: the runner's trades.csv and breaker-trades.csv, analysed in the browser ---- */
+const AL = {rows: [], type: 'all'};
+function alParse(name, text){
+  const L = text.split(/\r?\n/).filter(Boolean), H = (L.shift() || '').split(','), ix = n => H.indexOf(n), out = [];
+  const brk = !H.includes('kind') && H.includes('volume_x');
+  for (const line of L){
+    const f = line.split(','), r = parseFloat(f[ix('r_multiple')]); if (!Number.isFinite(r)) continue;
+    const op = Date.parse(f[ix('opened')]), cl = Date.parse(f[ix('closed')]); if (!Number.isFinite(op) || !Number.isFinite(cl)) continue;
+    const kind = brk ? 'breaker' : (f[ix('kind')] === 'divergence' ? 'divergence' : 'setup');
+    out.push({kind, tf: f[ix('tf')], dir: brk ? 1 : (f[ix('side')] === 'short' ? -1 : 1), grade: ix('grade') >= 0 ? f[ix('grade')] : '', regime: ix('regime') >= 0 ? f[ix('regime')] : '', op, cl, r, res: f[ix('result')], sym: f[ix('pair')]});
+  }
+  return out;
+}
+function alSim(list, start, risk){ let eq = start, pk = start, dd = 0; for (const t of list.slice().sort((a, b) => a.cl - b.cl)){ eq *= 1 + risk * t.r; if (eq > pk) pk = eq; dd = Math.max(dd, 1 - eq / pk); } return {eq, dd}; }
+function alRender(){
+  const out = $('alOut'); if (!out) return;
+  if (!AL.rows.length){ out.innerHTML = '<div class="mu" style="margin-top:8px">No files loaded yet.</div>'; return; }
+  const start = +$('alStart').value || 10000, risk = (+$('alRisk').value || 1) / 100, f2 = x => (x >= 0 ? '+' : '') + x.toFixed(2), cls = x => x > 0.02 ? 'up' : x < -0.02 ? 'dn' : '', usd = v => (v < 0 ? '-' : '') + '$' + Math.abs(Math.round(v)).toLocaleString('en-US');
+  const mom = l => { const g = new Map(); for (const t of l){ const k = t.tf + '|' + t.op + '|' + t.dir; (g.get(k) || g.set(k, []).get(k)).push(t.r); } const v = [...g.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length); return {n: v.length, avg: v.length ? v.reduce((x, y) => x + y, 0) / v.length : null}; };
+  const row = (label, l) => { if (!l.length) return ''; const s = brkStats(l.map(t => t.r)), m = mom(l), a = alSim(l, start, risk); return `<tr><td class="l">${esc(label)}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td class="${cls(s.avg)}">${f2(s.avg)}</td><td class="${m.avg == null ? '' : cls(m.avg)}">${m.avg == null ? '–' : f2(m.avg)}</td><td class="${cls(s.tot)}">${f2(s.tot)}</td><td>${usd(a.eq)}</td><td class="${a.eq >= start ? 'up' : 'dn'}">${(100 * (a.eq / start - 1)).toFixed(1)}%</td><td>-${(100 * a.dd).toFixed(1)}%</td></tr>`; };
+  const all = AL.rows, kinds = [['setup', 'Setups'], ['divergence', 'Divergences'], ['breaker', 'Breakers']], sel = AL.type === 'all' ? all : all.filter(t => t.kind === AL.type);
+  const t0 = Math.min(...all.map(t => t.cl)), t1 = Math.max(...all.map(t => t.cl)), days = Math.max(1, Math.round((t1 - t0) / 864e5));
+  let h = `<div class="mu" style="font-size:12px;margin:8px 0">${all.length} closed trades over about ${days} days, ${new Date(t0).toISOString().slice(0, 10)} to ${new Date(t1).toISOString().slice(0, 10)}. "Per moment" counts alerts of the same side and timeframe on the same candle once (they move together). Chance alone gives about -0.04R.</div>`;
+  h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Type</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Per moment</th><th>Total R</th><th>Account</th><th>Return</th><th>Worst drop</th></tr></thead><tbody>';
+  for (const [k, nm] of kinds) h += row(nm, all.filter(t => t.kind === k));
+  h += row('All together', all) + '</tbody></table></div>';
+  const groups = [['Side', t => t.dir > 0 ? 'Long' : 'Short'], ['Timeframe', t => t.tf.toUpperCase()], ['Grade', t => t.grade || null], ['Macro regime', t => t.regime || null], ['Week of closing', t => { const d = new Date(t.cl), x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - ((d.getUTCDay() + 6) % 7))); return x.toISOString().slice(0, 10); }], ['Result', t => t.res || null]];
+  h += `<div class="mu" style="font-size:12px;margin:12px 0 4px"><b>Breakdown</b> of: ${AL.type === 'all' ? 'all trades' : kinds.find(k => k[0] === AL.type)[1]} (change the Type above).</div>`;
+  h += '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th class="l">Bucket</th><th>Trades</th><th>Win rate</th><th>Avg R</th><th>Per moment</th><th>Total R</th><th>Account</th><th>Return</th><th>Worst drop</th></tr></thead><tbody>';
+  for (const [g, fn] of groups){ const by = new Map(); for (const t of sel){ const b = fn(t); if (b == null || b === '') continue; (by.get(b) || by.set(b, []).get(b)).push(t); } if (by.size < 2 && g !== 'Side') continue;
+    let first = true; for (const b of [...by.keys()].sort()){ const r = row(b, by.get(b)).replace('<td class="l">', `<td class="l">${first ? esc(g) : ''}</td><td class="l">`); first = false; h += r.replace('<tr>', by.get(b).length < 10 ? '<tr style="opacity:.5">' : '<tr>'); } }
+  h += '</tbody></table></div>';
+  const mid = (t0 + t1) / 2, a = sel.filter(t => t.cl < mid), b = sel.filter(t => t.cl >= mid), sa = brkStats(a.map(t => t.r)), sb = brkStats(b.map(t => t.r));
+  h += `<div class="mu" style="font-size:12px;margin:8px 0">First half of the period ${sa ? f2(sa.avg) + 'R (' + sa.n + ' trades)' : '–'}, second half ${sb ? f2(sb.avg) + 'R (' + sb.n + ' trades)' : '–'}. Rows with fewer than 10 trades are dimmed: too few to read. Open trades are not included until they close. A side that loses clearly is information, but reversing it is not automatically a winner: use the Setup study's "Opposite side" option to test that on history.</div>`;
+  out.innerHTML = h;
+}
+$('alFiles').onchange = async ev => { AL.rows = []; for (const f of ev.target.files){ try { AL.rows.push(...alParse(f.name, await f.text())); } catch {} } const seen = new Set(); AL.rows = AL.rows.filter(t => { const k = t.kind + t.sym + t.tf + t.op + t.dir; if (seen.has(k)) return false; seen.add(k); return true; }); alRender(); };
+for (const id of ['alStart', 'alRisk']) $(id).onchange = alRender;
+$('alType').onchange = ev => { AL.type = ev.target.value; alRender(); };
+alRender();
 $('suKind').onchange = () => { SU.kind = $('suKind').value; $('suThrL').hidden = SU.kind !== 'fund'; suRender(); };
 $('suTop').onchange = () => { SU.top = +$('suTop').value; suRender(); };
 $('suSince').onchange = () => { const v = $('suSince').value; SU.since = v ? Date.parse(v + 'T00:00:00Z') : 0; suRender(); };
