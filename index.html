@@ -917,6 +917,18 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       </div>
       <div id="suOut"></div>
     </details>
+    <details class="panel jfold" data-fold="btc">
+      <summary>BTC swing lab</summary>
+      <div class="mu" style="font-size:12px;margin:6px 0">Tests simple, well-known trend rules on BTCUSDT perpetuals over the whole history Binance has (since late 2019: the 2020-21 rally, the 2022 crash and the recovery). Each rule is a position, long or flat (or long or short), switched at the candle close. Costs are included: a fee on every position change and the real funding paid or received. The yardstick is buying and holding the whole period, and a random-timing test: the same trades in shuffled order, so the same time in the market and number of trades. Few trades means a wide margin of error: a rule that only works in one year is not a rule.</div>
+      <div class="row">
+        <label><input type="checkbox" class="btTf" value="1d" checked> 1D</label>
+        <label><input type="checkbox" class="btTf" value="4h" checked> 4H</label>
+        <label title="Charged on every position change, per side (taker fee plus slippage)">Fee per side % <input id="btFee" type="number" value="0.06" step="0.01" min="0" style="width:64px"></label>
+        <label title="Charge or credit the real 8-hourly funding rate to the open position"><input type="checkbox" id="btFund" checked> Funding</label>
+        <button id="btRun" class="btn">Run BTC study</button><span class="mu" id="btStatus"></span>
+      </div>
+      <div id="btOut"></div>
+    </details>
     </div>
     <div class="jpane" id="jtRunner" hidden>
     <details class="panel jfold" data-fold="alerts">
@@ -943,6 +955,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li><b>Four tabs.</b> <b>Scoreboard</b> (start here): every tested strategy in one table, same footing, with a verdict. <b>Live log</b>: the signals this browser logged. <b>Study lab</b>: the detailed history studies. <b>Runner results</b>: how your server's alerts really did. The tab you were on is remembered.</li>
       <li><b>Scoreboard</b> shows the per-moment average R (signals on the same candle and side count once), computed per timeframe and then averaged with equal weight, so a short 1H history cannot dominate. Compare it with <b>Chance</b>, which is what random entries earn with the same stop, target, side, timeframe and period (the Random entries rows, built by Run all tests; a * means no baseline yet and the fixed −0.04R is used), and with the noise ± column; the verdict is Promising only if it is well above chance and both halves of the period agree. Rows flagged ⚠ were run with less than a year of history. <b>Run all tests</b> reloads one year of candles per timeframe (first run for 100 coins can take several minutes; later runs reuse what is stored) and runs every study in turn, including <b>Classic signals</b> (EMA50 x EMA200, EMA20 x EMA50, close back over the EMA200, Donchian 55 breakout) and the random-entry baseline. For sweeps, pullbacks and ranges, whose stop is the candle's far end, the baseline uses a random-entry stop of about the same size in ATR (shown in the trade rule). Trend pullbacks are compared with random entries taken only while the EMAs are aligned in the same direction, and the EMA200 reclaim with random entries on the same side of the EMA200, so the trend itself is not credited to the rule (the extra Random entries rows show those baselines). Triggered setups are also split by trend: with price on the trade side of the EMA200, with EMA21/50/200 aligned, and against the trend, to see whether a trend gate would help (rerun Run all tests to fill these rows).</li>
       <li>The <b>Breaker candle study</b> and the <b>Setup study</b> replay rules on one year of history per timeframe for each coin (study only, no alerts). The Setup study covers liquidity sweeps, funding extremes, trend pullbacks, tight-range breakouts and <b>Indicator settings</b>, which replays the screener's setup for different RSI, DMI, ADX and OBV settings to see whether any setting beats the default. History has no open interest, market cap or grade, so those can only be judged here in the journal.</li>
+      <li>The <b>BTC swing lab</b> (Study lab) tests simple trend rules on BTCUSDT over the whole Binance history (since late 2019), long or flat and long or short, on 1D and 4H, with fees and the real funding. Compare each rule with buying and holding (return, worst drop, Sharpe, year by year) and with shuffled timing; it is for swing trades, not for the altcoin alerts.</li>
       <li>The Alert results box (above the Setup study) is only for people who run the Onslaught runner server: load the files it saves (send /export to its Telegram bot) to see how its alerts really did. It is not needed to use the Journal.</li>
       <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
     </ul></details></div>
@@ -2288,8 +2301,8 @@ async function getKlines(sym, tf, closedOnly, LIM = KLIMIT){   // LIM = KDEEP gi
 const amin = a => { let m = Infinity; for (const x of a) if (x < m) m = x; return m; }, amax = a => { let m = -Infinity; for (const x of a) if (x > m) m = x; return m; };
 const YEAR_N = {'15m': 1000, '1h': 8760 + 300, '4h': 2190 + 100, '1d': 1000, '1w': 300};      // wanted candles: a year plus warm-up for the indicators
 const yearKey = (sym, tf) => `ky:${sym}:${tf}`;
-async function getKlinesYear(sym, tf, closedOnly = true){
-  const want = YEAR_N[tf] || KDEEP, ms = TF_MS[tf], cur = tfOpen(tf, Date.now()), key = yearKey(sym, tf);
+async function getKlinesYear(sym, tf, closedOnly = true, wantN = 0, keyPre = ''){
+  const want = wantN || YEAR_N[tf] || KDEEP, ms = TF_MS[tf], cur = tfOpen(tf, Date.now()), key = keyPre + yearKey(sym, tf);
   let st = await Cache.get(key, true); if (!st || !Array.isArray(st.c)) st = {c: [], start: false};
   let c = st.c; const par = a => a.map(k => [k[0], +k[1], +k[2], +k[3], +k[4], +k[5]]);
   if (!c.length){                                                                  // first time: newest page, then older pages
@@ -5378,7 +5391,7 @@ function sbRowsData(){
   const add = (name, side, src, rule, tr, bk) => rows.push({name, side, src, rule, per: sbPer(tr), bk: bk && RB.m ? {key: bk + '|' + tgt, dir: side === 'Long' ? 1 : -1} : null});
   const cfg = SU.ev.cfg || [], flip = SU.meta.cfg && SU.meta.cfg.flip;
   if (cfg.length){ const base = cfg.filter(e => (e.m & 1) && e.rs && e.rs[ri] != null).map(e => ({tf: e.tf, t: e.t, dir: e.dir, r: e.rs[ri]}));
-    for (const [sd, d] of [['Long', 1], ['Short', -1]]) add('Triggered setups' + (flip ? ' (opposite-side run)' : ''), sd, 'History', `${stopTxt} stop, ${tgt}R`, base.filter(t => t.dir === d), flip ? null : stop); }
+    for (const [sd, d] of [['Long', 1], ['Short', -1]]) add('Triggered setups' + (flip ? ' (opposite-side run)' : ''), sd, 'History', `${stopTxt} stop, ${tgt}R`, base.filter(t => t.dir === d), flip && !/^a\d+$/.test(stop) ? null : stop); }
     if (!flip && cfg.some(e => e.tr != null && e.tr >= 0)){ const gb = cfg.filter(e => (e.m & 1) && e.rs && e.rs[ri] != null && e.tr != null && e.tr >= 0).map(e => ({tf: e.tf, t: e.t, dir: e.dir, r: e.rs[ri], tr: e.tr}));
       for (const [sd, d] of [['Long', 1], ['Short', -1]]){
         add('Triggered setups + price on the trade side of the EMA200', sd, 'History', `${stopTxt} stop, ${tgt}R (chance: random entries on that side of the EMA200)`, gb.filter(t => t.dir === d && (t.tr & 1)), 'T2:' + stop);
@@ -5473,6 +5486,80 @@ $('sbRun').onclick = async () => {
 rbLoad();
 for (const n of ['suRender', 'brkRender', 'alRender', 'renderJournal']){ const o = window[n]; if (typeof o === 'function') window[n] = function(){ const r = o.apply(this, arguments); try { if (!$('jtScore').hidden) sbRender(); } catch {} return r; }; }
 { let v = 'Score'; try { v = localStorage.getItem('onslaught-jtab') || 'Score'; } catch {} if (!document.getElementById('jt' + v)) v = 'Score'; jTab(v); }
+
+/* ---- BTC swing lab: trend rules on the full BTCUSDT history, with costs, against buy and hold and shuffled timing ---- */
+const BT = {res: null};
+async function btFunding(){
+  const key = 'frall:BTCUSDT', c = await Cache.get(key, true); let rates = c && Array.isArray(c.rates) ? c.rates : [];
+  const need = !rates.length || Date.now() - c.at > 6 * 36e5; if (!need) return rates;
+  let from = rates.length ? rates[rates.length - 1].t + 1 : Date.UTC(2019, 8, 1);
+  for (let g = 0; g < 40; g++){ const d = await getJSON(`${FAPI}/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=${from}&limit=1000`, FRLIM, 1); if (!Array.isArray(d) || !d.length) break;
+    for (const x of d){ const r = +x.fundingRate; if (Number.isFinite(r)) rates.push({t: +x.fundingTime, r}); } from = +d[d.length - 1].fundingTime + 1; if (d.length < 1000) break; }
+  await Cache.set(key, {at: Date.now(), rates}, true); return rates;
+}
+function btSma(a, p){ const o = new Array(a.length).fill(NaN); let s = 0; for (let i = 0; i < a.length; i++){ s += a[i]; if (i >= p) s -= a[i - p]; if (i >= p - 1) o[i] = s / p; } return o; }
+function btSignals(cd, tf){                                       // state at each close: +1 long, -1 short, 0 none
+  const n = cd.length, c = cd.map(k => k[4]), h = cd.map(k => k[2]), l = cd.map(k => k[3]), e20 = ema(c, 20), e50 = ema(c, 50), e200 = ema(c, 200), per = tf === '4h' ? 6 : 1, sm = btSma(c, 70 * per), mom = 90, out = {};
+  const sgn = (a, b) => a > b ? 1 : a < b ? -1 : 0;
+  out['Price vs EMA200'] = c.map((x, i) => e200[i] > 0 ? sgn(x, e200[i]) : 0);
+  out['EMA50 x EMA200'] = c.map((x, i) => e200[i] > 0 ? sgn(e50[i], e200[i]) : 0);
+  out['EMA20 x EMA50'] = c.map((x, i) => e50[i] > 0 ? sgn(e20[i], e50[i]) : 0);
+  out['Price vs 10-week average'] = c.map((x, i) => sm[i] > 0 ? sgn(x, sm[i]) : 0);
+  out['Momentum (90 candles)'] = c.map((x, i) => i >= mom ? sgn(x, c[i - mom]) : 0);
+  const don = new Array(n).fill(0); let st = 0;
+  for (let i = 56; i < n; i++){ let hi = -Infinity, lo = Infinity, h2 = -Infinity, l2 = Infinity; for (let j = i - 55; j < i; j++){ if (h[j] > hi) hi = h[j]; if (l[j] < lo) lo = l[j]; } for (let j = i - 20; j < i; j++){ if (h[j] > h2) h2 = h[j]; if (l[j] < l2) l2 = l[j]; }
+    if (c[i] > hi) st = 1; else if (c[i] < lo) st = -1; else if (st === 1 && c[i] < l2) st = 0; else if (st === -1 && c[i] > h2) st = 0; don[i] = st; }
+  out['Donchian 55 breakout, 20 exit'] = don;
+  return out;
+}
+function btRun(cd, pos, S, fee, fund, ms, wantCurve){              // pos[i] = position held through candle i+1, set at the close of candle i
+  const n = cd.length, ret = [], eqc = []; let eq = 1, prev = 0, trades = 0, inm = 0, peak = 1, mdd = 0;
+  for (let i = S; i < n; i++){ const p = pos[i - 1] || 0, ch = Math.abs(p - prev); if (ch > 0 && p !== 0) trades++; prev = p;
+    let r = p * (cd[i][4] / cd[i - 1][4] - 1) - ch * fee - (fund ? p * fund[i] : 0); if (r < -0.99) r = -0.99; eq *= 1 + r; ret.push(r); if (p !== 0) inm++; if (eq > peak) peak = eq; const dd = eq / peak - 1; if (dd < mdd) mdd = dd; if (wantCurve) eqc.push(eq); }
+  const m = ret.reduce((a, x) => a + x, 0) / ret.length, sd = Math.sqrt(ret.reduce((a, x) => a + (x - m) ** 2, 0) / (ret.length - 1)) || 1e-9, ppy = 365.25 * 864e5 / ms, yrs = ret.length / ppy;
+  return {tot: eq - 1, cagr: Math.pow(Math.max(eq, 1e-6), 1 / yrs) - 1, mdd, sharpe: m / sd * Math.sqrt(ppy), inm: inm / ret.length, trades, curve: eqc};
+}
+function btShuffle(pos, S, seed){                                  // same segments (position, length), random order
+  const seg = []; let cur = pos[S - 1] || 0, len = 0; for (let i = S - 1; i < pos.length; i++){ const p = pos[i] || 0; if (p === cur) len++; else { seg.push([cur, len]); cur = p; len = 1; } } seg.push([cur, len]);
+  let x = seed; const rnd = () => (x = (x * 16807) % 2147483647) / 2147483647; for (let i = seg.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [seg[i], seg[j]] = [seg[j], seg[i]]; }
+  const out = new Array(S - 1).fill(0); for (const [p, L] of seg) for (let k = 0; k < L; k++) out.push(p); return out;
+}
+function btYears(cd, curve, S){ const by = {}; let prevEq = 1, prevY = null; for (let i = S; i < cd.length; i++){ const y = new Date(cd[i][0]).getUTCFullYear(), e = curve[i - S]; if (prevY != null && y !== prevY){ by[prevY] = (by[prevY] || {}); by[prevY].end = prevEq; } if (!by[y]) by[y] = {start: prevY == null ? 1 : prevEq}; prevEq = e; prevY = y; } by[prevY].end = prevEq; const o = {}; for (const y of Object.keys(by)) o[y] = by[y].end / by[y].start - 1; return o; }
+function btAnalyse(cd, tf, fee, fund){
+  const ms = TF_MS[tf], S = tf === '4h' ? 430 : 210, sig = btSignals(cd, tf), rows = [], NS = 200;
+  const fundArr = fund ? (() => { const f = new Array(cd.length).fill(0), t0 = cd[0][0]; for (const x of fund){ const i = Math.floor((x.t - t0) / ms); if (i >= 0 && i < f.length) f[i] += x.r; } return f; })() : null;
+  const bh = new Array(cd.length).fill(1), B = btRun(cd, bh, S, fee, fundArr, ms, true); rows.push({rule: 'Buy and hold', mode: '', tf, tot: B.tot, cagr: B.cagr, mdd: B.mdd, sharpe: B.sharpe, inm: B.inm, trades: 1, years: btYears(cd, B.curve, S), pct: null, bh: true});
+  for (const [rule, s] of Object.entries(sig)) for (const mode of ['Long or flat', 'Long or short']){
+    const pos = s.map(x => mode === 'Long or flat' ? Math.max(0, x) : x), R = btRun(cd, pos, S, fee, fundArr, ms, true); let below = 0;
+    for (let k = 0; k < NS; k++){ const q = btRun(cd, btShuffle(pos, S, 1000 + k * 7919 + rule.length * 31 + mode.length * 977), S, fee, fundArr, ms, false); if (q.sharpe < R.sharpe) below++; }
+    rows.push({rule, mode, tf, tot: R.tot, cagr: R.cagr, mdd: R.mdd, sharpe: R.sharpe, inm: R.inm, trades: R.trades, years: btYears(cd, R.curve, S), pct: below / NS * 100, bh: false});
+  }
+  return {rows, from: cd[S][0], to: cd[cd.length - 1][0], candles: cd.length - S};
+}
+function btRender(){
+  const out = $('btOut'); if (!out) return; const R = BT.res; if (!R || !R.length){ out.innerHTML = ''; return; }
+  const p1 = x => x == null ? '–' : (x >= 0 ? '+' : '') + (x * 100).toFixed(0) + '%', p0 = x => (x * 100).toFixed(0) + '%', cl = x => x > 0.005 ? 'up' : x < -0.005 ? 'dn' : '', yrs = [...new Set(R.flatMap(b => b.rows.flatMap(r => Object.keys(r.years))))].sort();
+  let h = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Rule</th><th class="l">Position</th><th class="l">TF</th><th>Total return</th><th>Per year</th><th>Worst drop</th><th>Sharpe</th><th>Return / drop</th><th>In market</th><th>Trades</th><th title="Share of 200 shuffles of the same trades (same time in the market) that the rule beats on Sharpe">Beats random timing</th>' + yrs.map(y => `<th>${y}</th>`).join('') + '</tr></thead><tbody>';
+  for (const b of R){ const bh = b.rows[0]; for (const r of b.rows){
+    const cal = r.mdd < -0.001 ? r.cagr / -r.mdd : null, better = !r.bh && r.sharpe > bh.sharpe, pc = r.pct == null ? '–' : r.pct.toFixed(0) + '%', pcl = r.pct == null ? '' : r.pct >= 95 ? 'up' : r.pct >= 80 ? 'warn' : 'mu';
+    h += `<tr${r.bh ? ' style="background:rgba(255,255,255,.04)"' : ''}><td class="l">${r.rule}</td><td class="l mu">${r.mode}</td><td class="l">${r.tf.toUpperCase()}</td><td class="${cl(r.tot)}">${p1(r.tot)}</td><td class="${cl(r.cagr)}">${p1(r.cagr)}</td><td class="dn">${p0(r.mdd)}</td><td class="${better ? 'up' : ''}">${r.sharpe.toFixed(2)}</td><td>${cal == null ? '–' : cal.toFixed(2)}</td><td>${p0(r.inm)}</td><td>${r.trades}</td><td class="${pcl}">${pc}</td>${yrs.map(y => `<td class="${cl(r.years[y])}">${r.years[y] == null ? '–' : p1(r.years[y])}</td>`).join('')}</tr>`; } }
+  h += '</tbody></table></div>';
+  const m = R.map(b => `${b.rows[0].tf.toUpperCase()}: ${new Date(b.from).toISOString().slice(0, 10)} to ${new Date(b.to).toISOString().slice(0, 10)}`).join(' · ');
+  h += `<div class="mu" style="font-size:12px;margin:8px 0"><b>How to read:</b> the first row of each timeframe is buying at the start and holding. A rule is only interesting if it keeps most of the return with a much smaller worst drop (look at Return / drop and Sharpe), works in most years, and beats random timing (95% or more is strong; below 80% could be luck). "Long or flat" stays out of the market when the rule is not long; "Long or short" flips to short. Period: ${m}. Costs: ${BT.meta ? BT.meta.fee + '% fee per side' + (BT.meta.fund ? ' and real funding' : ', no funding') : ''}. Past trends are not a promise: few trades means a wide margin of error.</div>`;
+  out.innerHTML = h;
+}
+$('btRun').onclick = async () => {
+  if (BT.busy) return; const tfs = [...document.querySelectorAll('.btTf:checked')].map(x => x.value), st = $('btStatus'); if (!tfs.length){ toast('Pick at least one timeframe.'); return; }
+  const fee = Math.max(0, +$('btFee').value || 0) / 100, useF = $('btFund').checked; BT.busy = true; $('btRun').disabled = true; const res = [];
+  try {
+    let fund = null; if (useF){ st.textContent = 'Reading the funding history…'; fund = await btFunding(); }
+    for (const tf of tfs){ st.textContent = `Reading the ${tf.toUpperCase()} candles (the first time can take a minute)…`; const cd = await getKlinesYear('BTCUSDT', tf, true, 1e6, 'all:'); if (cd.length < 600){ throw new Error('not enough BTC history'); }
+      st.textContent = `Testing the rules on ${tf.toUpperCase()}…`; await new Promise(r => setTimeout(r, 20)); res.push(btAnalyse(cd, tf, fee * 100 / 100 * 1, fund)); }
+    BT.res = res; BT.meta = {fee: +(fee * 100).toFixed(3), fund: useF, at: Date.now()}; try { await Cache.set('btLab', {res, meta: BT.meta}); } catch {} st.textContent = 'Done.'; btRender();
+  } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
+  BT.busy = false; $('btRun').disabled = false;
+};
+(async () => { try { const v = await Cache.get('btLab'); if (v && Array.isArray(v.res)){ BT.res = v.res; BT.meta = v.meta || null; btRender(); } } catch {} })();
 $('suKind').onchange = () => { SU.kind = $('suKind').value; $('suThrL').hidden = SU.kind !== 'fund'; suRender(); };
 $('suTop').onchange = () => { SU.top = +$('suTop').value; suRender(); };
 $('suSince').onchange = () => { const v = $('suSince').value; SU.since = v ? Date.parse(v + 'T00:00:00Z') : 0; suRender(); };
@@ -5821,6 +5908,7 @@ journal: ['Como funciona o journal', `<ul>
 <li><b>Quatro separadores.</b> <b>Scoreboard</b> (começa aqui): todas as estratégias testadas numa tabela, com o mesmo critério e um veredicto. <b>Live log</b>: os sinais que este browser registou. <b>Study lab</b>: os estudos detalhados com histórico. <b>Runner results</b>: como os alertas do teu servidor correram de facto. O separador em que estavas fica guardado.</li>
 <li>O <b>Scoreboard</b> mostra o R médio por momento (sinais na mesma vela e lado contam uma vez), calculado por timeframe e depois com média de pesos iguais, para um histórico curto de 1H não dominar. Compara com a coluna <b>Chance</b>, que é o que entradas aleatórias ganham com o mesmo stop, alvo, lado, timeframe e período (as linhas Random entries, criadas pelo Run all tests; um * significa que ainda não há baseline e usa-se o −0,04R fixo), e com a coluna de ruído ±; o veredicto só é Promising se estiver bem acima do acaso e as duas metades do período concordarem. Linhas com ⚠ foram corridas com menos de um ano de histórico. <b>Run all tests</b> carrega um ano de velas por timeframe (a primeira vez com 100 moedas pode demorar vários minutos; as seguintes reutilizam o que está guardado) e corre todos os estudos em sequência, incluindo os <b>Classic signals</b> (EMA50 x EMA200, EMA20 x EMA50, fecho de volta acima da EMA200, rutura Donchian 55) e o baseline de entradas aleatórias. Nos sweeps, pullbacks e ranges, cujo stop é a ponta da vela, o baseline usa um stop aleatório com tamanho parecido em ATR (indicado na regra). Os pullbacks são comparados com entradas aleatórias feitas só quando as EMAs estão alinhadas na mesma direção, e o regresso à EMA200 com entradas aleatórias do mesmo lado da EMA200, para a tendência não ser creditada à regra (as linhas Random entries extra mostram esses baselines). Os triggered setups também são divididos por tendência: com o preço do lado do trade da EMA200, com EMA21/50/200 alinhadas, e contra a tendência, para ver se um filtro de tendência ajudaria (volta a correr o Run all tests para preencher estas linhas).</li>
 <li>O <b>Breaker candle study</b> e o <b>Setup study</b> repetem regras com um ano de histórico por timeframe e por moeda (só estudo, sem alertas). O Setup study cobre varrimentos de liquidez, funding extremo, pullbacks de tendência, rompimentos de range apertado e <b>Indicator settings</b>, que repete o setup do screener com diferentes definições de RSI, DMI, ADX e OBV para ver se alguma bate a predefinida. O histórico não tem open interest, market cap nem grade, por isso estes só se avaliam aqui no journal.</li>
+<li>O <b>BTC swing lab</b> (Study lab) testa regras simples de tendência no BTCUSDT com todo o histórico da Binance (desde finais de 2019), long ou fora e long ou short, em 1D e 4H, com comissões e o funding real. Compara cada regra com comprar e manter (retorno, pior queda, Sharpe, ano a ano) e com timing aleatório; serve para swing trades, não para os alertas de altcoins.</li>
 <li>A caixa Alert results (acima do Setup study) serve apenas para quem usa o servidor runner da Onslaught: carrega os ficheiros que ele guarda (envia /export ao bot de Telegram) para ver como os alertas correram na realidade. Não é preciso para usar o Journal.</li>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
 </ul>`]
