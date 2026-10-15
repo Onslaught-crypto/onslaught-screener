@@ -434,6 +434,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="status">
       <span><span id="dot" class="dot"></span> <span id="statusText">Idle</span></span>
       <span>Last scan: <span id="lastScan">—</span></span>
+      <span id="btcPill" hidden style="cursor:pointer" title="BTC swing trend (Journal, BTC swing lab). Click to refresh."></span>
       <button id="liveBtn" class="livechip" title="Live prices from Binance between scans. Click to turn off/on.">● Live</button>
       <label>Auto
         <select id="auto"><option value="0">Manual</option><option value="60">60s</option><option value="120">2m</option><option value="300">5m</option></select>
@@ -601,6 +602,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label title="From @BotFather. Stored only in this browser.">Telegram bot token <input id="tgToken" type="password" autocomplete="off" placeholder="123456789:ABC…" style="width:230px"></label>
         <label title="Your chat ID (message @userinfobot), or a group/channel ID">Chat ID <input id="tgChat" type="text" autocomplete="off" style="width:130px"></label>
         <label><input id="tgOn" type="checkbox"> Send alerts to Telegram</label>
+        <label title="BTC swing alert: a notice (and a Telegram message if Telegram is on) when BTC closes on the other side of its trend line. Long while above, flat below, never short. Rare: a few per year. Based on the BTC swing lab; a backtest, not a promise. Checked every 5 minutes while this page is open."><input id="btcOn" type="checkbox"> BTC swing alert</label>
+        <select id="btcTf" title="Trend line: daily EMA100 (fewer trades) or 4H EMA300 (more trades, higher backtest return)"><option value="1d">daily EMA100</option><option value="4h">4H EMA300</option></select>
         <label title="Message me when BTC or ETH trades within 0.5% of one of the largest estimated liquidation clusters (15m model, same as the Liquidations tab). Checked every 5 minutes while this page is open."><input id="tgLiq" type="checkbox"> Liquidation alerts</label>
         <label title="The standard alerts: new triggered setups on the timeframe selected in the scanner (1H, 4H…). Untick it to receive only the other alerts you tick below (divergences, breaker candles, liquidations)."><input id="tgSetups" type="checkbox" checked> Setup alerts (1H, 4H…)</label>
         <label title="Include entry, stop and targets for each alert"><input id="tgPlan" type="checkbox" checked> with trade plan</label>
@@ -957,6 +960,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li><b>Scoreboard</b> shows the per-moment average R (signals on the same candle and side count once), computed per timeframe and then averaged with equal weight, so a short 1H history cannot dominate. Compare it with <b>Chance</b>, which is what random entries earn with the same stop, target, side, timeframe and period (the Random entries rows, built by Run all tests; a * means no baseline yet and the fixed −0.04R is used), and with the noise ± column; the verdict is Promising only if it is well above chance and both halves of the period agree. Rows flagged ⚠ were run with less than a year of history. <b>Run all tests</b> reloads one year of candles per timeframe (first run for 100 coins can take several minutes; later runs reuse what is stored) and runs every study in turn, including <b>Classic signals</b> (EMA50 x EMA200, EMA20 x EMA50, close back over the EMA200, Donchian 55 breakout) and the random-entry baseline. For sweeps, pullbacks and ranges, whose stop is the candle's far end, the baseline uses a random-entry stop of about the same size in ATR (shown in the trade rule). Trend pullbacks are compared with random entries taken only while the EMAs are aligned in the same direction, and the EMA200 reclaim with random entries on the same side of the EMA200, so the trend itself is not credited to the rule (the extra Random entries rows show those baselines). Triggered setups are also split by trend: with price on the trade side of the EMA200, with EMA21/50/200 aligned, and against the trend, to see whether a trend gate would help (rerun Run all tests to fill these rows).</li>
       <li>The <b>Breaker candle study</b> and the <b>Setup study</b> replay rules on one year of history per timeframe for each coin (study only, no alerts). The Setup study covers liquidity sweeps, funding extremes, trend pullbacks, tight-range breakouts and <b>Indicator settings</b>, which replays the screener's setup for different RSI, DMI, ADX and OBV settings to see whether any setting beats the default. History has no open interest, market cap or grade, so those can only be judged here in the journal.</li>
       <li>The <b>BTC swing lab</b> (Study lab) tests simple trend rules on BTCUSDT over the whole Binance history (since late 2019), long or flat and long or short, on 1D and 4H, with fees and the real funding. Compare each rule with buying and holding (return, worst drop, Sharpe, year by year) and with shuffled timing; it is for swing trades, not for the altcoin alerts. <b>Run robustness check</b> then tries each rule at many speeds and tests each half of the history on its own, to see whether a good result survives or was one lucky setting.</li>
+<li>The <b>BTC swing alert</b> (Settings, Telegram section) turns the lab result into a signal: tick it and choose daily EMA100 or 4H EMA300. The header shows BTC trend up (long) or down (flat). When BTC closes on the other side of the line you get a notice, and a Telegram message if Telegram is on: LONG signal above, GO FLAT below. There is no short side (shorting BTC lost in the study) and no built-in stop. It fires a few times a year. A backtest, not a promise. The Telegram runner sends the same alert around the clock (<code>/btc</code> shows the state).</li>
       <li>The Alert results box (above the Setup study) is only for people who run the Onslaught runner server: load the files it saves (send /export to its Telegram bot) to see how its alerts really did. It is not needed to use the Journal.</li>
       <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
     </ul></details></div>
@@ -5858,6 +5862,46 @@ $('dvScan').onclick = () => divScan();
 const dvOpen = el => { const a = el.closest('.dvc'); if (!a) return; const x = DIV.rows.find(r => dvKey(r) === a.dataset.k); if (x) openDrawer(x.sym, {tf: x.tf, dir: x.side, div: x}); };
 $('dvGrid').onclick = e => dvOpen(e.target);
 $('dvGrid').onkeydown = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); dvOpen(e.target); } };
+/* ---- BTC swing trend: long while BTC closes above its trend line, flat below (BTC swing lab). Per user, kept in this browser. ---- */
+const BTCT = {KEY: 'onslaught.btcTrend', busy: false, t: 0, now: null,
+  R: {'1d': {ema: 100, lim: 500, label: 'daily EMA100', bt: '+727% vs +333% buy and hold since 2020, worst drop -35% vs -79%'}, '4h': {ema: 300, lim: 1000, label: '4H EMA300', bt: '+1228% vs +413% buy and hold since late 2019, worst drop -44% vs -79%'}}};
+const btcLoad = () => { try { return JSON.parse(localStorage.getItem(BTCT.KEY) || '{}'); } catch { return {}; } };
+const btcSave = o => { try { localStorage.setItem(BTCT.KEY, JSON.stringify(o)); } catch {} };
+async function btcTrendNow(tf){
+  const R = BTCT.R[tf] || BTCT.R['1d']; tf = BTCT.R[tf] ? tf : '1d'; const ms = TF_MS[tf];
+  const d = await getJSON(`${FAPI}/fapi/v1/klines?symbol=BTCUSDT&interval=${tf}&limit=${R.lim}`, WEIGHT, klineWeight(R.lim));
+  const k = d.filter(x => +x[0] + ms <= Date.now()).map(x => [+x[0], +x[4]]); if (k.length < R.ema + 20) throw new Error('not enough BTC candles');
+  const e = ema(k.map(x => x[1]), R.ema), i = k.length - 1, up = k[i][1] > e[i]; let j = i; while (j > 0 && (k[j - 1][1] > e[j - 1]) === up) j--;
+  return {tf, up, close: k[i][1], ema: e[i], t: k[i][0], since: k[j][0], dist: (k[i][1] / e[i] - 1) * 100, label: R.label, bt: R.bt};
+}
+function btcMsg(n, kind){
+  const $$ = x => '$' + Math.round(x).toLocaleString('en-US'), dist = Math.abs(n.dist).toFixed(1) + '%';
+  if (kind === 'start') return `🧭 <b>BTC swing monitor is on</b> (${n.label}).\n${n.up ? '🟢 UP (long)' : '🔴 DOWN (flat)'}: BTC ${$$(n.close)} is ${dist} ${n.up ? 'above' : 'below'} its trend line (${$$(n.ema)}).`;
+  return n.up
+    ? `🟢 <b>BTC swing: LONG signal</b> · ${n.label}\nBTC closed at <b>${$$(n.close)}</b>, ${dist} above its trend line (${$$(n.ema)}).\n<b>Plan:</b> long while BTC keeps closing above the line; go flat on the first close below it.\nNo stop is built in before that close: size small or add your own stop.\n<i>Backtest (long or flat): ${n.bt}. Past results, not a promise; being forward-tested.</i>`
+    : `🔴 <b>BTC swing: GO FLAT</b> · ${n.label}\nBTC closed at <b>${$$(n.close)}</b>, ${dist} below its trend line (${$$(n.ema)}).\n<b>Plan:</b> close the long and stay flat (the study found shorting did not pay). Look to go long again on the first close back above ~${$$(n.ema)}.\n<i>Backtest (long or flat): ${n.bt}. Past results, not a promise; being forward-tested.</i>`;
+}
+function btcPaint(){ const p = $('btcPill'), n = BTCT.now; if (!p) return; p.hidden = !n || !btcLoad().on; if (p.hidden) return;
+  p.textContent = `BTC trend: ${n.up ? '🟢 up (long)' : '🔴 down (flat)'} · ${n.label}`; p.title = `BTC ${Math.round(n.close).toLocaleString('en-US')} is ${Math.abs(n.dist).toFixed(1)}% ${n.up ? 'above' : 'below'} its trend line (${Math.round(n.ema).toLocaleString('en-US')}). Click to refresh.`; }
+async function btcCheck(force){
+  const o = btcLoad(); if (!o.on || BTCT.busy) return; if (!force && Date.now() - BTCT.t < 3e5) return;
+  BTCT.busy = true; BTCT.t = Date.now();
+  try {
+    const n = await btcTrendNow(o.tf); BTCT.now = n; btcPaint();
+    const prev = o.last;
+    if (!prev || prev.tf !== n.tf){ btcSave({...o, last: {tf: n.tf, up: n.up, t: n.t}}); if (tgActive()) { try { await tgSend(btcMsg(n, 'start')); } catch {} } toast(`BTC swing monitor on: ${n.up ? 'trend UP (long)' : 'trend DOWN (flat)'}.`); return; }
+    if (n.t === prev.t) return;
+    btcSave({...o, last: {tf: n.tf, up: n.up, t: n.t}});
+    if (n.up === prev.up) return;
+    toast(n.up ? `BTC swing: LONG signal (closed above ${n.label}).` : `BTC swing: GO FLAT (closed below ${n.label}).`);
+    try { if ('Notification' in window && Notification.permission === 'granted') new Notification(n.up ? 'BTC swing: LONG' : 'BTC swing: GO FLAT', {body: `BTC closed ${n.up ? 'above' : 'below'} its ${n.label}.`, tag: 'onslaught-btc'}); } catch {}
+    if (tgActive()) { try { await tgSend(btcMsg(n)); } catch {} }
+  } catch (e) { /* retried in 5 minutes */ } finally { BTCT.busy = false; }
+}
+$('btcOn').onchange = () => { const o = btcLoad(); o.on = $('btcOn').checked; o.tf = $('btcTf').value; if (!o.on) { delete o.last; BTCT.now = null; } btcSave(o); btcPaint(); if (o.on) { try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {} btcCheck(true); } };
+$('btcTf').onchange = () => { const o = btcLoad(); o.tf = $('btcTf').value; btcSave(o); if (o.on) btcCheck(true); };
+$('btcPill').onclick = () => btcCheck(true);
+{ const o = btcLoad(); $('btcOn').checked = !!o.on; $('btcTf').value = o.tf || '1d'; setTimeout(() => btcCheck(true), 4000); setInterval(() => btcCheck(false), 60000); }
 $('tgLiq').onchange = () => {
   if ($('tgLiq').checked && !$('tgOn').checked){ $('tgOn').checked = true; $('tgOn').dispatchEvent(new Event('change')); }
   tgSave();
@@ -5959,6 +6003,7 @@ journal: ['Como funciona o journal', `<ul>
 <li>O <b>Scoreboard</b> mostra o R médio por momento (sinais na mesma vela e lado contam uma vez), calculado por timeframe e depois com média de pesos iguais, para um histórico curto de 1H não dominar. Compara com a coluna <b>Chance</b>, que é o que entradas aleatórias ganham com o mesmo stop, alvo, lado, timeframe e período (as linhas Random entries, criadas pelo Run all tests; um * significa que ainda não há baseline e usa-se o −0,04R fixo), e com a coluna de ruído ±; o veredicto só é Promising se estiver bem acima do acaso e as duas metades do período concordarem. Linhas com ⚠ foram corridas com menos de um ano de histórico. <b>Run all tests</b> carrega um ano de velas por timeframe (a primeira vez com 100 moedas pode demorar vários minutos; as seguintes reutilizam o que está guardado) e corre todos os estudos em sequência, incluindo os <b>Classic signals</b> (EMA50 x EMA200, EMA20 x EMA50, fecho de volta acima da EMA200, rutura Donchian 55) e o baseline de entradas aleatórias. Nos sweeps, pullbacks e ranges, cujo stop é a ponta da vela, o baseline usa um stop aleatório com tamanho parecido em ATR (indicado na regra). Os pullbacks são comparados com entradas aleatórias feitas só quando as EMAs estão alinhadas na mesma direção, e o regresso à EMA200 com entradas aleatórias do mesmo lado da EMA200, para a tendência não ser creditada à regra (as linhas Random entries extra mostram esses baselines). Os triggered setups também são divididos por tendência: com o preço do lado do trade da EMA200, com EMA21/50/200 alinhadas, e contra a tendência, para ver se um filtro de tendência ajudaria (volta a correr o Run all tests para preencher estas linhas).</li>
 <li>O <b>Breaker candle study</b> e o <b>Setup study</b> repetem regras com um ano de histórico por timeframe e por moeda (só estudo, sem alertas). O Setup study cobre varrimentos de liquidez, funding extremo, pullbacks de tendência, rompimentos de range apertado e <b>Indicator settings</b>, que repete o setup do screener com diferentes definições de RSI, DMI, ADX e OBV para ver se alguma bate a predefinida. O histórico não tem open interest, market cap nem grade, por isso estes só se avaliam aqui no journal.</li>
 <li>O <b>BTC swing lab</b> (Study lab) testa regras simples de tendência no BTCUSDT com todo o histórico da Binance (desde finais de 2019), long ou fora e long ou short, em 1D e 4H, com comissões e o funding real. Compara cada regra com comprar e manter (retorno, pior queda, Sharpe, ano a ano) e com timing aleatório; serve para swing trades, não para os alertas de altcoins. O <b>Run robustness check</b> experimenta cada regra em várias velocidades e testa cada metade do histórico em separado, para ver se um bom resultado se mantém ou foi um único setting com sorte.</li>
+<li>O <b>alerta BTC swing</b> (Definições, secção Telegram) transforma o resultado do laboratório num sinal: ativa e escolhe EMA100 diária ou EMA300 4H. O cabeçalho mostra a tendência do BTC em alta (long) ou em baixa (fora). Quando o BTC fecha do outro lado da linha recebes um aviso, e uma mensagem Telegram se o Telegram estiver ligado: sinal LONG acima, SAIR abaixo. Não há lado short (short no BTC perdeu no estudo) nem stop incluído. Dispara poucas vezes por ano. Um backtest, não uma promessa. O runner Telegram envia o mesmo alerta 24 horas por dia (<code>/btc</code> mostra o estado).</li>
 <li>A caixa Alert results (acima do Setup study) serve apenas para quem usa o servidor runner da Onslaught: carrega os ficheiros que ele guarda (envia /export ao bot de Telegram) para ver como os alertas correram na realidade. Não é preciso para usar o Journal.</li>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
 </ul>`]
