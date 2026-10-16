@@ -955,6 +955,17 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <button id="cfRun" class="btn">Run confluence lab</button><span class="mu" id="cfStatus"></span></div>
       <div id="cfOut"></div>
     </details>
+    <details class="panel jfold" data-fold="sw">
+      <summary>Sweep &amp; breaker lab (top 10 coins)</summary>
+      <div class="mu" style="font-size:12px;margin:6px 0">Two ideas from a price-action course, with the rules fixed before looking at results. <b>Sweep</b>: price trades beyond the highest high or lowest low of the last 50 candles and the candle closes back inside the range; entry at the next open, stop beyond the sweep extreme (or 0.5 ATR beyond it). <b>Sweep + CISD</b>: after the sweep, within 5 candles, a candle in the trade direction closes beyond the open of the opposite-colour candle sequence that contained the sweep extreme and back inside the range; entry at the next open. Each is also split by whether the higher timeframes agree (EMA50, as in the Confluence lab). <b>Breaker (video rules)</b>: an order block (the last opposite candle before a 1.5 ATR move) is later broken by a close through it; price then retests it. Entry at the near edge or at the midpoint of the block (limit order, valid for 30 candles), stop at the far edge, target at the nearest unswept swing point in the trade direction (a trade with no such swing is skipped), 48 candles at most. Fees are taken off (both sides) and every result is compared with random entries built the same way.</div>
+      <div class="row" style="margin:6px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <label><input type="checkbox" class="swTf" value="1h" checked> 1h</label><label><input type="checkbox" class="swTf" value="4h" checked> 4h</label><label><input type="checkbox" class="swTf" value="1d" checked> 1d</label>
+        <label>Coins <select id="swCoins"><option value="0">Top 10 by volume (incl. BTC)</option><option value="1">Ranked 11 to 20 (holdout)</option></select></label>
+        <label title="Applies to the two sweep tables only; the breaker table uses its own stop and target">Sweep stop <select id="swStop"><option value="ext" selected>at the sweep extreme</option><option value="ext5">0.5 ATR beyond it</option></select></label>
+        <label>Sweep target <select id="swTgt"><option value="1">1R</option><option value="2" selected>2R</option><option value="3">3R</option></select></label>
+        <button id="swRun" class="btn">Run sweep &amp; breaker lab</button><span class="mu" id="swStatus"></span></div>
+      <div id="swOut"></div>
+    </details>
     </div>
     <div class="jpane" id="jtRunner" hidden>
     <details class="panel jfold" data-fold="alerts">
@@ -5642,9 +5653,16 @@ $('btRun').onclick = async () => {
 };
 
 /* Robustness: every rule over a range of speeds, and each half of the history on its own */
+function btPmo(c, l1, l2, sg){                                       // DecisionPoint Price Momentum Oscillator: 10 x double-smoothed 1-candle % change, and its EMA signal
+  const n = c.length, a1 = 2 / l1, a2 = 2 / l2, a3 = 2 / (sg + 1), pm = new Array(n).fill(0), sig = new Array(n).fill(0); let s1 = 0, s2 = 0, s3 = 0;
+  for (let i = 1; i < n; i++){ const roc = 100 * (c[i] / c[i - 1] - 1); s1 = i === 1 ? roc : s1 + a1 * (roc - s1); const x = 10 * s1; s2 = i === 1 ? x : s2 + a2 * (x - s2); s3 = i === 1 ? s2 : s3 + a3 * (s2 - s3); pm[i] = s2; sig[i] = s3; }
+  return [pm, sig];
+}
 function btFamilies(tf){
   const g = tf === '4h' ? {ema: [50, 100, 150, 200, 300, 400, 600], mom: [30, 60, 90, 180, 360], don: [20, 40, 55, 90, 150]} : {ema: [20, 30, 50, 70, 100, 150, 200, 250], mom: [20, 40, 60, 90, 120, 180], don: [20, 30, 55, 90, 120]}, out = [];
   for (const n of g.ema) out.push({fam: 'Price vs EMA', par: n, f: (cd, c) => { const e = ema(c, n); return c.map((x, i) => e[i] > 0 && x > e[i] ? 1 : 0); }});
+  for (const p of [[35, 20, 10], [56, 32, 16], [28, 16, 8], [70, 40, 20]]){ out.push({fam: 'PMO line above its signal', par: p.join('/'), f: (cd, c) => { const [pm, sg] = btPmo(c, p[0], p[1], p[2]); return c.map((x, i) => i > 3 * p[0] && pm[i] > sg[i] ? 1 : 0); }});
+    out.push({fam: 'PMO above zero', par: p.join('/'), f: (cd, c) => { const [pm] = btPmo(c, p[0], p[1], p[2]); return c.map((x, i) => i > 3 * p[0] && pm[i] > 0 ? 1 : 0); }}); }
   for (const n of g.mom) out.push({fam: 'Momentum (candles back)', par: n, f: (cd, c) => c.map((x, i) => i >= n && x > c[i - n] ? 1 : 0)});
   for (const n of g.don) out.push({fam: 'Donchian breakout (exit at a third)', par: n, f: (cd, c) => { const h = cd.map(k => k[2]), l = cd.map(k => k[3]), m = Math.max(5, Math.round(n / 3)), o = new Array(c.length).fill(0); let st = 0;
     for (let i = n + 1; i < c.length; i++){ let hi = -Infinity, lo = Infinity; for (let j = i - n; j < i; j++){ if (h[j] > hi) hi = h[j]; } for (let j = i - m; j < i; j++){ if (l[j] < lo) lo = l[j]; } if (c[i] > hi) st = 1; else if (st === 1 && c[i] < lo) st = 0; o[i] = st; } return o; }});
@@ -6132,6 +6150,110 @@ function cfRender(){
   out.innerHTML = h;
 }
 $('cfRun').onclick = cfRun; $('cfStop').onchange = $('cfTgt').onchange = () => { if (CF.res) cfRender(); };
+/* ---- Sweep & breaker lab: course rules (sweep + close back inside, CISD, breaker with edge / midpoint entry) on the top 10 coins ---- */
+const SW = {res: null, busy: false, cancel: false, GRID: {'1h': 2, '4h': 1, '1d': 1}, BG: {'1h': 3, '4h': 1, '1d': 1}};
+function swScan(cd, at){                                                            // A: sweep that closes back inside the 50-candle range; B: the same followed by a CISD
+  const n = cd.length, o = cd.map(k => k[1]), h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), A = [], B = [], last = {1: -99, '-1': -99};
+  for (let s = 60; s < n - 10; s++){
+    const a = at[s]; if (!(a > 0)) continue; let hi = -Infinity, lo = Infinity; for (let j = s - 50; j < s; j++){ if (h[j] > hi) hi = h[j]; if (l[j] < lo) lo = l[j]; }
+    const bull = l[s] < lo && c[s] > lo, bear = h[s] > hi && c[s] < hi; if (bull === bear) continue;
+    const dir = bull ? 1 : -1, ext = bull ? l[s] : h[s]; if (s - last[dir] < 10) continue; last[dir] = s;
+    A.push({i: s, dir, ext, atr: a});
+    for (let j = s; j <= s + 5 && j < n - 1; j++){
+      if (!(dir > 0 ? c[j] > o[j] : c[j] < o[j])) continue;
+      let r0 = j; while (r0 - 1 >= 0 && (dir > 0 ? c[r0 - 1] < o[r0 - 1] : c[r0 - 1] > o[r0 - 1])) r0--; if (r0 === j) continue;
+      let e = dir > 0 ? Infinity : -Infinity; for (let m = r0; m <= j; m++) e = dir > 0 ? Math.min(e, l[m]) : Math.max(e, h[m]);
+      if (dir > 0 ? e > ext : e < ext) continue;                                       // the sweep extreme must sit inside the sequence
+      if (dir > 0 ? (c[j] > o[r0] && c[j] > lo) : (c[j] < o[r0] && c[j] < hi)){ B.push({i: j, dir, ext: e, atr: at[j] > 0 ? at[j] : a}); break; }
+    }
+  }
+  return {A, B};
+}
+function swEvent(cd, x, fee, tf, htf){                                              // simulate one event for both stops and all targets; fee in R is both sides
+  const st = {ext: x.ext, ext5: x.dir > 0 ? x.ext - 0.5 * x.atr : x.ext + 0.5 * x.atr}, sm = setupSim(cd, {i: x.i, dir: x.dir, stops: st}); if (sm.status === 'skip' || !sm.sims || x.i + 1 >= cd.length) return null;
+  const E = cd[x.i + 1][1], g = {}, f = {}, ra = {}; for (const sk of ['ext', 'ext5']){ const risk = x.dir > 0 ? E - st[sk] : st[sk] - E; if (!(risk > 0)) continue; ra[sk] = risk / x.atr; for (const m of SETUP_TARGETS){ const q = sm.sims[sk + '|' + m]; if (q && q.done){ g[sk + '|' + m] = q.r; f[sk + '|' + m] = 2 * fee * E / risk; } } }
+  return Object.keys(g).length ? {tf, t: cd[x.i][0], dir: x.dir, htf, g, f, ra} : null;
+}
+function swSwing(cd, dir, entry, k){                                                // nearest unswept swing point beyond the entry (below for a short, above for a long), within 100 candles
+  let best = null, mn = cd[k - 1][3], mx = cd[k - 1][2];
+  for (let s = k - 2; s >= Math.max(1, k - 100); s--){
+    if (dir < 0){ const v = cd[s][3]; if (v < cd[s - 1][3] && v < cd[s + 1][3] && v < entry && v <= mn && (best === null || v > best)) best = v; }
+    else { const v = cd[s][2]; if (v > cd[s - 1][2] && v > cd[s + 1][2] && v > entry && v >= mx && (best === null || v < best)) best = v; }
+    if (cd[s][3] < mn) mn = cd[s][3]; if (cd[s][2] > mx) mx = cd[s][2];
+  }
+  return best;
+}
+function swBrkSim(cd, z, dir, from, mode, fee, a){                                     // limit entry at the block's near edge or midpoint, stop at the far edge, target at the nearest swing
+  const n = cd.length, entry = mode === 'edge' ? (dir < 0 ? z.lo : z.hi) : (z.lo + z.hi) / 2, stop = dir < 0 ? z.hi : z.lo, risk = Math.abs(stop - entry); if (!(risk > 0)) return null;
+  let fill = -1; for (let k = from; k < Math.min(n, from + 30); k++){ if (dir < 0 ? cd[k][2] >= entry : cd[k][3] <= entry){ fill = k; break; } if (dir < 0 ? cd[k][4] > z.hi : cd[k][4] < z.lo) return null; }
+  if (fill < 0 || fill < 3) return null; const T = swSwing(cd, dir, entry, fill); if (T == null) return null; const rew = Math.abs(entry - T) / risk; let r = null;
+  for (let q = fill; q < n && q < fill + 48; q++){ const K = cd[q]; if (dir < 0 ? K[2] >= stop : K[3] <= stop){ r = -1; break; } if (q > fill && (dir < 0 ? K[3] <= T : K[2] >= T)){ r = rew; break; } }
+  if (r == null){ if (fill + 47 > n - 1) return null; const C = cd[fill + 47][4]; r = (dir < 0 ? entry - C : C - entry) / risk; }
+  return {t: cd[fill][0], g: r, f: 2 * fee * entry / risk, ra: risk / a};
+}
+function swBrkFind(cd, at, fl, fee, tf, out){
+  const n = cd.length, o = cd.map(k => k[1]), h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]);
+  for (let j = 20; j < n - 70; j++){ const a = at[j]; if (!(a > 0)) continue; const hg = h[j] - l[j]; if (hg < 0.3 * a || hg > 3 * a) continue;
+    for (const dir of [-1, 1]){                                                     // -1: a bullish block that fails becomes a short breaker; 1: the reverse
+      if (!(dir < 0 ? c[j] < o[j] : c[j] > o[j])) continue; let mv = 0; for (let k = j + 1; k <= j + 3; k++) mv = Math.max(mv, dir < 0 ? h[k] - c[j] : c[j] - l[k]); if (mv < 1.5 * a) continue;
+      let kb = -1; for (let k = j + 4; k <= j + 60 && k < n; k++){ if (dir < 0 ? c[k] < l[j] : c[k] > h[j]){ kb = k; break; } } if (kb < 0) continue;
+      for (const mode of ['edge', 'mid']){ const r = swBrkSim(cd, {lo: l[j], hi: h[j]}, dir, kb + 1, mode, fee, a); if (r) out[mode].push({...r, tf, dir, htf: !!(fl[kb] & (dir > 0 ? 1 : 2))}); } } }
+}
+function swBrkBase(cd, at, fl, fee, tf, out){                                       // same mechanics, no breaker: the zone is a recent candle that sits beyond the price
+  const n = cd.length, ms = TF_MS[tf], h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]);
+  for (let q = 60; q < n - 80; q++){ if (Math.round(cd[q][0] / ms) % SW.BG[tf] !== 0) continue; const a = at[q]; if (!(a > 0)) continue;
+    for (const dir of [-1, 1]){ let z = null; for (let m = q - 1; m >= q - 10; m--){ const hg = h[m] - l[m]; if (hg < 0.3 * a || hg > 3 * a) continue; if (dir < 0 ? l[m] > c[q] : h[m] < c[q]){ z = {lo: l[m], hi: h[m]}; break; } }
+      if (!z) continue; for (const mode of ['edge', 'mid']){ const r = swBrkSim(cd, z, dir, q + 1, mode, fee, a); if (r) out[mode].push({...r, tf, dir, htf: !!(fl[q] & (dir > 0 ? 1 : 2))}); } } }
+}
+function swMatch(A, B, K){                                                          // baseline entries with the same stop size (in ATR) as the signals, so the fee costs the same
+  const bin = x => Math.floor(Math.log2(x.ra) * 4), by = new Map(); for (const b of B){ if (!(b.ra > 0)) continue; const k = bin(b); (by.get(k) || by.set(k, []).get(k)).push(b); }
+  const A2 = [], B2 = []; let seed = 12345; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (const a of A){ if (!(a.ra > 0)) continue; const L = by.get(bin(a)); if (!L) continue; A2.push(a); for (let q = 0; q < K; q++) B2.push(L[Math.floor(rnd() * L.length)]); }
+  return [A2, B2];
+}
+async function swRun(){
+  if (SW.busy){ SW.cancel = true; return; } SW.busy = true; SW.cancel = false; $('swRun').textContent = 'Stop'; const st = $('swStatus'), fee = (+$('btFee').value || 0.06) / 100;
+  try {
+    const tfs = [...document.querySelectorAll('.swTf:checked')].map(x => x.value); if (!tfs.length) throw new Error('Pick a timeframe.'); const oo = +$('swCoins').value;
+    st.textContent = 'Loading the coin list…'; const uni = (await getUniverse()).slice(oo * 10, oo * 10 + 10), tasks = [], res = {}; for (const u of uni) for (const tf of tfs) tasks.push([u.sym, tf]);
+    tfs.forEach(tf => res[tf] = {A: [], B: [], base: [], edge: [], mid: [], bedge: [], bmid: []});
+    let i = 0, done = 0;
+    async function worker(){ while (i < tasks.length && !SW.cancel){ const [sym, tf] = tasks[i++], ms = TF_MS[tf];
+      try { const cd = await getKlinesYear(sym, tf, true, CF.N[tf], 'cf:'); if (cd.length > 600){
+        const h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), at = atr(h, l, c, 14), fl = cfHtfFlags(cd, tf), R = res[tf], sc = swScan(cd, at), bit = d => d > 0 ? 1 : 2;
+        for (const x of sc.A){ const e = swEvent(cd, x, fee, tf, !!(fl[x.i] & bit(x.dir))); if (e) R.A.push(e); }
+        for (const x of sc.B){ const e = swEvent(cd, x, fee, tf, !!(fl[x.i] & bit(x.dir))); if (e) R.B.push(e); }
+        for (let q = 220; q < cd.length - 2; q++){ if (Math.round(cd[q][0] / ms) % SW.GRID[tf] !== 0 || !(at[q] > 0)) continue; for (const dir of [1, -1]){ let ex = dir > 0 ? Infinity : -Infinity; for (let m = q - 2; m <= q; m++) ex = dir > 0 ? Math.min(ex, l[m]) : Math.max(ex, h[m]);
+          const e = swEvent(cd, {i: q, dir, ext: ex, atr: at[q]}, fee, tf, !!(fl[q] & bit(dir))); if (e) R.base.push(e); } }
+        const O = {edge: R.edge, mid: R.mid}; swBrkFind(cd, at, fl, fee, tf, O); const Bz = {edge: R.bedge, mid: R.bmid}; swBrkBase(cd, at, fl, fee, tf, Bz); } } catch {}
+      done++; st.textContent = `Reading and scanning ${done} of ${tasks.length} (coin and timeframe)…`; await new Promise(r => setTimeout(r, 0)); } }
+    await Promise.all([worker(), worker(), worker()]);
+    if (SW.cancel){ st.textContent = 'Stopped.'; } else { SW.res = res; SW.coins = uni.map(u => u.sym.replace('USDT', '')); SW.fee = fee; st.textContent = ''; swRender(); }
+  } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
+  SW.busy = false; $('swRun').textContent = 'Run sweep & breaker lab';
+}
+function swRender(){
+  const out = $('swOut'); if (!SW.res){ out.innerHTML = ''; return; } const key = $('swStop').value + '|' + (+$('swTgt').value), tfs = Object.keys(SW.res), all = k => tfs.flatMap(tf => SW.res[tf][k]);
+  let t0 = Infinity, t1 = -Infinity; for (const k of ['A', 'B', 'base', 'edge', 'mid', 'bedge', 'bmid']) for (const e of all(k)){ if (e.t < t0) t0 = e.t; if (e.t > t1) t1 = e.t; } const mid = (t0 + t1) / 2;
+  const sk = $('swStop').value, pk = (L, fn) => L.filter(e => fn(e) && e.g[key] != null).map(e => ({t: e.t, tf: e.tf, g: e.g[key], f: e.f[key], ra: e.ra[sk]})), pb = (L, fn) => L.filter(fn).map(e => ({t: e.t, tf: e.tf, g: e.g, f: e.f, ra: e.ra})), cmp = (A, B) => { const [A2, B2] = swMatch(A, B, 3); return cfCompare(A2, B2, mid); };
+  const f2 = x => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(2), cl = x => x == null ? 'mu' : x > 0 ? 'up' : x < 0 ? 'dn' : 'mu';
+  const row = (label, sd, tf, r) => r ? `<tr><td class="l">${label}</td><td>${sd}</td><td>${tf}</td><td title="${r.raw} signals, counted as ${r.n} moments">${r.n}</td><td class="${cl(r.gm)}">${f2(r.gm)}</td><td class="dn">-${r.fm.toFixed(2)}</td><td class="${cl(r.net)}"><b>${f2(r.net)}</b></td><td>${f2(r.ch)}</td><td class="${cl(r.net - r.ch)}">${f2(r.net - r.ch)}</td><td>±${r.se.toFixed(2)}</td><td class="${cl(r.e1)}">${f2(r.e1)}</td><td class="${cl(r.e2)}">${f2(r.e2)}</td><td class="l">${r.v}</td></tr>` : '';
+  const head = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th>Side</th><th>TF</th><th>Moments</th><th>Gross R</th><th>Fee R</th><th>Net R</th><th>Chance (net)</th><th>vs chance</th><th>Noise ±</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>', tail = '</tbody></table></div>', sides = [['Long', 1], ['Short', -1]];
+  let h = `<div class="mu" style="font-size:12px;margin:6px 0">${SW.coins.join(', ')} · fee ${(SW.fee * 100).toFixed(2)}% per side (both sides charged) · ${all('A').length} sweeps, ${all('B').length} sweeps with CISD, ${all('edge').length} breaker trades (edge entry), ${all('mid').length} (midpoint entry).</div>`;
+  for (const [nm, k] of [['1. Sweep + close back inside the range', 'A'], ['2. Sweep + CISD confirmation', 'B']]){
+    h += `<b>${nm}</b> <span class="mu">(stop ${$('swStop').selectedOptions[0].textContent}, target ${$('swTgt').value}R)</span>` + head;
+    for (const [sd, d] of sides){ for (const tf of tfs) h += row('All signals', sd, tf, cmp(pk(SW.res[tf][k], e => e.dir === d), pk(SW.res[tf].base, e => e.dir === d)));
+      for (const w of [true, false]) h += row(`Higher timeframes ${w ? 'agree' : 'disagree'}`, sd, 'all', cmp(pk(all(k), e => e.dir === d && e.htf === w), pk(all('base'), e => e.dir === d && e.htf === w))); }
+    h += tail; }
+  h += '<b>3. Breaker, video rules</b> <span class="mu">(stop at the far edge, target at the nearest swing; the sweep selectors above do not apply)</span>' + head;
+  for (const [lbl, k, bk] of [['Entry at the near edge', 'edge', 'bedge'], ['Entry at the midpoint', 'mid', 'bmid']]) for (const [sd, d] of sides){
+    for (const tf of tfs) h += row(lbl, sd, tf, cmp(pb(SW.res[tf][k], e => e.dir === d), pb(SW.res[tf][bk], e => e.dir === d)));
+    h += row(lbl + ', higher timeframes agree', sd, 'all', cmp(pb(all(k), e => e.dir === d && e.htf), pb(all(bk), e => e.dir === d && e.htf))); }
+  h += tail;
+  h += `<div class="mu" style="font-size:12px;margin-top:6px">R = profit in units of the stop distance. A <b>moment</b> is one candle on one timeframe; signals on the same candle count once, as their average. Net R = Gross R minus the fee in R (both sides; the stop is tight, so the fee in R is large). "Chance" = random entries built the same way <b>and with the same stop size in ATR</b> (within about 20%, so the fee costs the same): for the sweep tables, any candle with the stop beyond the last 3 candles' extreme; for the breaker table, a recent candle that sits beyond the price used as the block, with the same limit entry, stop and swing target. <b>Promising</b> needs 2.5 noise units above chance and above it in both halves; rows with a negative Net R are marked "loses after fees". Many rows are shown, so one or two will look good by luck: trust a result only if it holds on the holdout coins (ranked 11 to 20) and on a second stop and target. The breaker rule has no fixed reward-to-risk: a close swing target gives a small R, so look at Net R, not the win rate.</div>`;
+  out.innerHTML = h;
+}
+$('swRun').onclick = swRun; $('swStop').onchange = $('swTgt').onchange = () => { if (SW.res) swRender(); };
 const btcTfList = o => o.tf === 'both' ? ['1d', '4h'] : [BTCT.R[o.tf] ? o.tf : '1d'];
 function btcSwingChip(){ const o = btcLoad(); if (!o.on) return ''; const px = x => Math.round(x).toLocaleString('en-US');
   return btcTfList(o).map(tf => { const n = BTCT.nows[tf]; if (!n) return '';
