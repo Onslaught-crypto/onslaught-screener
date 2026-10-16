@@ -845,6 +845,9 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
     <div class="mu" id="jShowNote" style="font-size:12px;margin:-4px 2px 8px"></div>
     <div class="stats" id="jCards"></div>
+    <div class="panel" id="jHonest"><div class="rot-head"><b>The honest view</b> <span class="mu">Per market moment (signals on the same candle and side count once, as their average), after fees, in money.</span></div>
+      <div class="row" style="margin:6px 0"><label>Starting account $ <input id="jhStart" type="number" value="1000" min="1" step="100" style="width:84px"></label><label title="Each market moment risks this share of the account, split across all its signals">Risk per moment % <input id="jhRisk" type="number" value="1" min="0.1" max="10" step="0.1" style="width:64px"></label><label title="Charged on entry and again on exit, so the round trip costs twice this (taker fee plus slippage)">Fee per side % <input id="jhFee" type="number" value="0.06" min="0" step="0.01" style="width:64px"></label></div>
+      <div id="jhOut"></div></div>
     <div class="panel"><div class="rot-head"><b>Equity curve</b> <span class="mu" id="jEqNote">Running total of R over completed signals, oldest to newest (setups only, 1R each).</span></div><div id="jEq"></div></div>
     <details class="panel jfold" data-fold="edge" open>
       <summary>Where is the edge?</summary>
@@ -3034,6 +3037,26 @@ function jEquity(es){
     <path d="${line}" fill="none" stroke="${up ? 'var(--bull)' : 'var(--bear)'}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
     <div class="mu" style="font-size:12px;margin-top:4px">${d.length} completed · total <b class="${up ? 'up' : 'dn'}">${fR(run)}</b> · deepest drawdown <b class="dn">−${dd.toFixed(1)}R</b></div>`;
 }
+function jHonest(es){
+  const out = $('jhOut'); if (!out) return;
+  const num = (id, d) => { const v = parseFloat($(id).value); return Number.isFinite(v) && v >= 0 ? v : d; }, start = Math.max(1, num('jhStart', 1000)), risk = Math.max(0.1, num('jhRisk', 1)) / 100, fee = num('jhFee', 0.06) / 100;
+  try { localStorage.setItem('onslaught.jh', JSON.stringify([$('jhStart').value, $('jhRisk').value, $('jhFee').value])); } catch {}
+  const done = es.filter(e => e.out && e.out.res && Number.isFinite(e.out.rr) && e.atr > 0 && e.price > 0);
+  if (done.length < 10){ out.innerHTML = '<div class="mu">Needs at least 10 completed signals.</div>'; return; }
+  const g = new Map(); for (const e of done){ const k = e.tf + '|' + e.ct + '|' + e.dir, o = g.get(k) || g.set(k, {t: e.ct, gs: 0, fs: 0, n: 0}).get(k); o.gs += e.out.rr; o.fs += 2 * fee * e.price / (1.5 * e.atr); o.n++; }
+  const M = [...g.values()].map(o => ({t: o.t, gr: o.gs / o.n, fe: o.fs / o.n, n: o.n})).sort((a, b) => a.t - b.t).map(o => ({...o, nr: o.gr - o.fe}));
+  const st = a => { const n = a.length, m = n ? a.reduce((x, y) => x + y, 0) / n : 0; let v = 0; for (const x of a) v += (x - m) * (x - m); return {n, m, se: n > 1 ? Math.sqrt(v / (n - 1) / n) : 0}; };
+  const S = st(M.map(o => o.nr)), z = S.se > 0 ? S.m / S.se : 0, h = Math.floor(M.length / 2), m1 = st(M.slice(0, h).map(o => o.nr)).m, m2 = st(M.slice(h).map(o => o.nr)).m, rec = st(M.slice(-30).map(o => o.nr)).m;
+  let v = M.length < 30 ? 'Too few moments' : z >= 2.5 && m1 > 0 && m2 > 0 ? 'Promising' : z >= 2 ? 'Unproven' : z <= -2 ? 'Worse than chance' : 'No edge'; if (S.m <= 0 && M.length >= 30) v += ' · loses after fees';
+  let eq = start, pk = start, dd = 0; for (const o of M){ eq *= 1 + risk * o.nr; pk = Math.max(pk, eq); dd = Math.max(dd, 1 - eq / pk); }
+  const gm = st(M.map(o => o.gr)).m, fm = st(M.map(o => o.fe)).m, usd = x => (x < 0 ? '−' : '') + '$' + Math.abs(x).toLocaleString('en-US', {maximumFractionDigits: 0}), pc = x => (x >= 0 ? '+' : '') + (100 * x).toFixed(1) + '%', c = x => x > 0 ? 'up' : x < 0 ? 'dn' : '';
+  out.innerHTML = `<div class="stats"><div class="stat ${eq >= start ? 'bull' : 'bear'}"><div class="k">Account</div><div class="v">${usd(eq)}</div><div class="s">from ${usd(start)} · <b class="${c(eq - start)}">${pc(eq / start - 1)}</b> · worst drop −${(100 * dd).toFixed(0)}%</div></div>
+    <div class="stat"><div class="k">Market moments</div><div class="v">${M.length}</div><div class="s">from ${done.length} signals</div></div>
+    <div class="stat ${S.m > 0 ? 'bull' : 'bear'}"><div class="k">Net R per moment</div><div class="v">${fR(S.m)}</div><div class="s">gross ${fR(gm)} · fees −${fm.toFixed(2)}R · noise ±${(2 * S.se).toFixed(2)}</div></div>
+    <div class="stat"><div class="k">Halves / last 30</div><div class="v"><span class="${c(m1)}">${fR(m1)}</span> · <span class="${c(m2)}">${fR(m2)}</span></div><div class="s">first half · second half · last 30 moments <b class="${c(rec)}">${fR(rec)}</b></div></div>
+    <div class="stat"><div class="k">Verdict</div><div class="v" style="font-size:15px">${v}</div><div class="s">chance level is about 0R (symmetric stop and target)</div></div></div>
+    <div class="mu" style="font-size:12px;margin-top:6px">How to read: net R is after fees. "Noise" is the range chance alone could explain; a result inside it is not proof. The account compounds, each moment risking ${(100 * risk).toFixed(1)}% of it split across that moment's signals, in the order they happened (moments that overlap in time are treated as one after the other, so a real account could differ). Promising needs 2.5 noise units above zero and a positive result in both halves. With the plan view the fee is estimated at a 1.5 ATR stop.</div>`;
+}
 function renderJournal(){
   const all = J.entries.filter(e => e.kind !== 'div'), es = jBasis(all), st = jStats(es), pending = es.filter(e => !e.out || !e.out.res).length;
   if ($('jShow')) $('jShow').value = JSH.show;
@@ -3045,7 +3068,7 @@ function renderJournal(){
     + card('Win rate', st.win == null ? '—' : st.win.toFixed(0) + '%', 'target before stop', st.win >= 50 ? 'bull' : '')
     + card('Expectancy', st.avgR == null ? '—' : fR(st.avgR), 'average R per signal', st.avgR > 0 ? 'bull' : st.avgR < 0 ? 'bear' : '')
     + card('Avg +12 candles', st.r12 == null ? '—' : fmtPct(st.r12), 'return in your favour', st.r12 > 0 ? 'bull' : st.r12 < 0 ? 'bear' : '');
-  jEquity(es); renderLoss(es); 
+  jEquity(es); jHonest(es); renderLoss(es); 
   const groups = edgeGroups(es), maxR = Math.max(0.5, ...groups.map(g => Math.abs(g.avgR || 0)));
   let lastG = '';
   $('jEdge').innerHTML = groups.length ? groups.map(g => { const first = g.group !== lastG; lastG = g.group; const w = 50 * Math.abs(g.avgR || 0) / maxR;
@@ -5674,6 +5697,8 @@ $('suRun').onclick = suRun; $('suCsv').onclick = suCsv;
 suLoad();
 
 $('jUpdate').onclick = () => updateOutcomes(true);
+try { const v = JSON.parse(localStorage.getItem('onslaught.jh') || 'null'); if (Array.isArray(v)){ $('jhStart').value = v[0]; $('jhRisk').value = v[1]; $('jhFee').value = v[2]; } } catch {}
+for (const id of ['jhStart', 'jhRisk', 'jhFee']) $(id).addEventListener('input', () => { try { renderJournal(); } catch {} });
 $('jShow').onchange = () => { JSH.show = $('jShow').value; try { localStorage.setItem('onslaught-jshow', JSH.show); } catch {} renderJournal(); };
 $('jCsv').onclick = journalCSV;
 $('jWhat2').addEventListener('change', () => renderWhatIf(jBasis(J.entries.filter(e => e.kind !== 'div'))));
