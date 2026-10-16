@@ -908,7 +908,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <summary>Setup study</summary>
       <div class="mu" style="font-size:12px;margin:6px 0">Tests a trading idea on up to 1000 candles of history per coin, with the same rules every time, so ideas can be compared fairly. The trade is taken at the open of the candle after the signal; every stop is tried with targets of 1R, 2R and 3R; a trade that reaches neither within 48 candles is closed at market; the stop wins when a candle touches both; no fees. Judge a result by the cluster-adjusted average (signals at the same moment count once), and by whether both halves of the period agree. <b>Liquidity sweep</b>: price trades beyond the highest high / lowest low of the last 20 candles and closes back inside; the trade is against the sweep. <b>Funding extreme</b>: at a funding settlement the rate is far from normal; the trade is against the crowd (a very positive rate = short, a very negative rate = long). <b>Trend pullback</b>: EMA21 above EMA50 above EMA200 (reverse for shorts), the candle dips to the EMA21 and closes back on the trend side; the trade goes with the trend. <b>Tight-range breakout</b>: the last 20 candles' range was among the narrowest 20% of the last 100, and the candle closes beyond that range; the trade goes with the break. Both record the coin's strength against BTC over the last 30 candles.</div>
       <div class="row">
-        <label>Setup <select id="suKind"><option value="sweep">Liquidity sweep (20 candles)</option><option value="fund">Funding extreme (against the crowd)</option><option value="pull">Trend pullback to the EMA21 (with the trend)</option><option value="range">Breakout from a tight range (with the break)</option><option value="classic">Classic signals (EMA crosses, EMA200 reclaim, Donchian 55)</option><option value="cfg">Indicator settings (screener setups, compare settings)</option></select></label>
+        <label>Setup <select id="suKind"><option value="sweep">Liquidity sweep (20 candles)</option><option value="fund">Funding extreme (against the crowd)</option><option value="pull">Trend pullback to the EMA21 (with the trend)</option><option value="range">Breakout from a tight range (with the break)</option><option value="classic">Classic signals (EMA crosses, EMA200 reclaim, Donchian 55)</option><option value="div">Divergences (RSI, MACD, OBV, history replay)</option><option value="cfg">Indicator settings (screener setups, compare settings)</option></select></label>
         <label><input type="checkbox" class="suTf" value="15m"> 15m</label>
         <label><input type="checkbox" class="suTf" value="1h" checked> 1h</label>
         <label><input type="checkbox" class="suTf" value="4h" checked> 4h</label>
@@ -933,6 +933,24 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div id="btTradesOut"></div>
       <div id="btOut"></div>
       <div id="btRob"></div>
+      <div style="margin-top:14px"><b>BTC scalp lab</b> <span class="mu">Scalp triggers on BTCUSDT only (EMA crosses, EMA200 reclaim, Donchian 55, RSI/MACD/OBV divergences, liquidity sweep) on 15m, 1h and 4h, replayed over up to 3 years, each side separately. Fees are taken off, and every row is compared with random BTC entries on the same timeframe, stop and target, with a first-half / second-half check. A signal only counts if it is profitable <b>after fees</b> and beats chance.</span>
+        <div class="row" style="margin:6px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <label><input type="checkbox" class="bsTf" value="15m" checked> 15m</label><label><input type="checkbox" class="bsTf" value="1h" checked> 1h</label><label><input type="checkbox" class="bsTf" value="4h" checked> 4h</label>
+          <label>Stop <select id="bsStop"><option value="a10">1 ATR</option><option value="a15" selected>1.5 ATR</option><option value="a20">2 ATR</option><option value="a30">3 ATR</option></select></label>
+          <label>Target <select id="bsTgt"><option value="1">1R</option><option value="2" selected>2R</option><option value="3">3R</option></select></label>
+          <button id="bsRun" class="btn">Run BTC scalp lab</button><span class="mu" id="bsStatus"></span></div>
+        <div id="bsOut"></div></div>
+    </details>
+    <details class="panel jfold" data-fold="cf">
+      <summary>Confluence lab (top 10 coins)</summary>
+      <div class="mu" style="font-size:12px;margin:6px 0">One trigger, many confluences. The trigger is a <b>breakout with retest and confirmation</b>: a close beyond the 20-candle high or low, then within 8 candles a retest of that level that holds and closes in the trade direction (entry at that close). Each signal is then tagged with five yes/no confluences, all measured with data up to the entry only: <b>HTF trends aligned</b> (higher timeframes above or below their EMA50), <b>strong level</b> (the broken level was tested 2+ times before), <b>order block</b> at the retest, <b>fair value gap</b> at the retest, and <b>value-area flip</b> (the level sits at the POC / VAH / VAL of the earlier 100 candles, volume profile estimated from candle volume). The tables show whether stacking confluences adds anything: each one on its own, by number of confluences, and the best combinations. Fees are taken off and everything is compared with random entries on the same coins. Definitions are fixed before looking at results; do not tune them afterwards.</div>
+      <div class="row" style="margin:6px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <label><input type="checkbox" class="cfTf" value="1h" checked> 1h</label><label><input type="checkbox" class="cfTf" value="4h" checked> 4h</label><label><input type="checkbox" class="cfTf" value="1d" checked> 1d</label>
+        <label>Coins <select id="cfCoins"><option value="0">Top 10 by volume (incl. BTC)</option><option value="1">Ranked 11 to 20 (holdout)</option></select></label>
+        <label>Stop <select id="cfStop"><option value="a10">1 ATR</option><option value="a15" selected>1.5 ATR</option><option value="a20">2 ATR</option><option value="a30">3 ATR</option></select></label>
+        <label>Target <select id="cfTgt"><option value="1">1R</option><option value="2" selected>2R</option><option value="3">3R</option></select></label>
+        <button id="cfRun" class="btn">Run confluence lab</button><span class="mu" id="cfStatus"></span></div>
+      <div id="cfOut"></div>
     </details>
     </div>
     <div class="jpane" id="jtRunner" hidden>
@@ -961,7 +979,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li><b>Scoreboard</b> shows the per-moment average R (signals on the same candle and side count once), computed per timeframe and then averaged with equal weight, so a short 1H history cannot dominate. Compare it with <b>Chance</b>, which is what random entries earn with the same stop, target, side, timeframe and period (the Random entries rows, built by Run all tests; a * means no baseline yet and the fixed −0.04R is used), and with the noise ± column; the verdict is Promising only if it is well above chance and both halves of the period agree. Rows flagged ⚠ were run with less than a year of history. <b>Run all tests</b> reloads one year of candles per timeframe (first run for 100 coins can take several minutes; later runs reuse what is stored) and runs every study in turn, including <b>Classic signals</b> (EMA50 x EMA200, EMA20 x EMA50, close back over the EMA200, Donchian 55 breakout) and the random-entry baseline. For sweeps, pullbacks and ranges, whose stop is the candle's far end, the baseline uses a random-entry stop of about the same size in ATR (shown in the trade rule). Trend pullbacks are compared with random entries taken only while the EMAs are aligned in the same direction, and the EMA200 reclaim with random entries on the same side of the EMA200, so the trend itself is not credited to the rule (the extra Random entries rows show those baselines). Triggered setups are also split by trend: with price on the trade side of the EMA200, with EMA21/50/200 aligned, and against the trend, to see whether a trend gate would help (rerun Run all tests to fill these rows).</li>
       <li>The <b>Breaker candle study</b> and the <b>Setup study</b> replay rules on one year of history per timeframe for each coin (study only, no alerts). The Setup study covers liquidity sweeps, funding extremes, trend pullbacks, tight-range breakouts and <b>Indicator settings</b>, which replays the screener's setup for different RSI, DMI, ADX and OBV settings to see whether any setting beats the default. History has no open interest, market cap or grade, so those can only be judged here in the journal.</li>
       <li>The <b>BTC swing lab</b> (Study lab) tests simple trend rules on BTCUSDT over the whole Binance history (since late 2019), long or flat and long or short, on 1D and 4H, with fees and the real funding. Compare each rule with buying and holding (return, worst drop, Sharpe, year by year) and with shuffled timing; it is for swing trades, not for the altcoin alerts. <b>Run robustness check</b> then tries each rule at many speeds and tests each half of the history on its own, to see whether a good result survives or was one lucky setting.</li>
-<li>The <b>BTC swing alert</b> (Settings, Telegram section) turns the lab result into a signal: tick it and choose daily EMA100 or 4H EMA300. The header shows BTC trend up (long) or down (flat). When BTC closes on the other side of the line you get a notice, and a Telegram message if Telegram is on: LONG signal above, GO FLAT below. There is no short side (shorting BTC lost in the study) and no built-in stop. It fires a few times a year. A backtest, not a promise. The Telegram runner sends the same alert around the clock (<code>/btc</code> shows the state). The swing line shows as a chip in the market banner (not the header). It is a slow view, separate from the 1D/4H arrows; when they disagree the banner says so. Choose "both" (default) to get daily and 4H as two separate alerts, each with its own chip; the 4H flips more often. The Study lab button <b>List the BTC swing trades</b> shows the real buys and sells of both lines (date, price, result), the latest 5 first and a link to see them all.</li>
+<li>The <b>BTC swing alert</b> (Settings, Telegram section) turns the lab result into a signal: tick it and choose daily EMA100 or 4H EMA300. The header shows BTC trend up (long) or down (flat). When BTC closes on the other side of the line you get a notice, and a Telegram message if Telegram is on: LONG signal above, GO FLAT below. There is no short side (shorting BTC lost in the study) and no built-in stop. It fires a few times a year. A backtest, not a promise. The Telegram runner sends the same alert around the clock (<code>/btc</code> shows the state). The swing line shows as a chip in the market banner (not the header). It is a slow view, separate from the 1D/4H arrows; when they disagree the banner says so. Choose "both" (default) to get daily and 4H as two separate alerts, each with its own chip; the 4H flips more often. The Study lab button <b>List the BTC swing trades</b> shows the real buys and sells of both lines (date, price, result), the latest 5 first and a link to see them all. The <b>BTC scalp lab</b> (same fold) tests scalp triggers on BTC only (EMA crosses, divergences, liquidity sweep) on 15m, 1h and 4h with fees taken off and a random-entry baseline; the Scoreboard also has a Divergence study (Run all tests) comparing RSI, MACD, RSI + MACD and OBV divergences against chance. The <b>Confluence lab</b> (Study lab) tests a breakout + retest + confirmation trigger on the top 10 coins tagged with five confluences (higher-timeframe trends, strong level, order block, fair value gap, value-area flip), net of fees, against random entries; it shows each confluence alone, results by number of confluences and the best combinations, and has a holdout (coins ranked 11 to 20).</li>
 <li>Two Scoreboard rows split the triggered setups by what <b>BTC</b> was doing at signal time: above or below its daily EMA100 (last closed daily candle). Each is compared with random entries taken in the same BTC state. Re-run Run all tests once to fill those baselines.</li>
       <li>The Alert results box (above the Setup study) is only for people who run the Onslaught runner server: load the files it saves (send /export to its Telegram bot) to see how its alerts really did. It is not needed to use the Journal.</li>
       <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
@@ -2035,6 +2053,19 @@ function classicScan(cd){
   }
   return out;
 }
+/* Divergence history: every confirmed divergence (5 candles after the swing) the live scanner would have shown, replayed on a sliding 300-candle window. Entry at the close of the confirming candle. */
+function divScanHist(cd){
+  const n = cd.length, out = []; if (n < 260) return out;
+  const hh = cd.map(k => k[2]), ll = cd.map(k => k[3]), cc = cd.map(k => k[4]), at = atr(hh, ll, cc, 14), pv = divPivots(hh, ll, 5), Ls = new Set();
+  for (const b of pv.lo) Ls.add(b + 5); for (const b of pv.hi) Ls.add(b + 5);
+  for (const L of [...Ls].sort((a, b) => a - b)){
+    if (L < 200 || L >= n) continue; const a = at[L], C = cc[L]; if (!(a > 0)) continue;
+    for (const x of divergences(cd.slice(Math.max(0, L - 299), L + 1), {maxAgo: 0})){
+      if (!x.conf || x.ago !== 0) continue; const d = x.side, st = {}; for (const [k, m] of [['a10', 1], ['a15', 1.5], ['a20', 2], ['a30', 3]]) st[k] = d > 0 ? C - m * a : C + m * a;
+      out.push({i: L, t: cd[L][0], dir: d, ind: x.ind, ov: x.ov, score: x.score, stops: st, atr: a}); } }
+  return out;
+}
+const DIV_ROWS = [['Divergence: RSI + MACD, strong 70+ (what the runner sends)', e => e.ind === 'both' && e.score >= 70], ['Divergence: RSI + MACD (any strength)', e => e.ind === 'both'], ['Divergence: RSI only', e => e.ind === 'rsi'], ['Divergence: MACD only', e => e.ind === 'macd'], ['Divergence: OBV only', e => e.ind === 'obv'], ['Divergence: with OBV also agreeing', e => e.ov && e.ind !== 'obv']];
 function pullScan(cd, btc, o){
   o = o || {};
   const n = cd.length, out = [];
@@ -5143,6 +5174,10 @@ SU_KINDS.classic = {name: 'Classic signals', stops: {a20: 'stop 2 ATR from the c
   groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long' : 'Short'], ['Rule', e => e.variant], ['Rule and timeframe', e => e.variant + ' ' + e.tf.toUpperCase()],
     ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
   csv: [['rule', e => e.variant]]};
+SU_KINDS.div = {name: 'Divergences', stops: {a20: 'stop 2 ATR from the close', a30: 'stop 3 ATR from the close', a15: 'stop 1.5 ATR from the close', a10: 'stop 1 ATR from the close'},
+  groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long (bullish divergence)' : 'Short (bearish divergence)'], ['Indicators', e => ({both: 'RSI + MACD', rsi: 'RSI only', macd: 'MACD only', obv: 'OBV only'})[e.ind] + (e.ov && e.ind !== 'obv' ? ' + OBV' : '')],
+    ['Strength', e => e.score >= 70 ? 'Strong (70+)' : e.score >= 50 ? 'Medium (50 to 69)' : 'Weak (under 50)'], ['Stop distance (ATR)', e => suB(e.riskAtr, [0.5, 1, 2], ['under 0.5', '0.5 to 1', '1 to 2', '2 or more'])]],
+  csv: [['indicators', e => e.ind], ['obv_agrees', e => e.ov ? 1 : 0], ['strength', e => e.score]]};
 SU_KINDS.cfg = {name: 'Indicator settings', stops: {a10: 'stop 1 ATR from the signal close', a15: 'stop 1.5 ATR from the signal close', a20: 'stop 2 ATR from the signal close', a30: 'stop 3 ATR from the signal close', a40: 'stop 4 ATR from the signal close', sw: 'stop beyond the 10-candle swing (0.25 ATR past it)'},
   groups: [['Timeframe', e => e.tf], ['Side', e => e.dir > 0 ? 'Long' : 'Short'], ['Checks agreeing (of 4: DMI, RSI/EMA, RSI vs 50, OBV)', e => e.al === 4 ? 'All 4' : '3 of 4'],
     ['Stablecoin dominance (USDT.D + USDC.D), day before, by side', e => e.sd == null ? null : (e.dir > 0 ? 'Long' : 'Short') + ' · stables ' + (e.sd > 0 ? 'rising' : e.sd < 0 ? 'falling' : 'flat')],
@@ -5267,6 +5302,7 @@ async function suRun(){
           else if (kind === 'sweep') found = sweepScan(cd);
           else if (kind === 'fund') found = fundScan(cd, await suRates(sym), {thr});
           else if (kind === 'classic') found = classicScan(cd);
+          else if (kind === 'div') found = divScanHist(cd);
           else { const btc = await getKlinesYear('BTCUSDT', tf); found = (kind === 'pull' ? pullScan : rangeScan)(cd, btc); }
           for (const b0 of found){
             const b = flip ? suFlip(b0, cd) : b0, r = setupSim(cd, b);
@@ -5276,6 +5312,7 @@ async function suRun(){
             else if (kind === 'fund') Object.assign(rec, {fr: b.fr, ch24: b.ch24, atrPct: b.atrPct, withTrend: b.withTrend});
             else if (kind === 'pull') Object.assign(rec, {rs30: b.rs30, depth: b.depth, reach50: b.reach50, slope: b.slope, vol: b.vol});
             else if (kind === 'classic') rec.variant = b.variant;
+            else if (kind === 'div') Object.assign(rec, {ind: b.ind, ov: b.ov, score: b.score});
             else Object.assign(rec, {rs30: b.rs30, pct: b.pct, close: b.close, body: b.body, vol: b.vol, withTrend: b.withTrend});
             ev.push(rec);
           }
@@ -5410,12 +5447,12 @@ function sbRowsData(){
           add('Triggered setups + BTC below its daily EMA100', sd, 'History', `${stopTxt} stop, ${tgt}R (chance: random entries while BTC is below it)`, bt.filter(t => t.bu === 0), 'B0:' + stop); }
         add('Triggered setups against the trend (EMA21/50/200 not aligned)', sd, 'History', `${stopTxt} stop, ${tgt}R`, gb.filter(t => t.dir === d && !(t.tr & 2)), stop); } }
   const nearAtr = ev => { const v = ev.map(e => e.riskAtr).filter(Number.isFinite).sort((a, b) => a - b); if (!v.length) return null; const med = v[v.length >> 1]; return [['a05', .5], ['a10', 1], ['a15', 1.5], ['a20', 2], ['a30', 3], ['a40', 4]].reduce((b, x) => Math.abs(x[1] - med) < Math.abs(b[1] - med) ? x : b); };
-  for (const kind of ['sweep', 'fund', 'pull', 'range', 'classic']){ const ev = SU.ev[kind] || []; if (!ev.length) continue; const sk0 = Object.keys(SU_KINDS[kind].stops)[0], key = sk0 + '|' + tgt, ne = /^a\d+$/.test(sk0) ? [sk0] : nearAtr(ev), bkey = ne ? ne[0] : null;
+  for (const kind of ['sweep', 'fund', 'pull', 'range', 'classic', 'div']){ const ev = SU.ev[kind] || []; if (!ev.length) continue; const sk0 = Object.keys(SU_KINDS[kind].stops)[0], key = sk0 + '|' + tgt, ne = /^a\d+$/.test(sk0) ? [sk0] : nearAtr(ev), bkey = ne ? ne[0] : null;
     const ruleTxt = SU_KINDS[kind].stops[sk0] + (kind === 'pull' && ne ? ` (chance: random entries in an aligned EMA trend, ${ne[1]} ATR stop)` : /^a\d+$/.test(sk0) || !ne ? '' : ` (chance: random entries, ${ne[1]} ATR stop)`);
-    const groups = kind === 'classic' ? CLASSIC_VARIANTS : [null];
-    for (const vr of groups){ const ev2 = vr ? ev.filter(e => e.variant === vr) : ev; if (!ev2.length) continue;
+    const groups = kind === 'classic' ? CLASSIC_VARIANTS : kind === 'div' ? DIV_ROWS.map(x => x[0]) : [null];
+    for (const vr of groups){ const ev2 = !vr ? ev : kind === 'div' ? ev.filter(DIV_ROWS.find(x => x[0] === vr)[1]) : ev.filter(e => e.variant === vr); if (!ev2.length) continue;
       const tr = ev2.filter(e => e.sims && e.sims[key] && e.sims[key].done).map(e => ({tf: e.tf, t: e.t, dir: e.dir, r: e.sims[key].r}));
-      for (const [sd, d] of [['Long', 1], ['Short', -1]]) add(vr ? 'Classic: ' + vr : SU_KINDS[kind].name, sd, 'History', `${ruleTxt}${vr === CLASSIC_VARIANTS[2] ? ' (chance: random entries on the same side of the EMA200)' : ''}, ${tgt}R`, tr.filter(t => t.dir === d), kind === 'pull' && bkey ? 'T3:' + bkey : vr === CLASSIC_VARIANTS[2] && bkey ? 'T2:' + bkey : bkey); } }
+      for (const [sd, d] of [['Long', 1], ['Short', -1]]) add(vr ? (kind === 'div' ? vr : 'Classic: ' + vr) : SU_KINDS[kind].name, sd, 'History', `${ruleTxt}${vr === CLASSIC_VARIANTS[2] ? ' (chance: random entries on the same side of the EMA200)' : ''}, ${tgt}R`, tr.filter(t => t.dir === d), kind === 'pull' && bkey ? 'T3:' + bkey : vr === CLASSIC_VARIANTS[2] && bkey ? 'T2:' + bkey : bkey); } }
   if (RB.m) for (const [pf, bn] of [['', 'Random entries (baseline)'], ['T3:', 'Random entries in a trend (EMA21/50/200 aligned)'], ['T2:', 'Random entries on the same side of the EMA200'], ['B1:', 'Random entries while BTC is above its daily EMA100'], ['B0:', 'Random entries while BTC is below its daily EMA100']]) for (const [sd, d] of [['Long', 1], ['Short', -1]]){ const L = RB.m[pf + stop + '|' + tgt], tr = []; if (L) for (const tf of Object.keys(L)) for (const x of (L[tf][d] || [])) tr.push({tf, t: x[0], dir: d, r: x[1]}); if (tr.length) add(bn, sd, 'Baseline', `${stopTxt} stop, ${tgt}R`, tr); }
   if (BRK.ev.length){ const tr = BRK.ev.filter(brkFrozen).filter(e => e.st === 'filled' && e.sims && e.sims['plan|0'] && e.sims['plan|0'].done).map(e => ({tf: e.tf, t: e.t, dir: 1, r: e.sims['plan|0'].r})); add('Breaker candle (frozen rule)', 'Long', 'History', 'limit at 50%, thirds at 1.618 / 2 / 2.272', tr); }
   const je = (J.entries || []).filter(e => e.out && e.out.res && Number.isFinite(e.out.rr));
@@ -5435,7 +5472,7 @@ function sbRender(){
     h += `<tr${hd ? '' : ' style="opacity:.6"'}><td class="l">${esc(r.name)}</td><td class="l">${r.side}</td><td class="l">${r.src}</td><td class="l mu">${esc(r.rule)}</td><td>${n}</td><td class="${hd ? cls(hd.m) : ''}">${hd ? f2(hd.m) : '–'}</td><td class="mu" title="${hd && !hd.real ? 'No random-entry baseline for this row yet: the fixed -0.04R is used. Press Run all tests.' : 'Random entries, same rule'}">${hd ? f2(hd.ch) + (hd.real ? '' : '*') : '–'}</td><td class="${hd && r.src !== 'Baseline' ? cls(hd.ex) : ''}">${hd && r.src !== 'Baseline' ? f2(hd.ex) : '–'}</td><td>${hd ? '±' + (2 * hd.se).toFixed(2) : '–'}</td>${tfv(r.per, '1h')}${tfv(r.per, '4h')}${tfv(r.per, '1d')}<td class="${hd ? cls(hd.h1) : ''}">${hd ? f2(hd.h1) : '–'}</td><td class="${hd ? cls(hd.h2) : ''}">${hd ? f2(hd.h2) : '–'}</td><td class="l ${vc}">${vt}</td></tr>`;
   }
   h += '</tbody></table></div>';
-  const cov = []; for (const [k, nm] of [['cfg', 'Triggered setups'], ['sweep', 'Sweeps'], ['fund', 'Funding'], ['pull', 'Pullbacks'], ['range', 'Ranges'], ['classic', 'Classic signals']]){ const ev = SU.ev[k] || []; if (!ev.length) continue; const parts = [];
+  const cov = []; for (const [k, nm] of [['cfg', 'Triggered setups'], ['sweep', 'Sweeps'], ['fund', 'Funding'], ['pull', 'Pullbacks'], ['range', 'Ranges'], ['classic', 'Classic signals'], ['div', 'Divergences']]){ const ev = SU.ev[k] || []; if (!ev.length) continue; const parts = [];
     for (const tf of ['1h', '4h', '1d']){ const ts = ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (amax(ts) - amin(ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`${nm}: ${parts.join(', ')}`); }
   if (BRK.ev.length){ const parts = []; for (const tf of ['1h', '4h', '1d']){ const ts = BRK.ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (amax(ts) - amin(ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`Breaker: ${parts.join(', ')}`); }
   h += `<div class="mu" style="font-size:12px;margin:8px 0"><b>How to read:</b> "Chance" is what random entries earn with the same stop, target, side, timeframe and period (the Random entries rows; * = no baseline yet, the fixed -0.04R is used). "vs chance" is the average minus that. "Noise ±" is about two standard errors: a result only counts if it is bigger than that. <b>Promising</b> = well above chance (2.5 noise units) and above it in both halves of the period; <b>Unproven</b> = above chance but not convincingly or the halves disagree; <b>No edge</b> = within the noise; <b>Worse than chance</b> = clearly negative; <b>Too few</b> = under 30 moments. Timeframe cells show that timeframe alone (hover for moments and days; dimmed under 10). History = replays on old candles; Live journal = signals this browser logged (1.5 ATR, 1.5R); Runner = trades your server followed (load them in Runner results). Different sources use different trade rules, so compare within a source first. With this many rows, one or two will look good by luck alone: trust a Promising row only if it also holds in a different coin set, a later period, or your live results.</div>`;
@@ -5492,7 +5529,7 @@ $('sbRun').onclick = async () => {
   try {
     for (const c of document.querySelectorAll('.suTf')) c.checked = tfs.includes(c.value); for (const c of document.querySelectorAll('.brkTf')) c.checked = tfs.includes(c.value);
     $('suN').value = $('sbN').value; $('brkN').value = $('sbN').value;
-    const steps = [['cfg', 'Triggered setups'], ['sweep', 'Liquidity sweeps'], ['fund', 'Funding extremes'], ['pull', 'Trend pullbacks'], ['range', 'Range breakouts'], ['classic', 'Classic signals'], ['brk', 'Breaker candles'], ['rand', 'Random-entry baseline']];
+    const steps = [['cfg', 'Triggered setups'], ['sweep', 'Liquidity sweeps'], ['fund', 'Funding extremes'], ['pull', 'Trend pullbacks'], ['range', 'Range breakouts'], ['classic', 'Classic signals'], ['div', 'Divergences'], ['brk', 'Breaker candles'], ['rand', 'Random-entry baseline']];
     for (const [i, [kind, nm]] of steps.entries()){
       if (SU.cancel || BRK.cancel) break;
       st.textContent = `Step ${i + 1} of ${steps.length}: ${nm}…`;
@@ -5924,6 +5961,142 @@ $('btTrades').onclick = async () => {
   catch (e){ st.textContent = 'Could not load BTC history: ' + e.message; }
 };
 $('btTradesOut').addEventListener('click', e => { const a = e.target.closest('.btTrAll'); if (!a) return; e.preventDefault(); BTL.show[a.dataset.tf] = !BTL.show[a.dataset.tf]; $('btTradesOut').innerHTML = btTradesHtml(BTL.res); });
+/* ---- BTC scalp lab: scalp triggers on BTCUSDT only, fees included, against random BTC entries ---- */
+const BS = {res: null, busy: false, N: {'15m': 70080 + 300, '1h': 26280 + 300, '4h': 6570 + 100}, GRID: {'15m': 6, '1h': 2, '4h': 1}, ST: {a10: 1, a15: 1.5, a20: 2, a30: 3}};
+function bsRules(cd){
+  const out = []; for (const x of classicScan(cd)) out.push([ 'Classic: ' + x.variant, x ]);
+  for (const x of divScanHist(cd)){ const sg = x.score >= 70; if (x.ind === 'both' && sg) out.push(['Divergence: RSI + MACD, strong 70+', x]); if (x.ind === 'both') out.push(['Divergence: RSI + MACD', x]); if (x.ind === 'rsi') out.push(['Divergence: RSI only', x]); if (x.ind === 'macd') out.push(['Divergence: MACD only', x]); if (x.ind === 'obv') out.push(['Divergence: OBV only', x]); }
+  const h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), at = atr(h, l, c, 14);
+  for (const x of sweepScan(cd)){ const a = at[x.i]; if (!(a > 0)) continue; out.push(['Liquidity sweep', {i: x.i, t: x.t, dir: x.dir, atr: a}]); }
+  return out;
+}
+function bsStops(cd, i, dir, a){ const C = cd[i][4], st = {}; for (const [k, m] of Object.entries(BS.ST)) st[k] = dir > 0 ? C - m * a : C + m * a; return st; }
+function bsStat(arr){ const n = arr.length; if (!n) return {n: 0, m: 0, se: 0}; const m = arr.reduce((a, x) => a + x, 0) / n; let v = 0; for (const x of arr) v += (x - m) * (x - m); return {n, m, se: n > 1 ? Math.sqrt(v / (n - 1) / n) : 0}; }
+async function bsRun(){
+  if (BS.busy){ BS.cancel = true; return; } BS.busy = true; BS.cancel = false; $('bsRun').textContent = 'Stop'; const st = $('bsStatus'), fee = (+$('btFee').value || 0.06) / 100;
+  try {
+    const tfs = [...document.querySelectorAll('.bsTf:checked')].map(x => x.value); if (!tfs.length) throw new Error('Pick a timeframe.');
+    const res = {}; 
+    for (const tf of tfs){
+      st.textContent = `Reading the BTC ${tf} candles (the first time can take a minute)…`; const cd = await getKlinesYear('BTCUSDT', tf, true, BS.N[tf], 'bs:'); if (cd.length < 600) throw new Error('not enough BTC history for ' + tf);
+      const h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), at = atr(h, l, c, 14), rows = {}, ms = TF_MS[tf];
+      st.textContent = `Finding the ${tf} signals…`; await new Promise(r => setTimeout(r, 0));
+      const evs = bsRules(cd), ev = [];
+      for (const [name, x] of evs){ if (BS.cancel) break; const sims = setupSim(cd, {i: x.i, dir: x.dir, stops: bsStops(cd, x.i, x.dir, x.atr)}); if (sims.status === 'skip' || !sims.sims) continue; ev.push({name, t: x.t, dir: x.dir, price: cd[x.i][4], atr: x.atr, sims: sims.sims}); }
+      st.textContent = `Random BTC entries on ${tf}…`; await new Promise(r => setTimeout(r, 0));
+      const base = []; for (let q = 220; q < cd.length - 2; q++){ if (Math.round(cd[q][0] / ms) % BS.GRID[tf] !== 0 || !(at[q] > 0)) continue; for (const dir of [1, -1]){ const sm = setupSim(cd, {i: q, dir, stops: bsStops(cd, q, dir, at[q])}); if (sm.status === 'skip' || !sm.sims) continue; base.push({t: cd[q][0], dir, price: cd[q][4], atr: at[q], sims: sm.sims}); } }
+      res[tf] = {ev, base, t0: cd[220][0], t1: cd[cd.length - 1][0], n: cd.length};
+    }
+    BS.res = res; BS.fee = fee; st.textContent = ''; bsRender();
+  } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
+  BS.busy = false; $('bsRun').textContent = 'Run BTC scalp lab';
+}
+function bsRender(){
+  const out = $('bsOut'); if (!BS.res){ out.innerHTML = ''; return; } const sk = $('bsStop').value, tg = +$('bsTgt').value, key = sk + '|' + tg, fee = BS.fee, k = BS.ST[sk];
+  const pick = (L, f) => L.filter(f).filter(e => e.sims[key] && e.sims[key].done).map(e => ({t: e.t, g: e.sims[key].r, f: fee * e.price / (k * e.atr)}));
+  const rows = [];
+  for (const [tf, R] of Object.entries(BS.res)){ const mid = (R.t0 + R.t1) / 2, names = [...new Set(R.ev.map(e => e.name))];
+    for (const nm of names) for (const [sd, d] of [['Long', 1], ['Short', -1]]){
+      const A = pick(R.ev, e => e.name === nm && e.dir === d), B = pick(R.base, e => e.dir === d); if (!A.length || !B.length) continue;
+      const net = x => x.g - x.f, a = bsStat(A.map(net)), b = bsStat(B.map(net)), z = (a.m - b.m) / Math.sqrt(a.se * a.se + b.se * b.se || 1e-9), ex = h => { const a1 = A.filter(x => h ? x.t >= mid : x.t < mid).map(net), b1 = B.filter(x => h ? x.t >= mid : x.t < mid).map(net); return a1.length && b1.length ? bsStat(a1).m - bsStat(b1).m : null; };
+      const e1 = ex(0), e2 = ex(1), gm = bsStat(A.map(x => x.g)).m, fm = bsStat(A.map(x => x.f)).m;
+      let v = a.n < 30 ? 'Too few' : z >= 2.5 && e1 > 0 && e2 > 0 ? 'Promising' : z >= 2 ? 'Unproven' : z <= -2 ? 'Worse than chance' : 'No edge';
+      if (a.m <= 0 && v !== 'Too few') v += ' · loses after fees';
+      rows.push({tf, nm, sd, n: a.n, gm, fm, nm2: a.m, ch: b.m, z, se: 2 * a.se, e1, e2, v});
+    } }
+  const f2 = x => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(2), cl = x => x == null ? 'mu' : x > 0 ? 'up' : x < 0 ? 'dn' : 'mu';
+  const order = {Promising: 0, Unproven: 1}; rows.sort((x, y) => (order[x.v.split(' ·')[0]] ?? 2) - (order[y.v.split(' ·')[0]] ?? 2) || y.z - x.z);
+  out.innerHTML = rows.length ? `<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Signal</th><th>Side</th><th>TF</th><th>Signals</th><th>Gross R</th><th>Fee R</th><th>Net R</th><th>Chance (net)</th><th>vs chance</th><th>Noise ±</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>${rows.map(r => `<tr><td class="l">${r.nm}</td><td>${r.sd}</td><td>${r.tf}</td><td>${r.n}</td><td class="${cl(r.gm)}">${f2(r.gm)}</td><td class="dn">-${r.fm.toFixed(2)}</td><td class="${cl(r.nm2)}"><b>${f2(r.nm2)}</b></td><td>${f2(r.ch)}</td><td class="${cl(r.nm2 - r.ch)}">${f2(r.nm2 - r.ch)}</td><td>±${r.se.toFixed(2)}</td><td class="${cl(r.e1)}">${f2(r.e1)}</td><td class="${cl(r.e2)}">${f2(r.e2)}</td><td class="l">${r.v}</td></tr>`).join('')}</tbody></table></div>
+    <div class="mu" style="font-size:12px;margin-top:6px">R = profit in units of the stop distance (${$('bsStop').selectedOptions[0].textContent} stop, ${tg}R target, thirds not used: one stop and one target). Fee R = the fee (${(fee * 100).toFixed(2)}% round trip) divided by the stop distance: it is large on small stops. Net R = Gross R minus Fee R. "Chance" = random BTC entries on the same side, timeframe, stop and target, net of the same fee. <b>Promising</b> needs 2.5 noise units above chance and above it in both halves; any row with a negative Net R is marked "loses after fees". Ordered best first. Many rows are tested, so one or two will look good by luck: trust a result only if it holds on another stop and target as well.</div>` : '<div class="mu">No signals found.</div>';
+}
+$('bsRun').onclick = bsRun; $('bsStop').onchange = $('bsTgt').onchange = () => { if (BS.res) bsRender(); };
+/* ---- Confluence lab: breakout + retest + confirmation on the top 10 coins, tagged with five confluences ---- */
+const CF = {res: null, busy: false, N: {'1h': 26280 + 300, '4h': 6570 + 100, '1d': 1000}, GRID: {'1h': 2, '4h': 1, '1d': 1}, FEATS: ['HTF trends aligned', 'Strong level (tested 2+ times)', 'Order block at the retest', 'Fair value gap at the retest', 'Value-area flip (POC / VAH / VAL)']};
+function cfResample(cd, ms, toMs, off){
+  const out = []; let cur = null;
+  for (const k of cd){ const b = Math.floor((k[0] - off) / toMs) * toMs + off; if (!cur || cur[0] !== b){ if (cur) out.push(cur); cur = [b, k[1], k[2], k[3], k[4], k[5]]; } else { if (k[2] > cur[2]) cur[2] = k[2]; if (k[3] < cur[3]) cur[3] = k[3]; cur[4] = k[4]; cur[5] += k[5]; } }
+  if (cur && cd[cd.length - 1][0] + ms >= cur[0] + toMs) out.push(cur); return out;
+}
+function cfHtfFlags(cd, tf){                                                        // bit 1: long ok (higher timeframes above their EMA50), bit 2: short ok
+  const ms = TF_MS[tf], D = 864e5, T = tf === '1h' ? [[4 * 36e5, 0], [D, 0]] : tf === '4h' ? [[D, 0], [7 * D, 4 * D]] : [[7 * D, 4 * D], [30 * D, 0]], n = cd.length, fl = new Uint8Array(n).fill(3);
+  for (const [toMs, off] of T){ const s = cfResample(cd, ms, toMs, off), e = ema(s.map(x => x[4]), 50); let p = -1;
+    for (let i = 0; i < n; i++){ const te = cd[i][0] + ms; while (p + 1 < s.length && s[p + 1][0] + toMs <= te) p++; const ok = p >= 50 && e[p] > 0; if (!(ok && s[p][4] > e[p])) fl[i] &= ~1; if (!(ok && s[p][4] < e[p])) fl[i] &= ~2; } }
+  return fl;
+}
+function cfProfile(cd, from, to, a){                                                // volume profile of candles [from, to): POC, value-area high and low
+  let lo = Infinity, hi = -Infinity; for (let j = from; j < to; j++){ if (cd[j][3] < lo) lo = cd[j][3]; if (cd[j][2] > hi) hi = cd[j][2]; }
+  const NB = 40, w = (hi - lo) / NB; if (!(w > 0)) return null; const v = new Array(NB).fill(0);
+  for (let j = from; j < to; j++){ const b0 = Math.min(NB - 1, Math.floor((cd[j][3] - lo) / w)), b1 = Math.min(NB - 1, Math.floor((cd[j][2] - lo) / w)), share = (cd[j][5] || 0) / (b1 - b0 + 1); for (let b = b0; b <= b1; b++) v[b] += share; }
+  let pi = 0; for (let b = 1; b < NB; b++) if (v[b] > v[pi]) pi = b; const tot = v.reduce((x, y) => x + y, 0); let acc = v[pi], u = pi, d = pi;
+  while (acc < 0.7 * tot && (u < NB - 1 || d > 0)){ const up = u < NB - 1 ? v[u + 1] : -1, dn = d > 0 ? v[d - 1] : -1; if (up >= dn){ u++; acc += v[u]; } else { d--; acc += v[d]; } }
+  return {poc: lo + (pi + 0.5) * w, vah: lo + (u + 1) * w, val: lo + d * w};
+}
+function cfScan(cd, tf){
+  const n = cd.length, o = cd.map(k => k[1]), h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), at = atr(h, l, c, 14), fl = cfHtfFlags(cd, tf), out = [], lastEv = {1: -99, '-1': -99};
+  for (let b = 130; b < n - 10; b++){
+    const a = at[b]; if (!(a > 0)) continue; let hi = -Infinity, lo = Infinity; for (let j = b - 20; j < b; j++){ if (h[j] > hi) hi = h[j]; if (l[j] < lo) lo = l[j]; }
+    for (const dir of [1, -1]){
+      const lvl = dir > 0 ? hi : lo; if (dir > 0 ? !(c[b] > lvl && c[b - 1] <= lvl) : !(c[b] < lvl && c[b - 1] >= lvl)) continue;
+      for (let r = b + 1; r <= b + 8 && r < n; r++){
+        const ar = at[r]; if (!(ar > 0)) break; if (dir > 0 ? c[r] < lvl - 0.5 * ar : c[r] > lvl + 0.5 * ar) break;
+        const touch = dir > 0 ? (l[r] <= lvl + 0.25 * ar && l[r] >= lvl - 0.5 * ar) : (h[r] >= lvl - 0.25 * ar && h[r] <= lvl + 0.5 * ar), hold = dir > 0 ? c[r] > lvl && c[r] > o[r] : c[r] < lvl && c[r] < o[r];
+        if (!(touch && hold)) continue;
+        if (r - lastEv[dir] >= 10){ lastEv[dir] = r;
+          const f = [!!(fl[r] & (dir > 0 ? 1 : 2)), false, false, false, false];
+          let t = 0, lastT = -99; for (let j = Math.max(1, b - 100); j < b; j++){ const x = dir > 0 ? h[j] : l[j], loc = dir > 0 ? (x >= h[j - 1] && x >= h[j + 1]) : (x <= l[j - 1] && x <= l[j + 1]); if (loc && Math.abs(x - lvl) <= 0.3 * a && j - lastT >= 3){ t++; lastT = j; } } f[1] = t >= 2;
+          for (let j = r - 4; j >= Math.max(1, r - 50) && !f[2]; j--){ const m = dir > 0 ? c[j] < o[j] : c[j] > o[j]; if (!m) continue; let mv = 0; for (let k = j + 1; k <= j + 3; k++) mv = Math.max(mv, dir > 0 ? h[k] - c[j] : c[j] - l[k]); if (mv < 1.5 * at[j]) continue;
+            let ok = true; for (let k = j + 1; k < r; k++) if (dir > 0 ? c[k] < l[j] : c[k] > h[j]){ ok = false; break; } if (ok && l[r] <= h[j] && h[r] >= l[j]) f[2] = true; }
+          for (let k = r - 1; k >= Math.max(2, r - 50) && !f[3]; k--){ const g0 = dir > 0 ? h[k - 2] : h[k], g1 = dir > 0 ? l[k] : l[k - 2]; if (!(dir > 0 ? l[k] > h[k - 2] : h[k] < l[k - 2]) || g1 - g0 < 0.3 * at[k]) continue;
+            let ok = true; for (let m2 = k + 1; m2 < r; m2++) if (dir > 0 ? l[m2] <= g0 : h[m2] >= g1){ ok = false; break; } if (ok && l[r] <= g1 && h[r] >= g0) f[3] = true; }
+          const pr = cfProfile(cd, b - 100, b, a); if (pr) f[4] = Math.abs(lvl - pr.poc) <= 0.5 * a || Math.abs(lvl - (dir > 0 ? pr.vah : pr.val)) <= 0.5 * a;
+          out.push({i: r, t: cd[r][0], dir, atr: ar, f}); }
+        break; } } }
+  return out;
+}
+async function cfRun(){
+  if (CF.busy){ CF.cancel = true; return; } CF.busy = true; CF.cancel = false; $('cfRun').textContent = 'Stop'; const st = $('cfStatus');
+  try {
+    const tfs = [...document.querySelectorAll('.cfTf:checked')].map(x => x.value); if (!tfs.length) throw new Error('Pick a timeframe.'); const o = +$('cfCoins').value;
+    st.textContent = 'Loading the coin list…'; const uni = (await getUniverse()).slice(o * 10, o * 10 + 10), tasks = [], res = {}; for (const u of uni) for (const tf of tfs) tasks.push([u.sym, tf]); tfs.forEach(tf => res[tf] = {ev: [], base: []});
+    let i = 0, done = 0;
+    async function worker(){ while (i < tasks.length && !CF.cancel){ const [sym, tf] = tasks[i++], ms = TF_MS[tf];
+      try { const cd = await getKlinesYear(sym, tf, true, CF.N[tf], 'cf:'); if (cd.length > 600){
+        const h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), at = atr(h, l, c, 14), fl = cfHtfFlags(cd, tf);
+        for (const x of cfScan(cd, tf)){ const sm = setupSim(cd, {i: x.i, dir: x.dir, stops: bsStops(cd, x.i, x.dir, x.atr)}); if (sm.status === 'skip' || !sm.sims) continue; res[tf].ev.push({sym, t: x.t, dir: x.dir, price: cd[x.i][4], atr: x.atr, f: x.f, sims: sm.sims}); }
+        for (let q = 220; q < cd.length - 2; q++){ if (Math.round(cd[q][0] / ms) % CF.GRID[tf] !== 0 || !(at[q] > 0)) continue; for (const dir of [1, -1]){ const sm = setupSim(cd, {i: q, dir, stops: bsStops(cd, q, dir, at[q])}); if (sm.status === 'skip' || !sm.sims) continue; res[tf].base.push({t: cd[q][0], dir, price: cd[q][4], atr: at[q], htf: !!(fl[q] & (dir > 0 ? 1 : 2)), sims: sm.sims}); } } } } catch {}
+      done++; st.textContent = `Reading and scanning ${done} of ${tasks.length} (coin and timeframe)…`; await new Promise(r => setTimeout(r, 0)); } }
+    await Promise.all([worker(), worker(), worker()]);
+    if (CF.cancel){ st.textContent = 'Stopped.'; } else { CF.res = res; CF.fee = (+$('btFee').value || 0.06) / 100; CF.coins = uni.map(u => u.sym.replace('USDT', '')); st.textContent = ''; cfRender(); }
+  } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
+  CF.busy = false; $('cfRun').textContent = 'Run confluence lab';
+}
+function cfCompare(A, B, mid){
+  const net = x => x.g - x.f, a = bsStat(A.map(net)), b = bsStat(B.map(net)); if (!a.n || !b.n) return null;
+  const z = (a.m - b.m) / Math.sqrt(a.se * a.se + b.se * b.se || 1e-9), ex = hh => { const a1 = A.filter(x => hh ? x.t >= mid : x.t < mid).map(net), b1 = B.filter(x => hh ? x.t >= mid : x.t < mid).map(net); return a1.length >= 5 && b1.length ? bsStat(a1).m - bsStat(b1).m : null; };
+  const e1 = ex(0), e2 = ex(1); let v = a.n < 30 ? 'Too few' : z >= 2.5 && e1 > 0 && e2 > 0 ? 'Promising' : z >= 2 ? 'Unproven' : z <= -2 ? 'Worse than chance' : 'No edge'; if (a.m <= 0 && v !== 'Too few') v += ' · loses after fees';
+  return {n: a.n, gm: bsStat(A.map(x => x.g)).m, fm: bsStat(A.map(x => x.f)).m, net: a.m, ch: b.m, z, se: 2 * a.se, e1, e2, v};
+}
+function cfRender(){
+  const out = $('cfOut'); if (!CF.res){ out.innerHTML = ''; return; } const sk = $('cfStop').value, tg = +$('cfTgt').value, key = sk + '|' + tg, fee = CF.fee, k = BS.ST[sk];
+  const pick = (L, f) => L.filter(f).filter(e => e.sims[key] && e.sims[key].done).map(e => ({t: e.t, g: e.sims[key].r, f: fee * e.price / (k * e.atr), ev: e}));
+  let t0 = Infinity, t1 = -Infinity; for (const R of Object.values(CF.res)) for (const e of R.ev.concat(R.base)){ if (e.t < t0) t0 = e.t; if (e.t > t1) t1 = e.t; } const mid = (t0 + t1) / 2;
+  const f2 = x => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(2), cl = x => x == null ? 'mu' : x > 0 ? 'up' : x < 0 ? 'dn' : 'mu';
+  const row = (label, sd, tf, r, extra) => r ? `<tr><td class="l">${label}</td><td>${sd}</td><td>${tf}</td><td>${r.n}</td><td class="${cl(r.gm)}">${f2(r.gm)}</td><td class="dn">-${r.fm.toFixed(2)}</td><td class="${cl(r.net)}"><b>${f2(r.net)}</b></td><td>${f2(r.ch)}</td><td class="${cl(r.net - r.ch)}">${f2(r.net - r.ch)}</td><td>±${r.se.toFixed(2)}</td><td class="${cl(r.e1)}">${f2(r.e1)}</td><td class="${cl(r.e2)}">${f2(r.e2)}</td><td class="l">${r.v}</td></tr>` : '';
+  const head = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th>Side</th><th>TF</th><th>Signals</th><th>Gross R</th><th>Fee R</th><th>Net R</th><th>Chance (net)</th><th>vs chance</th><th>Noise ±</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>', tail = '</tbody></table></div>';
+  const tfs = Object.keys(CF.res), sides = [['Long', 1], ['Short', -1]], allEv = tfs.flatMap(tf => CF.res[tf].ev), allBase = tfs.flatMap(tf => CF.res[tf].base);
+  const base = (dir, htf, tfl) => pick(tfl ? CF.res[tfl].base : allBase, b => b.dir === dir && (htf == null || b.htf === htf));
+  let h = `<div class="mu" style="font-size:12px;margin:6px 0">${CF.coins.join(', ')} · ${$('cfStop').selectedOptions[0].textContent} stop · ${tg}R · fee ${(fee * 100).toFixed(2)}% round trip · ${allEv.length} signals.</div>`;
+  h += '<b>1. The trigger alone (breakout, retest, confirmation)</b>' + head; for (const tf of tfs) for (const [sd, d] of sides) h += row('All signals', sd, tf, cfCompare(pick(CF.res[tf].ev, e => e.dir === d), base(d, null, tf), mid)); h += tail;
+  h += '<b>2. Each confluence on its own</b> <span class="mu">(all timeframes together; "HTF" rows are compared with random entries that also had the higher timeframes aligned)</span>' + head;
+  CF.FEATS.forEach((nm, fi) => { for (const [sd, d] of sides) for (const w of [true, false]){ const A = pick(allEv, e => e.dir === d && e.f[fi] === w); h += row(`${nm}: ${w ? 'yes' : 'no'}`, sd, 'all', cfCompare(A, base(d, fi === 0 ? w : null), mid)); } }); h += tail;
+  h += '<b>3. By number of confluences</b>' + head; for (const [lbl, fn] of [['0 or 1', x => x <= 1], ['2', x => x === 2], ['3', x => x === 3], ['4 or 5', x => x >= 4]]) for (const [sd, d] of sides) h += row(`${lbl} confluences`, sd, 'all', cfCompare(pick(allEv, e => e.dir === d && fn(e.f.filter(Boolean).length)), base(d, null), mid)); h += tail;
+  const combos = []; for (let m = 1; m < 32; m++) for (const [sd, d] of sides){ const A = pick(allEv, e => e.dir === d && CF.FEATS.every((_, fi) => !(m & (1 << fi)) || e.f[fi])); if (A.length < 40) continue; const r = cfCompare(A, base(d, null), mid); if (r) combos.push({m, sd, r}); }
+  combos.sort((x, y) => y.r.z - x.r.z);
+  h += '<b>4. Best combinations</b> <span class="mu">(signals that have at least these confluences, 40+ signals, best 8 by noise units; out of up to 62 combinations tested, so a few will look good by luck)</span>' + head + combos.slice(0, 8).map(x => row(CF.FEATS.map((nm, fi) => x.m & (1 << fi) ? nm.split(' (')[0] : null).filter(Boolean).join(' + '), x.sd, 'all', x.r)).join('') + tail;
+  h += `<div class="mu" style="font-size:12px;margin-top:6px">R = profit in units of the stop distance. Net R = Gross R minus the fee in R. "Chance" = random entries on the same coins, side, stop and target, net of the same fee. <b>Promising</b> needs 2.5 noise units above chance and above it in both halves; rows with a negative Net R are marked "loses after fees". What to look for: does the result rise as the number of confluences rises (section 3)? If not, stacking confluences adds nothing here. Then run the lab again on the holdout coins (ranked 11 to 20): a result that disappears there was luck.</div>`;
+  out.innerHTML = h;
+}
+$('cfRun').onclick = cfRun; $('cfStop').onchange = $('cfTgt').onchange = () => { if (CF.res) cfRender(); };
 const btcTfList = o => o.tf === 'both' ? ['1d', '4h'] : [BTCT.R[o.tf] ? o.tf : '1d'];
 function btcSwingChip(){ const o = btcLoad(); if (!o.on) return ''; const px = x => Math.round(x).toLocaleString('en-US');
   return btcTfList(o).map(tf => { const n = BTCT.nows[tf]; if (!n) return '';
@@ -6050,7 +6223,7 @@ journal: ['Como funciona o journal', `<ul>
 <li>O <b>Scoreboard</b> mostra o R médio por momento (sinais na mesma vela e lado contam uma vez), calculado por timeframe e depois com média de pesos iguais, para um histórico curto de 1H não dominar. Compara com a coluna <b>Chance</b>, que é o que entradas aleatórias ganham com o mesmo stop, alvo, lado, timeframe e período (as linhas Random entries, criadas pelo Run all tests; um * significa que ainda não há baseline e usa-se o −0,04R fixo), e com a coluna de ruído ±; o veredicto só é Promising se estiver bem acima do acaso e as duas metades do período concordarem. Linhas com ⚠ foram corridas com menos de um ano de histórico. <b>Run all tests</b> carrega um ano de velas por timeframe (a primeira vez com 100 moedas pode demorar vários minutos; as seguintes reutilizam o que está guardado) e corre todos os estudos em sequência, incluindo os <b>Classic signals</b> (EMA50 x EMA200, EMA20 x EMA50, fecho de volta acima da EMA200, rutura Donchian 55) e o baseline de entradas aleatórias. Nos sweeps, pullbacks e ranges, cujo stop é a ponta da vela, o baseline usa um stop aleatório com tamanho parecido em ATR (indicado na regra). Os pullbacks são comparados com entradas aleatórias feitas só quando as EMAs estão alinhadas na mesma direção, e o regresso à EMA200 com entradas aleatórias do mesmo lado da EMA200, para a tendência não ser creditada à regra (as linhas Random entries extra mostram esses baselines). Os triggered setups também são divididos por tendência: com o preço do lado do trade da EMA200, com EMA21/50/200 alinhadas, e contra a tendência, para ver se um filtro de tendência ajudaria (volta a correr o Run all tests para preencher estas linhas).</li>
 <li>O <b>Breaker candle study</b> e o <b>Setup study</b> repetem regras com um ano de histórico por timeframe e por moeda (só estudo, sem alertas). O Setup study cobre varrimentos de liquidez, funding extremo, pullbacks de tendência, rompimentos de range apertado e <b>Indicator settings</b>, que repete o setup do screener com diferentes definições de RSI, DMI, ADX e OBV para ver se alguma bate a predefinida. O histórico não tem open interest, market cap nem grade, por isso estes só se avaliam aqui no journal.</li>
 <li>O <b>BTC swing lab</b> (Study lab) testa regras simples de tendência no BTCUSDT com todo o histórico da Binance (desde finais de 2019), long ou fora e long ou short, em 1D e 4H, com comissões e o funding real. Compara cada regra com comprar e manter (retorno, pior queda, Sharpe, ano a ano) e com timing aleatório; serve para swing trades, não para os alertas de altcoins. O <b>Run robustness check</b> experimenta cada regra em várias velocidades e testa cada metade do histórico em separado, para ver se um bom resultado se mantém ou foi um único setting com sorte.</li>
-<li>O <b>alerta BTC swing</b> (Definições, secção Telegram) transforma o resultado do laboratório num sinal: ativa e escolhe EMA100 diária ou EMA300 4H. O cabeçalho mostra a tendência do BTC em alta (long) ou em baixa (fora). Quando o BTC fecha do outro lado da linha recebes um aviso, e uma mensagem Telegram se o Telegram estiver ligado: sinal LONG acima, SAIR abaixo. Não há lado short (short no BTC perdeu no estudo) nem stop incluído. Dispara poucas vezes por ano. Um backtest, não uma promessa. O runner Telegram envia o mesmo alerta 24 horas por dia (<code>/btc</code> mostra o estado). A linha swing aparece como chip no banner do mercado (não no cabeçalho). É uma visão lenta, separada das setas 1D/4H; quando discordam o banner avisa. Escolhe "both" (por defeito) para receber diário e 4H como dois alertas separados, cada um com o seu chip; o 4H muda mais vezes. O botão <b>List the BTC swing trades</b> do Study lab mostra as compras e vendas reais das duas linhas (data, preço, resultado), as últimas 5 primeiro e um link para ver todas.</li>
+<li>O <b>alerta BTC swing</b> (Definições, secção Telegram) transforma o resultado do laboratório num sinal: ativa e escolhe EMA100 diária ou EMA300 4H. O cabeçalho mostra a tendência do BTC em alta (long) ou em baixa (fora). Quando o BTC fecha do outro lado da linha recebes um aviso, e uma mensagem Telegram se o Telegram estiver ligado: sinal LONG acima, SAIR abaixo. Não há lado short (short no BTC perdeu no estudo) nem stop incluído. Dispara poucas vezes por ano. Um backtest, não uma promessa. O runner Telegram envia o mesmo alerta 24 horas por dia (<code>/btc</code> mostra o estado). A linha swing aparece como chip no banner do mercado (não no cabeçalho). É uma visão lenta, separada das setas 1D/4H; quando discordam o banner avisa. Escolhe "both" (por defeito) para receber diário e 4H como dois alertas separados, cada um com o seu chip; o 4H muda mais vezes. O botão <b>List the BTC swing trades</b> do Study lab mostra as compras e vendas reais das duas linhas (data, preço, resultado), as últimas 5 primeiro e um link para ver todas. O <b>BTC scalp lab</b> (mesma secção) testa triggers de scalp só no BTC (cruzamentos de EMA, divergências, liquidity sweep) em 15m, 1h e 4h, com as comissões descontadas e uma base de entradas aleatórias; o Scoreboard tem também o estudo de Divergências (Run all tests) que compara divergências RSI, MACD, RSI + MACD e OBV com o acaso. O <b>Confluence lab</b> (Study lab) testa um trigger de rutura + reteste + confirmação nas 10 maiores moedas com cinco confluências (tendências em timeframes superiores, nível forte, order block, fair value gap, flip da área de valor), líquido de comissões e contra entradas aleatórias; mostra cada confluência isolada, os resultados por número de confluências e as melhores combinações, com um holdout (moedas 11 a 20).</li>
 <li>Duas linhas do Scoreboard dividem os setups disparados pelo que o <b>BTC</b> fazia na altura do sinal: acima ou abaixo da EMA100 diária (último candle diário fechado). Cada uma compara com entradas aleatórias no mesmo estado do BTC. Corre Run all tests uma vez para preencher essas bases.</li>
 <li>A caixa Alert results (acima do Setup study) serve apenas para quem usa o servidor runner da Onslaught: carrega os ficheiros que ele guarda (envia /export ao bot de Telegram) para ver como os alertas correram na realidade. Não é preciso para usar o Journal.</li>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
