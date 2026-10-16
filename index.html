@@ -6062,27 +6062,31 @@ async function cfRun(){
     async function worker(){ while (i < tasks.length && !CF.cancel){ const [sym, tf] = tasks[i++], ms = TF_MS[tf];
       try { const cd = await getKlinesYear(sym, tf, true, CF.N[tf], 'cf:'); if (cd.length > 600){
         const h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), at = atr(h, l, c, 14), fl = cfHtfFlags(cd, tf);
-        for (const x of cfScan(cd, tf)){ const sm = setupSim(cd, {i: x.i, dir: x.dir, stops: bsStops(cd, x.i, x.dir, x.atr)}); if (sm.status === 'skip' || !sm.sims) continue; res[tf].ev.push({sym, t: x.t, dir: x.dir, price: cd[x.i][4], atr: x.atr, f: x.f, sims: sm.sims}); }
-        for (let q = 220; q < cd.length - 2; q++){ if (Math.round(cd[q][0] / ms) % CF.GRID[tf] !== 0 || !(at[q] > 0)) continue; for (const dir of [1, -1]){ const sm = setupSim(cd, {i: q, dir, stops: bsStops(cd, q, dir, at[q])}); if (sm.status === 'skip' || !sm.sims) continue; res[tf].base.push({t: cd[q][0], dir, price: cd[q][4], atr: at[q], htf: !!(fl[q] & (dir > 0 ? 1 : 2)), sims: sm.sims}); } } } } catch {}
+        for (const x of cfScan(cd, tf)){ const sm = setupSim(cd, {i: x.i, dir: x.dir, stops: bsStops(cd, x.i, x.dir, x.atr)}); if (sm.status === 'skip' || !sm.sims) continue; res[tf].ev.push({sym, tf, t: x.t, dir: x.dir, price: cd[x.i][4], atr: x.atr, f: x.f, sims: sm.sims}); }
+        for (let q = 220; q < cd.length - 2; q++){ if (Math.round(cd[q][0] / ms) % CF.GRID[tf] !== 0 || !(at[q] > 0)) continue; for (const dir of [1, -1]){ const sm = setupSim(cd, {i: q, dir, stops: bsStops(cd, q, dir, at[q])}); if (sm.status === 'skip' || !sm.sims) continue; res[tf].base.push({tf, t: cd[q][0], dir, price: cd[q][4], atr: at[q], htf: !!(fl[q] & (dir > 0 ? 1 : 2)), sims: sm.sims}); } } } } catch {}
       done++; st.textContent = `Reading and scanning ${done} of ${tasks.length} (coin and timeframe)…`; await new Promise(r => setTimeout(r, 0)); } }
     await Promise.all([worker(), worker(), worker()]);
     if (CF.cancel){ st.textContent = 'Stopped.'; } else { CF.res = res; CF.fee = (+$('btFee').value || 0.06) / 100; CF.coins = uni.map(u => u.sym.replace('USDT', '')); st.textContent = ''; cfRender(); }
   } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
   CF.busy = false; $('cfRun').textContent = 'Run confluence lab';
 }
-function cfCompare(A, B, mid){
-  const net = x => x.g - x.f, a = bsStat(A.map(net)), b = bsStat(B.map(net)); if (!a.n || !b.n) return null;
+function cfMoments(L){                                                              // signals on the same candle (same timeframe and time) win or lose together, so they count once: their average
+  const m = new Map(); for (const x of L){ const k = x.tf + '|' + x.t, o = m.get(k) || m.set(k, {t: x.t, g: 0, f: 0, n: 0}).get(k); o.g += x.g; o.f += x.f; o.n++; }
+  return [...m.values()].map(o => ({t: o.t, g: o.g / o.n, f: o.f / o.n}));
+}
+function cfCompare(A0, B0, mid){
+  const A = cfMoments(A0), B = cfMoments(B0), net = x => x.g - x.f, a = bsStat(A.map(net)), b = bsStat(B.map(net)); if (!a.n || !b.n) return null;
   const z = (a.m - b.m) / Math.sqrt(a.se * a.se + b.se * b.se || 1e-9), ex = hh => { const a1 = A.filter(x => hh ? x.t >= mid : x.t < mid).map(net), b1 = B.filter(x => hh ? x.t >= mid : x.t < mid).map(net); return a1.length >= 5 && b1.length ? bsStat(a1).m - bsStat(b1).m : null; };
   const e1 = ex(0), e2 = ex(1); let v = a.n < 30 ? 'Too few' : z >= 2.5 && e1 > 0 && e2 > 0 ? 'Promising' : z >= 2 ? 'Unproven' : z <= -2 ? 'Worse than chance' : 'No edge'; if (a.m <= 0 && v !== 'Too few') v += ' · loses after fees';
-  return {n: a.n, gm: bsStat(A.map(x => x.g)).m, fm: bsStat(A.map(x => x.f)).m, net: a.m, ch: b.m, z, se: 2 * a.se, e1, e2, v};
+  return {n: a.n, raw: A0.length, gm: bsStat(A.map(x => x.g)).m, fm: bsStat(A.map(x => x.f)).m, net: a.m, ch: b.m, z, se: 2 * a.se, e1, e2, v};
 }
 function cfRender(){
   const out = $('cfOut'); if (!CF.res){ out.innerHTML = ''; return; } const sk = $('cfStop').value, tg = +$('cfTgt').value, key = sk + '|' + tg, fee = CF.fee, k = BS.ST[sk];
-  const pick = (L, f) => L.filter(f).filter(e => e.sims[key] && e.sims[key].done).map(e => ({t: e.t, g: e.sims[key].r, f: fee * e.price / (k * e.atr), ev: e}));
+  const pick = (L, f) => L.filter(f).filter(e => e.sims[key] && e.sims[key].done).map(e => ({t: e.t, tf: e.tf, g: e.sims[key].r, f: fee * e.price / (k * e.atr), ev: e}));
   let t0 = Infinity, t1 = -Infinity; for (const R of Object.values(CF.res)) for (const e of R.ev.concat(R.base)){ if (e.t < t0) t0 = e.t; if (e.t > t1) t1 = e.t; } const mid = (t0 + t1) / 2;
   const f2 = x => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(2), cl = x => x == null ? 'mu' : x > 0 ? 'up' : x < 0 ? 'dn' : 'mu';
-  const row = (label, sd, tf, r, extra) => r ? `<tr><td class="l">${label}</td><td>${sd}</td><td>${tf}</td><td>${r.n}</td><td class="${cl(r.gm)}">${f2(r.gm)}</td><td class="dn">-${r.fm.toFixed(2)}</td><td class="${cl(r.net)}"><b>${f2(r.net)}</b></td><td>${f2(r.ch)}</td><td class="${cl(r.net - r.ch)}">${f2(r.net - r.ch)}</td><td>±${r.se.toFixed(2)}</td><td class="${cl(r.e1)}">${f2(r.e1)}</td><td class="${cl(r.e2)}">${f2(r.e2)}</td><td class="l">${r.v}</td></tr>` : '';
-  const head = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th>Side</th><th>TF</th><th>Signals</th><th>Gross R</th><th>Fee R</th><th>Net R</th><th>Chance (net)</th><th>vs chance</th><th>Noise ±</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>', tail = '</tbody></table></div>';
+  const row = (label, sd, tf, r, extra) => r ? `<tr><td class="l">${label}</td><td>${sd}</td><td>${tf}</td><td title="${r.raw} signals, counted as ${r.n} moments">${r.n}</td><td class="${cl(r.gm)}">${f2(r.gm)}</td><td class="dn">-${r.fm.toFixed(2)}</td><td class="${cl(r.net)}"><b>${f2(r.net)}</b></td><td>${f2(r.ch)}</td><td class="${cl(r.net - r.ch)}">${f2(r.net - r.ch)}</td><td>±${r.se.toFixed(2)}</td><td class="${cl(r.e1)}">${f2(r.e1)}</td><td class="${cl(r.e2)}">${f2(r.e2)}</td><td class="l">${r.v}</td></tr>` : '';
+  const head = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th>Side</th><th>TF</th><th>Moments</th><th>Gross R</th><th>Fee R</th><th>Net R</th><th>Chance (net)</th><th>vs chance</th><th>Noise ±</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>', tail = '</tbody></table></div>';
   const tfs = Object.keys(CF.res), sides = [['Long', 1], ['Short', -1]], allEv = tfs.flatMap(tf => CF.res[tf].ev), allBase = tfs.flatMap(tf => CF.res[tf].base);
   const base = (dir, htf, tfl) => pick(tfl ? CF.res[tfl].base : allBase, b => b.dir === dir && (htf == null || b.htf === htf));
   let h = `<div class="mu" style="font-size:12px;margin:6px 0">${CF.coins.join(', ')} · ${$('cfStop').selectedOptions[0].textContent} stop · ${tg}R · fee ${(fee * 100).toFixed(2)}% round trip · ${allEv.length} signals.</div>`;
@@ -6090,10 +6094,10 @@ function cfRender(){
   h += '<b>2. Each confluence on its own</b> <span class="mu">(all timeframes together; "HTF" rows are compared with random entries that also had the higher timeframes aligned)</span>' + head;
   CF.FEATS.forEach((nm, fi) => { for (const [sd, d] of sides) for (const w of [true, false]){ const A = pick(allEv, e => e.dir === d && e.f[fi] === w); h += row(`${nm}: ${w ? 'yes' : 'no'}`, sd, 'all', cfCompare(A, base(d, fi === 0 ? w : null), mid)); } }); h += tail;
   h += '<b>3. By number of confluences</b>' + head; for (const [lbl, fn] of [['0 or 1', x => x <= 1], ['2', x => x === 2], ['3', x => x === 3], ['4 or 5', x => x >= 4]]) for (const [sd, d] of sides) h += row(`${lbl} confluences`, sd, 'all', cfCompare(pick(allEv, e => e.dir === d && fn(e.f.filter(Boolean).length)), base(d, null), mid)); h += tail;
-  const combos = []; for (let m = 1; m < 32; m++) for (const [sd, d] of sides){ const A = pick(allEv, e => e.dir === d && CF.FEATS.every((_, fi) => !(m & (1 << fi)) || e.f[fi])); if (A.length < 40) continue; const r = cfCompare(A, base(d, null), mid); if (r) combos.push({m, sd, r}); }
+  const combos = []; for (let m = 1; m < 32; m++) for (const [sd, d] of sides){ const A = pick(allEv, e => e.dir === d && CF.FEATS.every((_, fi) => !(m & (1 << fi)) || e.f[fi])); if (A.length < 40) continue; const r = cfCompare(A, base(d, null), mid); if (r && r.n < 40) continue; if (r) combos.push({m, sd, r}); }
   combos.sort((x, y) => y.r.z - x.r.z);
   h += '<b>4. Best combinations</b> <span class="mu">(signals that have at least these confluences, 40+ signals, best 8 by noise units; out of up to 62 combinations tested, so a few will look good by luck)</span>' + head + combos.slice(0, 8).map(x => row(CF.FEATS.map((nm, fi) => x.m & (1 << fi) ? nm.split(' (')[0] : null).filter(Boolean).join(' + '), x.sd, 'all', x.r)).join('') + tail;
-  h += `<div class="mu" style="font-size:12px;margin-top:6px">R = profit in units of the stop distance. Net R = Gross R minus the fee in R. "Chance" = random entries on the same coins, side, stop and target, net of the same fee. <b>Promising</b> needs 2.5 noise units above chance and above it in both halves; rows with a negative Net R are marked "loses after fees". What to look for: does the result rise as the number of confluences rises (section 3)? If not, stacking confluences adds nothing here. Then run the lab again on the holdout coins (ranked 11 to 20): a result that disappears there was luck.</div>`;
+  h += `<div class="mu" style="font-size:12px;margin-top:6px">R = profit in units of the stop distance. A <b>moment</b> is one candle on one timeframe: signals that fire on the same candle (many coins breaking out together) win or lose together, so they count once, as their average (hover a number for the raw signal count). Net R = Gross R minus the fee in R. "Chance" = random entries on the same coins, side, stop and target, net of the same fee. <b>Promising</b> needs 2.5 noise units above chance and above it in both halves; rows with a negative Net R are marked "loses after fees". What to look for: does the result rise as the number of confluences rises (section 3)? If not, stacking confluences adds nothing here. Then run the lab again on the holdout coins (ranked 11 to 20): a result that disappears there was luck.</div>`;
   out.innerHTML = h;
 }
 $('cfRun').onclick = cfRun; $('cfStop').onchange = $('cfTgt').onchange = () => { if (CF.res) cfRender(); };
