@@ -5938,10 +5938,15 @@ function tapeLine(n){ const d = S.regimeDir; if (!d) return ''; return `\n<i>Not
 /* Actual trades of the two BTC swing lines (long at the first close above the line, sell at the first close below it), listed with date, price and result. */
 const BTL = {rules: [['1d', 100, 'Daily EMA100'], ['4h', 300, '4H EMA300']], show: {}};
 function btTradeList(cd, tf, p){
-  const c = cd.map(k => k[4]), e = ema(c, p), ms = TF_MS[tf], tr = []; let ent = null;
-  for (let i = 1; i < cd.length; i++){ if (!(e[i] > 0) || !(e[i - 1] > 0)) continue; const up = c[i] > e[i], was = c[i - 1] > e[i - 1];
-    if (up && !was && ent == null) ent = {t: cd[i][0] + ms, p: c[i]}; else if (!up && was && ent != null){ tr.push({t0: ent.t, p0: ent.p, t1: cd[i][0] + ms, p1: c[i], r: c[i] / ent.p - 1}); ent = null; } }
-  return {tr, open: ent ? {t0: ent.t, p0: ent.p, r: c[c.length - 1] / ent.p - 1, last: c[c.length - 1]} : null};
+  const c = cd.map(k => k[4]), e = ema(c, p), ms = TF_MS[tf], tr = [], Y = {}; let ent = null;
+  for (let i = 1; i < cd.length; i++){ if (!(e[i] > 0) || !(e[i - 1] > 0)) continue; { const y = new Date(cd[i][0]).getUTCFullYear(), q = Y[y] || (Y[y] = {s: 1, b: 1, n: 0, m: 0, t: 0}), r = c[i] / c[i - 1] - 1; q.b *= 1 + r; if (ent != null){ q.s *= 1 + r; q.m++; } q.n++; } const up = c[i] > e[i], was = c[i - 1] > e[i - 1];
+    if (up && !was && ent == null) ent = {t: cd[i][0] + ms, p: c[i]}; else if (!up && was && ent != null){ tr.push({t0: ent.t, p0: ent.p, t1: cd[i][0] + ms, p1: c[i], r: c[i] / ent.p - 1}); ent = null; Y[new Date(cd[i][0]).getUTCFullYear()].t++; } }
+  return {tr, years: Y, open: ent ? {t0: ent.t, p0: ent.p, r: c[c.length - 1] / ent.p - 1, last: c[c.length - 1]} : null};
+}
+function btYearTable(Y){
+  const ys = Object.keys(Y || {}).sort(); if (!ys.length) return '';
+  const p = x => `<td class="${x >= 0 ? 'up' : 'dn'}">${x >= 0 ? '+' : ''}${(100 * x).toFixed(0)}%</td>`, now = new Date().getUTCFullYear();
+  return `<div class="tablewrap" style="border:0"><table class="jedge" style="margin-top:4px"><thead><tr><th>Year</th><th>Rule (long or flat)</th><th>Buy and hold</th><th>Difference</th><th>In market</th><th>Trades closed</th></tr></thead><tbody>${ys.map(y => { const q = Y[y], s = q.s - 1, b = q.b - 1; return `<tr><td>${y}${+y === now ? ' (so far)' : ''}</td>${p(s)}${p(b)}${p(s - b)}<td>${(100 * q.m / q.n).toFixed(0)}%</td><td>${q.t}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 function btTradesHtml(res){
   const d = t => new Date(t).toISOString().slice(0, 16).replace('T', ' '), px = x => Math.round(x).toLocaleString('en-US'), pc = x => `<b class="${x >= 0 ? 'up' : 'dn'}">${x >= 0 ? '+' : ''}${(100 * x).toFixed(1)}%</b>`;
@@ -5949,6 +5954,7 @@ function btTradesHtml(res){
     const tr = L.tr, w = tr.filter(x => x.r > 0).length, avg = tr.length ? tr.reduce((a, x) => a + x.r, 0) / tr.length : 0, all = BTL.show[tf], rows = (all ? tr : tr.slice(-5)).slice().reverse();
     const days = x => ((x.t1 - x.t0) / 864e5).toFixed(0);
     return `<div style="margin:10px 0"><b>${name}</b> <span class="mu">${tr.length} closed trades · ${w} winners (${tr.length ? (100 * w / tr.length).toFixed(0) : 0}%) · average ${(100 * avg).toFixed(1)}% · best ${tr.length ? (100 * Math.max(...tr.map(x => x.r))).toFixed(0) : 0}% · worst ${tr.length ? (100 * Math.min(...tr.map(x => x.r))).toFixed(0) : 0}% · before fees. Buy at the close of the first candle above the line, sell at the close of the first candle below it.</span>
+      ${btYearTable(L.years)}
       <div class="tablewrap" style="border:0"><table class="jedge" style="margin-top:4px"><thead><tr><th>Buy (UTC)</th><th>Buy price</th><th>Sell (UTC)</th><th>Sell price</th><th>Days</th><th>Result</th></tr></thead><tbody>
       ${L.open ? `<tr><td>${d(L.open.t0)}</td><td>$${px(L.open.p0)}</td><td class="mu" colspan="2">still long, now $${px(L.open.last)}</td><td>${((Date.now() - L.open.t0) / 864e5).toFixed(0)}</td><td>${pc(L.open.r)}</td></tr>` : ''}
       ${rows.map(x => `<tr><td>${d(x.t0)}</td><td>$${px(x.p0)}</td><td>${d(x.t1)}</td><td>$${px(x.p1)}</td><td>${days(x)}</td><td>${pc(x.r)}</td></tr>`).join('')}</tbody></table></div>
