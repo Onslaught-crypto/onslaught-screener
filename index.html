@@ -931,11 +931,12 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input type="checkbox" class="btTf" value="4h" checked> 4H</label>
         <label title="Charged on every position change, per side (taker fee plus slippage)">Fee per side % <input id="btFee" type="number" value="0.06" step="0.01" min="0" style="width:64px"></label>
         <label title="Charge or credit the real 8-hourly funding rate to the open position"><input type="checkbox" id="btFund" checked> Funding</label>
-        <button id="btRun" class="btn">Run BTC study</button><button id="btRobRun" class="btn" title="Sweeps the speed of each rule and tests each half of the history on its own">Run robustness check</button><button id="btTrades" class="btn" title="Lists the actual buys and sells of the two BTC swing lines (daily EMA100 and 4H EMA300): date, price and result of each trade">List the BTC swing trades</button><span class="mu" id="btStatus"></span>
+        <button id="btRun" class="btn">Run BTC study</button><button id="btRobRun" class="btn" title="Sweeps the speed of each rule and tests each half of the history on its own">Run robustness check</button><button id="btComboRun" class="btn" title="Picks the best rule of each family on the first half of the history only, then tests them combined (all agree, majority, scaled exposure) on the second half">Combine rules</button><button id="btTrades" class="btn" title="Lists the actual buys and sells of the two BTC swing lines (daily EMA100 and 4H EMA300): date, price and result of each trade">List the BTC swing trades</button><span class="mu" id="btStatus"></span>
       </div>
       <div id="btTradesOut"></div>
       <div id="btOut"></div>
       <div id="btRob"></div>
+      <div id="btComboOut"></div>
       <div style="margin-top:14px"><b>BTC scalp lab</b> <span class="mu">Scalp triggers on BTCUSDT only (EMA crosses, EMA200 reclaim, Donchian 55, RSI/MACD/OBV divergences, liquidity sweep) on 15m, 1h and 4h, replayed over up to 3 years, each side separately. Fees are taken off, and every row is compared with random BTC entries on the same timeframe, stop and target, with a first-half / second-half check. A signal only counts if it is profitable <b>after fees</b> and beats chance.</span>
         <div class="row" style="margin:6px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <label><input type="checkbox" class="bsTf" value="15m" checked> 15m</label><label><input type="checkbox" class="bsTf" value="1h" checked> 1h</label><label><input type="checkbox" class="bsTf" value="4h" checked> 4h</label>
@@ -5705,6 +5706,49 @@ $('btRobRun').onclick = async () => {
     BT.rob = res; try { await Cache.set('btRob', res); } catch {} st.textContent = 'Done.'; btRobRender();
   } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
   BT.busy = false; $('btRun').disabled = false; $('btRobRun').disabled = false;
+};
+
+/* Combine rules: pick the best rule of each family on the FIRST half only, then test the combination (all agree, majority, scaled exposure) and judge it on the second half */
+function btCombo(cd, tf, fee, fund){
+  const ms = TF_MS[tf], S = tf === '4h' ? 650 : 310, n = cd.length, M = S + Math.floor((n - S) / 2), c = cd.map(k => k[4]), NS = 100;
+  const fa = fund ? (() => { const f = new Array(n).fill(0), t0 = cd[0][0]; for (const x of fund){ const i = Math.floor((x.t - t0) / ms); if (i >= 0 && i < n) f[i] += x.r; } return f; })() : null;
+  const run = (pos, wc) => ({all: btRun(cd, pos, S, fee, fa, ms, wc), h1: btRun(cd, pos, S, fee, fa, ms, false, M), h2: btRun(cd, pos, M, fee, fa, ms, false)});
+  const cand = btFamilies(tf).map(f => { const pos = f.f(cd, c), r = btRun(cd, pos, S, fee, fa, ms, false, M); return {fam: f.fam, par: f.par, pos, h1: r.sharpe}; });
+  const best = {}; for (const x of cand) if (!best[x.fam] || x.h1 > best[x.fam].h1) best[x.fam] = x;
+  const picks = Object.values(best).sort((a, b) => b.h1 - a.h1).slice(0, 3), k = picks.length;
+  const sum = new Array(n).fill(0).map((_, i) => picks.reduce((a, x) => a + (x.pos[i] || 0), 0));
+  const defs = [['Buy and hold', new Array(n).fill(1)], ['Best single rule (first half)', picks[0].pos], ['All ' + k + ' agree', sum.map(x => x === k ? 1 : 0)], ['Majority (' + Math.ceil((k + 1) / 2) + ' of ' + k + ')', sum.map(x => x >= Math.ceil((k + 1) / 2) ? 1 : 0)], ['Scaled exposure (share long)', sum.map(x => x / k)]];
+  const sl = x => ({tot: x.tot, mdd: x.mdd, sharpe: x.sharpe, inm: x.inm, trades: x.trades}), rows = [];
+  for (const [name, pos] of defs){ const R = run(pos, true); let below = 0; if (name !== 'Buy and hold') for (let q = 0; q < NS; q++){ const r = btRun(cd, btShuffle(pos, S, 1000 + q * 7919 + name.length * 31), S, fee, fa, ms, false); if (r.sharpe < R.all.sharpe) below++; }
+    rows.push({name, all: sl(R.all), h1: sl(R.h1), h2: sl(R.h2), years: btYears(cd, R.all.curve, S), pct: name === 'Buy and hold' ? null : below / NS * 100}); }
+  return {tf, picks: picks.map(x => ({fam: x.fam, par: x.par, h1: x.h1, h2: btRun(cd, x.pos, M, fee, fa, ms, false).sharpe})), rows, from: cd[S][0], mid: cd[M][0], to: cd[n - 1][0]};
+}
+function btComboRender(){
+  const out = $('btComboOut'); if (!out) return; const R = BT.combo; if (!R || !R.length){ out.innerHTML = ''; return; }
+  const p1 = x => (x >= 0 ? '+' : '') + (x * 100).toFixed(0) + '%', cl = x => x > 0.005 ? 'up' : x < -0.005 ? 'dn' : '', d = t => new Date(t).toISOString().slice(0, 10);
+  let h = '<div style="margin:14px 0 4px;font-weight:600">Combined rules (long or flat)</div>';
+  for (const b of R){ const yrs = [...new Set(b.rows.flatMap(r => Object.keys(r.years)))].sort(), bh = b.rows[0], single = b.rows[1];
+    h += `<div class="mu" style="font-size:12px;margin:8px 0 4px">${b.tf.toUpperCase()}: ${d(b.from)} to ${d(b.to)}. The three rules were chosen on the first half only (until ${d(b.mid)}); the second half is the real test.</div>`;
+    h += '<div class="mu" style="font-size:12px;margin:2px 0">Rules: ' + b.picks.map(x => `<b>${x.fam.split(' (')[0]} ${x.par}</b> (Sharpe ${x.h1.toFixed(2)} on the 1st half, ${x.h2.toFixed(2)} on the 2nd)`).join(' · ') + '</div>';
+    h += `<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Combination</th><th>Return</th><th>Worst drop</th><th>Sharpe</th><th>In market</th><th>Trades</th><th>Return, 1st half</th><th>Sharpe, 1st half</th><th>Return, 2nd half</th><th>Worst drop, 2nd half</th><th>Sharpe, 2nd half</th><th title="Share of 100 shuffles of the same positions that it beats on Sharpe">Beats random timing</th>${yrs.map(y => `<th>${y}</th>`).join('')}</tr></thead><tbody>`;
+    for (const r of b.rows){ const g2 = r.name !== 'Buy and hold' && r.h2.sharpe > bh.h2.sharpe;
+      h += `<tr${r.name === 'Buy and hold' ? ' style="background:rgba(255,255,255,.04)"' : ''}><td class="l">${r.name}</td><td class="${cl(r.all.tot)}">${p1(r.all.tot)}</td><td class="dn">${(r.all.mdd * 100).toFixed(0)}%</td><td>${r.all.sharpe.toFixed(2)}</td><td>${(r.all.inm * 100).toFixed(0)}%</td><td>${r.all.trades}</td><td class="${cl(r.h1.tot)}">${p1(r.h1.tot)}</td><td>${r.h1.sharpe.toFixed(2)}</td><td class="${cl(r.h2.tot)}">${p1(r.h2.tot)}</td><td class="dn">${(r.h2.mdd * 100).toFixed(0)}%</td><td class="${g2 ? 'up' : ''}">${r.h2.sharpe.toFixed(2)}</td><td>${r.pct == null ? '–' : r.pct.toFixed(0) + '%'}</td>${yrs.map(y => `<td class="${cl(r.years[y])}">${r.years[y] == null ? '–' : p1(r.years[y])}</td>`).join('')}</tr>`; }
+    h += '</tbody></table></div>';
+    const better = b.rows.slice(2).filter(r => r.h2.sharpe > single.h2.sharpe && r.h2.mdd >= single.h2.mdd - 0.02);
+    h += `<div style="font-size:13px;margin:6px 0"><b>Verdict (2nd half):</b> ${better.length ? better.map(r => r.name).join(', ') + ' beat' + (better.length === 1 ? 's' : '') + ' the best single rule on Sharpe without a deeper drop.' : 'no combination beats the best single rule on Sharpe without a deeper drop. Combining adds nothing here.'}</div>`; }
+  h += '<div class="mu" style="font-size:12px;margin:8px 0"><b>How to read:</b> the three rules are the best of three different families on the first half, so the first-half numbers are flattering by design. The second half is what counts: a combination is worth using only if it beats the single best rule there on Sharpe and drop. "All agree" is long only when every rule is long; "Majority" when most are; "Scaled" holds the share of rules that are long (0%, a third, two thirds or all in). Same costs as above.</div>';
+  out.innerHTML = h;
+}
+$('btComboRun').onclick = async () => {
+  if (BT.busy) return; const tfs = [...document.querySelectorAll('.btTf:checked')].map(x => x.value), st = $('btStatus'); if (!tfs.length){ toast('Pick at least one timeframe.'); return; }
+  const fee = Math.max(0, +$('btFee').value || 0) / 100, useF = $('btFund').checked; BT.busy = true; for (const id of ['btRun', 'btRobRun', 'btComboRun']) $(id).disabled = true; const res = [];
+  try {
+    let fund = null; if (useF){ st.textContent = 'Reading the funding history…'; fund = await btFunding(); }
+    for (const tf of tfs){ st.textContent = `Reading the ${tf.toUpperCase()} candles…`; const cd = await getKlinesYear('BTCUSDT', tf, true, 1e6, 'all:'); if (cd.length < 900) throw new Error('not enough BTC history');
+      st.textContent = `Combining the rules on ${tf.toUpperCase()}…`; await new Promise(r => setTimeout(r, 20)); res.push(btCombo(cd, tf, fee, fund)); }
+    BT.combo = res; st.textContent = 'Done.'; btComboRender();
+  } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
+  BT.busy = false; for (const id of ['btRun', 'btRobRun', 'btComboRun']) $(id).disabled = false;
 };
 (async () => { try { const v = await Cache.get('btRob'); if (Array.isArray(v) && v.length){ BT.rob = v; btRobRender(); } } catch {} })();
 (async () => { try { const v = await Cache.get('btLab'); if (v && Array.isArray(v.res)){ BT.res = v.res; BT.meta = v.meta || null; btRender(); } } catch {} })();
