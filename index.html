@@ -968,16 +968,6 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <button id="swRun" class="btn">Run sweep &amp; breaker lab</button><span class="mu" id="swStatus"></span></div>
       <div id="swOut"></div>
     </details>
-    <details class="panel jfold" data-fold="ns">
-      <summary>New signals lab (top 10 coins, holdout 11 to 20)</summary>
-      <div class="mu" style="font-size:12px;margin:6px 0">Tests two signal families taken from a popular indicator, then <b>fine-tunes</b> them to see where they could be improved, without fooling ourselves. <b>Reversal (V5)</b>: buy when the candle is red, closes more than 2 standard deviations below its 20-candle average and RSI(14) is under 25; sell is the mirror (RSI over 75). <b>RSI impulse line (V6)</b>: the RSI line is drawn at the lowest RSI before each run of rising RSI; a buy is RSI crossing back above that line while the line is low (under 50), a sell is the mirror. The indicator only allows buys in a bull cycle and sells in a bear cycle (a monthly signal); here BTC's daily EMA100 stands in for the cycle. Entry at the next open, stop at the chosen ATR distance, one target, 48 candles at most, fees on both sides, compared with random entries with the same stop. <b>Fine-tuning</b>: every setting of the grids is run on the top 10 coins and, separately, on coins ranked 11 to 20 that were not used to choose anything; a setting only counts if it also holds there. The first run on a new stop or target needs the button again.</div>
-      <div class="row" style="margin:6px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <label><input type="checkbox" class="nsTf" value="1h" checked> 1h</label><label><input type="checkbox" class="nsTf" value="4h" checked> 4h</label><label><input type="checkbox" class="nsTf" value="1d" checked> 1d</label>
-        <label>Stop <select id="nsStop"><option value="1">1 ATR</option><option value="1.5" selected>1.5 ATR</option><option value="2">2 ATR</option><option value="3">3 ATR</option></select></label>
-        <label>Target <select id="nsTgt"><option value="1">1R</option><option value="2" selected>2R</option><option value="3">3R</option></select></label>
-        <button id="nsRun" class="btn">Run new signals lab</button><span class="mu" id="nsStatus"></span></div>
-      <div id="nsOut"></div>
-    </details>
     </div>
     <div class="jpane" id="jtRunner" hidden>
     <details class="panel jfold" data-fold="alerts">
@@ -6354,109 +6344,6 @@ function swRender(){
   out.innerHTML = h;
 }
 $('swRun').onclick = swRun; $('swStop').onchange = $('swTgt').onchange = () => { if (SW.res) swRender(); };
-/* ---- New signals lab: reversal signal (V5) and RSI-impulse-line signal (V6), default settings and a fine-tuning grid with a holdout ---- */
-const NS = {res: null, busy: false, cancel: false, GRID: {'1h': 2, '4h': 1, '1d': 1}, V5: {mult: [1.5, 2, 2.5, 3], th: [15, 20, 25, 30, 35], len: [10, 20, 50], def: {mult: 2, th: 25, len: 20}}, V6: {cnt: [3, 4, 5, 6, 8], il: [2, 3], thr: [40, 45, 50, 55], def: {cnt: 4, il: 2, thr: 50}}};
-function nsPre(cd, tf){
-  const o = cd.map(k => k[1]), h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), pre = {tf, cd, o, h, l, c, at: atr(h, l, c, 14), rs: rsi(c, 14), fl: cfHtfFlags(cd, tf), sma: {}, sd: {}, lines: {}};
-  for (const len of NS.V5.len){ const sm = sma(c, len); pre.sma[len] = sm; pre.sd[len] = stdev(c.map((x, i) => i >= len - 1 ? x - sm[i] : 0), 20); } return pre;
-}
-function nsLine(pre, il, cnt){                                                      // the impulse line: lowest RSI before the latest run of rising RSI
-  const key = il + '|' + cnt; if (pre.lines[key]) return pre.lines[key]; const rs = pre.rs, n = rs.length, line = new Array(n).fill(NaN); let cur = NaN;
-  for (let i = il + cnt + 1; i < n; i++){ let up = true; for (let k = 0; k < il; k++) if (!(rs[i - k] > rs[i - k - 1])){ up = false; break; }
-    if (up){ let mn = Infinity; for (let j = 0; j < cnt; j++){ const v = rs[i - il - j]; if (v < mn) mn = v; } if (isFinite(mn)) cur = mn; } line[i] = cur; }
-  return (pre.lines[key] = line);
-}
-function nsV5(pre, p, side){
-  const {o, c, rs} = pre, sm = pre.sma[p.len], sd = pre.sd[p.len], out = []; let last = -99;
-  for (let i = 90; i < c.length - 2; i++){ const dist = c[i] - sm[i], s = sd[i]; if (!(s > 0) || !(rs[i] >= 0)) continue;
-    const ok = side > 0 ? dist < -p.mult * s && c[i] < o[i] && rs[i] < p.th : dist > p.mult * s && c[i] > o[i] && rs[i] > 100 - p.th;
-    if (ok && i - last >= 6){ out.push(i); last = i; } }
-  return out;
-}
-function nsV6(pre, p, side){
-  const rs = pre.rs, ln = nsLine(pre, p.il, p.cnt), out = []; let last = -99;
-  for (let i = p.il + p.cnt + 3; i < rs.length - 2; i++){ const L = ln[i], L1 = ln[i - 1]; if (!(L >= 0) || !(L1 >= 0)) continue;
-    let ok; if (side > 0) ok = rs[i] > L && rs[i - 1] <= L1 && (L === L1 || (L < L1 && L1 - L < 20)) && L < p.thr && L1 < p.thr + 5 && rs[i] <= 50;
-    else ok = rs[i] < L && rs[i - 1] >= L1 && (L === L1 || (L > L1 && L - L1 < 20)) && L > 100 - p.thr && L1 > 100 - p.thr - 5 && rs[i] >= 50;
-    if (ok && i - last >= 6){ out.push(i); last = i; } }
-  return out;
-}
-function nsSim(cd, i, dir, a, K, T, fee){                                           // entry at the next open, stop K ATR away, target T R, 48 candles, stop wins a tie
-  const q0 = i + 1, n = cd.length; if (q0 >= n || !(a > 0)) return null; const E = cd[q0][1], risk = K * a; let mfe = 0, mae = 0, r = null, res = null, bars = 0;
-  for (let q = q0; q < n && q < q0 + 48; q++){ const k = cd[q]; bars = q - q0 + 1; const fav = dir > 0 ? (k[2] - E) / risk : (E - k[3]) / risk, adv = dir > 0 ? (E - k[3]) / risk : (k[2] - E) / risk;
-    if (adv >= 1){ r = -1; res = 'stop'; mae = 1; break; } if (fav > mfe) mfe = fav; if (adv > mae) mae = adv; if (fav >= T){ r = T; res = 'target'; break; } }
-  if (r == null){ if (q0 + 47 > n - 1) return null; const C = cd[q0 + 47][4]; r = (dir > 0 ? C - E : E - C) / risk; res = 'time'; bars = 48; }
-  return {r, res, bars, mfe, mae, f: 2 * fee * E / risk};
-}
-function nsItems(pre, idxs, dir, K, T, fee, btc){
-  const out = [], ms = TF_MS[pre.tf]; for (const i of idxs){ const s = nsSim(pre.cd, i, dir, pre.at[i], K, T, fee); if (!s) continue; out.push({tf: pre.tf, t: pre.cd[i][0], dir, g: s.r, f: s.f, res: s.res, bars: s.bars, mfe: s.mfe, mae: s.mae, htf: !!(pre.fl[i] & (dir > 0 ? 1 : 2)), btc: btc(pre.cd[i][0] + ms)}); }
-  return out;
-}
-function nsMed(a){ if (!a.length) return null; const b = a.slice().sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; }
-async function nsRun(){
-  if (NS.busy){ NS.cancel = true; return; } NS.busy = true; NS.cancel = false; $('nsRun').textContent = 'Stop'; const st = $('nsStatus'), fee = (+$('btFee').value || 0.06) / 100, K = +$('nsStop').value, T = +$('nsTgt').value;
-  try {
-    const tfs = [...document.querySelectorAll('.nsTf:checked')].map(x => x.value); if (!tfs.length) throw new Error('Pick a timeframe.');
-    st.textContent = 'Loading the coin list…'; const uni = await getUniverse(), groups = {train: uni.slice(0, 10), hold: uni.slice(10, 20)}, tasks = [], pres = {train: [], hold: []};
-    for (const g of ['train', 'hold']) for (const u of groups[g]) for (const tf of tfs) tasks.push([g, u.sym, tf]);
-    let bcd = await getKlinesYear('BTCUSDT', '1d', true, 1500, 'cf:'); if (bcd.length < 200) throw new Error('not enough BTC history'); const be = ema(bcd.map(k => k[4]), 100), bUp = bcd.map((k, i) => be[i] > 0 && k[4] > be[i]);
-    const btc = t => { let lo = 0, hi = bcd.length - 1, r = -1; while (lo <= hi){ const m = (lo + hi) >> 1; if (bcd[m][0] + 864e5 <= t){ r = m; lo = m + 1; } else hi = m - 1; } return r < 0 ? null : bUp[r]; };
-    let i = 0, done = 0;
-    async function worker(){ while (i < tasks.length && !NS.cancel){ const [g, sym, tf] = tasks[i++]; try { const cd = await getKlinesYear(sym, tf, true, CF.N[tf], 'cf:'); if (cd.length > 600) pres[g].push(nsPre(cd, tf)); } catch {}
-      done++; st.textContent = `Reading ${done} of ${tasks.length} (coin and timeframe)…`; await new Promise(r => setTimeout(r, 0)); } }
-    await Promise.all([worker(), worker(), worker()]); if (NS.cancel) throw new Error('stopped');
-    let t0 = Infinity, t1 = -Infinity; for (const g of ['train', 'hold']) for (const p of pres[g]){ if (p.cd[0][0] < t0) t0 = p.cd[0][0]; if (p.cd[p.cd.length - 1][0] > t1) t1 = p.cd[p.cd.length - 1][0]; } const mid = (t0 + t1) / 2;
-    st.textContent = 'Random entries…'; await new Promise(r => setTimeout(r, 0)); const base = {train: [], hold: []};
-    for (const g of ['train', 'hold']) for (const p of pres[g]){ const ms = TF_MS[p.tf], idx = []; for (let q = 220; q < p.cd.length - 2; q++) if (Math.round(p.cd[q][0] / ms) % NS.GRID[p.tf] === 0 && p.at[q] > 0) idx.push(q); for (const d of [1, -1]) base[g].push(...nsItems(p, idx, d, K, T, fee, btc)); }
-    const ev = (fam, par, side, g) => { const out = []; for (const p of pres[g]) out.push(...nsItems(p, fam === 'v5' ? nsV5(p, par, side) : nsV6(p, par, side), side, K, T, fee, btc)); return out; };
-    const cmp = (A, B) => cfCompare(A, B, mid), bs = (g, side) => base[g].filter(x => x.dir === side);
-    const R = {K, T, fee, mid, coins: {train: groups.train.map(u => u.sym.replace('USDT', '')), hold: groups.hold.map(u => u.sym.replace('USDT', ''))}, tfs, base, defaults: {}, grids: {}};
-    for (const [fam, grid] of [['v5', NS.V5], ['v6', NS.V6]]){
-      const combos = []; if (fam === 'v5'){ for (const mult of grid.mult) for (const th of grid.th) for (const len of grid.len) combos.push({mult, th, len}); } else { for (const cnt of grid.cnt) for (const il of grid.il) for (const thr of grid.thr) combos.push({cnt, il, thr}); }
-      R.defaults[fam] = {}; const rows = []; let k = 0;
-      for (const par of combos){ for (const side of [1, -1]){ const A = ev(fam, par, side, 'train'), H = ev(fam, par, side, 'hold'); const isDef = Object.keys(grid.def).every(x => grid.def[x] === par[x]);
-          rows.push({par, side, isDef, tr: cmp(A, bs('train', side)), ho: cmp(H, bs('hold', side))}); if (isDef) R.defaults[fam][side] = {A, H}; }
-        if (++k % 2 === 0){ st.textContent = `Fine-tuning ${fam === 'v5' ? 'reversal' : 'RSI line'}: setting ${k} of ${combos.length}…`; await new Promise(r => setTimeout(r, 0)); if (NS.cancel) throw new Error('stopped'); } }
-      R.grids[fam] = rows; }
-    NS.res = R; st.textContent = ''; nsRender();
-  } catch (e){ st.textContent = e && e.message === 'stopped' ? 'Stopped.' : 'Failed: ' + (e && e.message || e); }
-  NS.busy = false; $('nsRun').textContent = 'Run new signals lab';
-}
-function nsRender(){
-  const out = $('nsOut'); if (!NS.res){ out.innerHTML = ''; return; } const R = NS.res, mid = R.mid, f2 = x => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(2), cl = x => x == null ? 'mu' : x > 0 ? 'up' : x < 0 ? 'dn' : 'mu', pc = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
-  const head = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th>Side</th><th>TF</th><th>Moments</th><th>Gross R</th><th>Fee R</th><th>Net R</th><th>Chance (net)</th><th>vs chance</th><th>Noise ±</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>', tail = '</tbody></table></div>';
-  const row = (label, sd, tf, r) => r ? `<tr><td class="l">${label}</td><td>${sd}</td><td>${tf}</td><td title="${r.raw} signals, counted as ${r.n} moments">${r.n}</td><td class="${cl(r.gm)}">${f2(r.gm)}</td><td class="dn">-${r.fm.toFixed(2)}</td><td class="${cl(r.net)}"><b>${f2(r.net)}</b></td><td>${f2(r.ch)}</td><td class="${cl(r.net - r.ch)}">${f2(r.net - r.ch)}</td><td>±${r.se.toFixed(2)}</td><td class="${cl(r.e1)}">${f2(r.e1)}</td><td class="${cl(r.e2)}">${f2(r.e2)}</td><td class="l">${r.v}</td></tr>` : '';
-  const cmp = (A, B) => cfCompare(A, B, mid), bs = (g, side) => R.base[g].filter(x => x.dir === side), sides = [['Buy', 1], ['Sell', -1]];
-  let h = `<div class="mu" style="font-size:12px;margin:6px 0">Train: ${R.coins.train.join(', ')} · holdout: ${R.coins.hold.join(', ')} · stop ${R.K} ATR, target ${R.T}R · fee ${(R.fee * 100).toFixed(2)}% per side (both charged).</div>`;
-  const defTable = (fam, title, splitName, splitFn) => { let t = `<b>${title}</b> <span class="mu">(the indicator's own default settings)</span>` + head;
-    for (const [nm, sd] of sides){ const D = R.defaults[fam][sd]; if (!D) continue;
-      for (const tf of R.tfs) t += row('All signals', nm, tf, cmp(D.A.filter(x => x.tf === tf), bs('train', sd).filter(x => x.tf === tf)));
-      for (const w of [true, false]) t += row(`${splitName}: ${w ? 'yes' : 'no'}`, nm, 'all', cmp(D.A.filter(x => splitFn(x) === w), bs('train', sd).filter(x => splitFn(x) === w)));
-      t += row('Holdout coins, all signals', nm, 'all', cmp(D.H, bs('hold', sd))); }
-    return t + tail; };
-  h += defTable('v5', '1. Reversal signal (V5)', 'Higher timeframes agree', x => x.htf);
-  const gridTable = (fam, title, lab) => { const rows = R.grids[fam].filter(r => r.tr && r.ho), nAll = rows.length;
-    const good = rows.filter(r => r.tr.z >= 1), held = good.filter(r => r.ho.net - r.ho.ch > 0);
-    const pick = rows.filter(r => r.tr.n >= 40).sort((a, b) => b.tr.z - a.tr.z).slice(0, 8), withDef = pick.concat(rows.filter(r => r.isDef && !pick.includes(r)));
-    let t = `<b>${title}</b> <span class="mu">(${nAll} setting-and-side rows tested; best 8 on the train coins by noise units, plus the default; "Holdout" is the same setting on coins that were not used to choose it)</span>`;
-    t += `<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Setting</th><th>Side</th><th>Train moments</th><th>Train net R</th><th>vs chance</th><th>Noise ±</th><th>1st half</th><th>2nd half</th><th>Holdout moments</th><th>Holdout net R</th><th>vs chance</th><th>Noise ±</th><th class="l">Holdout verdict</th></tr></thead><tbody>`;
-    for (const r of withDef){ const a = r.tr, b = r.ho; t += `<tr${r.isDef ? ' style="background:rgba(255,255,255,.04)"' : ''}><td class="l">${lab(r.par)}${r.isDef ? ' <span class="mu">(default)</span>' : ''}</td><td>${r.side > 0 ? 'Buy' : 'Sell'}</td><td>${a.n}</td><td class="${cl(a.net)}"><b>${f2(a.net)}</b></td><td class="${cl(a.net - a.ch)}">${f2(a.net - a.ch)}</td><td>±${a.se.toFixed(2)}</td><td class="${cl(a.e1)}">${f2(a.e1)}</td><td class="${cl(a.e2)}">${f2(a.e2)}</td><td>${b.n}</td><td class="${cl(b.net)}"><b>${f2(b.net)}</b></td><td class="${cl(b.net - b.ch)}">${f2(b.net - b.ch)}</td><td>±${b.se.toFixed(2)}</td><td class="l">${b.v}</td></tr>`; }
-    t += `</tbody></table></div><div style="font-size:13px;margin:6px 0"><b>Does tuning hold up?</b> ${good.length} of ${nAll} rows beat chance by at least one noise unit on the train coins; of those, ${held.length} (${good.length ? Math.round(held.length / good.length * 100) : 0}%) also beat chance on the holdout coins. If that share is near 50%, the "best" settings are mostly luck.</div>`; return t; };
-  h += gridTable('v5', '2. Fine-tuning the reversal signal', p => `σ ${p.mult} · RSI ${p.th}/${100 - p.th} · MA ${p.len}`);
-  const v6split = x => x.btc === true;
-  h += defTable('v6', '3. RSI impulse-line signal (V6)', 'BTC daily trend up', v6split);
-  h += gridTable('v6', '4. Fine-tuning the RSI impulse-line signal', p => `line from ${p.cnt} candles · ${p.il} rising · line ${p.thr}`);
-  // KPI card
-  const kpi = (A, B) => { if (!A.length || !B.length) return null; const s = L => ({n: L.length, tg: L.filter(x => x.res === 'target').length / L.length, sp: L.filter(x => x.res === 'stop').length / L.length, to: L.filter(x => x.res === 'time').length / L.length, q10: L.filter(x => x.res === 'target' && x.bars <= 10).length / L.length, mb: nsMed(L.filter(x => x.res === 'target').map(x => x.bars)), mf: nsMed(L.map(x => x.mfe)), ma: nsMed(L.map(x => x.mae))}); return {a: s(A), b: s(B)}; };
-  const kr = (label, k) => k ? `<tr><td class="l">${label}</td><td>${k.a.n}</td><td>${pc(k.a.tg)} <span class="mu">(${pc(k.b.tg)})</span></td><td>${pc(k.a.sp)} <span class="mu">(${pc(k.b.sp)})</span></td><td>${pc(k.a.to)} <span class="mu">(${pc(k.b.to)})</span></td><td>${pc(k.a.q10)} <span class="mu">(${pc(k.b.q10)})</span></td><td>${k.a.mb == null ? '—' : k.a.mb.toFixed(0)} <span class="mu">(${k.b.mb == null ? '—' : k.b.mb.toFixed(0)})</span></td><td>${k.a.mf.toFixed(2)} <span class="mu">(${k.b.mf.toFixed(2)})</span></td><td>${k.a.ma.toFixed(2)} <span class="mu">(${k.b.ma.toFixed(2)})</span></td></tr>` : '';
-  h += '<b>5. Signal KPIs</b> <span class="mu">(default settings, train coins, all timeframes; each figure with the same figure for random entries in brackets)</span><div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Signal</th><th>Signals</th><th>Hit the target</th><th>Stopped out</th><th>Timed out (48 candles)</th><th>Target within 10 candles</th><th>Median candles to target</th><th>Median best move (R)</th><th>Median worst move (R)</th></tr></thead><tbody>';
-  for (const [nm, sd] of sides){ const D = R.defaults.v5[sd]; if (D) h += kr('Reversal ' + nm.toLowerCase(), kpi(D.A, bs('train', sd))); }
-  for (const [nm, sd] of sides){ const D = R.defaults.v6[sd]; if (D) h += kr('RSI line ' + nm.toLowerCase(), kpi(D.A, bs('train', sd))); }
-  h += '</tbody></table></div>';
-  h += `<div class="mu" style="font-size:12px;margin-top:6px">R = profit in units of the stop distance. A <b>moment</b> is one candle on one timeframe, so signals on the same candle count once. Net R = Gross R minus the fee in R. "Chance" = random entries with the same stop and target, net of the same fee. <b>Promising</b> needs 2.5 noise units above chance and above it in both halves. The KPI table counts every signal (not per moment) and shows how often the trade reaches the target before the stop, how fast, and how far it moves for and against you, next to the same figures for random entries: a signal is only useful if its figures are clearly better than the brackets. Fine-tuning tests many settings, so the best few will always look good on the train coins; trust a setting only if the holdout agrees, and prefer a broad area of good settings over one lucky cell.</div>`;
-  out.innerHTML = h;
-}
-$('nsRun').onclick = nsRun; $('nsStop').onchange = $('nsTgt').onchange = () => { if (NS.res) $('nsStatus').textContent = 'Stop or target changed: press Run to update.'; };
 const btcTfList = o => o.tf === 'both' ? ['1d', '4h'] : [BTCT.R[o.tf] ? o.tf : '1d'];
 function btcSwingChip(){ const o = btcLoad(); if (!o.on) return ''; const px = x => Math.round(x).toLocaleString('en-US');
   return btcTfList(o).map(tf => { const n = BTCT.nows[tf]; if (!n) return '';
