@@ -931,12 +931,13 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label><input type="checkbox" class="btTf" value="4h" checked> 4H</label>
         <label title="Charged on every position change, per side (taker fee plus slippage)">Fee per side % <input id="btFee" type="number" value="0.06" step="0.01" min="0" style="width:64px"></label>
         <label title="Charge or credit the real 8-hourly funding rate to the open position"><input type="checkbox" id="btFund" checked> Funding</label>
-        <button id="btRun" class="btn">Run BTC study</button><button id="btRobRun" class="btn" title="Sweeps the speed of each rule and tests each half of the history on its own">Run robustness check</button><button id="btComboRun" class="btn" title="Picks the best rule of each family on the first half of the history only, then tests them combined (all agree, majority, scaled exposure) on the second half">Combine rules</button><button id="btTrades" class="btn" title="Lists the actual buys and sells of the two BTC swing lines (daily EMA100 and 4H EMA300): date, price and result of each trade">List the BTC swing trades</button><span class="mu" id="btStatus"></span>
+        <button id="btRun" class="btn">Run BTC study</button><button id="btRobRun" class="btn" title="Sweeps the speed of each rule and tests each half of the history on its own">Run robustness check</button><button id="btComboRun" class="btn" title="Picks the best rule of each family on the first half of the history only, then tests them combined (all agree, majority, scaled exposure) on the second half">Combine rules</button><button id="btWalkRun" class="btn" title="Each year, re-picks the best rule of each family using only the years before it, then trades that year with the combinations. The honest version of the Combine test">Walk-forward test</button><button id="btTrades" class="btn" title="Lists the actual buys and sells of the two BTC swing lines (daily EMA100 and 4H EMA300): date, price and result of each trade">List the BTC swing trades</button><span class="mu" id="btStatus"></span>
       </div>
       <div id="btTradesOut"></div>
       <div id="btOut"></div>
       <div id="btRob"></div>
       <div id="btComboOut"></div>
+      <div id="btWalkOut"></div>
       <div style="margin-top:14px"><b>BTC scalp lab</b> <span class="mu">Scalp triggers on BTCUSDT only (EMA crosses, EMA200 reclaim, Donchian 55, RSI/MACD/OBV divergences, liquidity sweep) on 15m, 1h and 4h, replayed over up to 3 years, each side separately. Fees are taken off, and every row is compared with random BTC entries on the same timeframe, stop and target, with a first-half / second-half check. A signal only counts if it is profitable <b>after fees</b> and beats chance.</span>
         <div class="row" style="margin:6px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <label><input type="checkbox" class="bsTf" value="15m" checked> 15m</label><label><input type="checkbox" class="bsTf" value="1h" checked> 1h</label><label><input type="checkbox" class="bsTf" value="4h" checked> 4h</label>
@@ -5741,14 +5742,59 @@ function btComboRender(){
 }
 $('btComboRun').onclick = async () => {
   if (BT.busy) return; const tfs = [...document.querySelectorAll('.btTf:checked')].map(x => x.value), st = $('btStatus'); if (!tfs.length){ toast('Pick at least one timeframe.'); return; }
-  const fee = Math.max(0, +$('btFee').value || 0) / 100, useF = $('btFund').checked; BT.busy = true; for (const id of ['btRun', 'btRobRun', 'btComboRun']) $(id).disabled = true; const res = [];
+  const fee = Math.max(0, +$('btFee').value || 0) / 100, useF = $('btFund').checked; BT.busy = true; for (const id of ['btRun', 'btRobRun', 'btComboRun', 'btWalkRun']) $(id).disabled = true; const res = [];
   try {
     let fund = null; if (useF){ st.textContent = 'Reading the funding history…'; fund = await btFunding(); }
     for (const tf of tfs){ st.textContent = `Reading the ${tf.toUpperCase()} candles…`; const cd = await getKlinesYear('BTCUSDT', tf, true, 1e6, 'all:'); if (cd.length < 900) throw new Error('not enough BTC history');
       st.textContent = `Combining the rules on ${tf.toUpperCase()}…`; await new Promise(r => setTimeout(r, 20)); res.push(btCombo(cd, tf, fee, fund)); }
     BT.combo = res; st.textContent = 'Done.'; btComboRender();
   } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
-  BT.busy = false; for (const id of ['btRun', 'btRobRun', 'btComboRun']) $(id).disabled = false;
+  BT.busy = false; for (const id of ['btRun', 'btRobRun', 'btComboRun', 'btWalkRun']) $(id).disabled = false;
+};
+
+/* Walk-forward: for each calendar year, pick the best rule of each family using only the years before it, then trade that year; the yearly pieces are stitched together */
+function btWalk(cd, tf, fee, fund){
+  const ms = TF_MS[tf], S = tf === '4h' ? 650 : 310, n = cd.length, c = cd.map(k => k[4]), NS = 100, yr = i => new Date(cd[i][0]).getUTCFullYear();
+  const fa = fund ? (() => { const f = new Array(n).fill(0), t0 = cd[0][0]; for (const x of fund){ const i = Math.floor((x.t - t0) / ms); if (i >= 0 && i < n) f[i] += x.r; } return f; })() : null;
+  const y0 = yr(S) + 2; let T0 = -1; for (let i = S; i < n; i++) if (yr(i) >= y0){ T0 = i; break; } if (T0 < 0 || n - T0 < 200) throw new Error('not enough history for a walk-forward');
+  const fams = btFamilies(tf).map(f => ({fam: f.fam, par: f.par, pos: f.f(cd, c)}));
+  const names = ['Best single rule (re-picked)', 'All 3 agree', 'Majority (2 of 3)', 'Scaled exposure (share long)'], P = names.map(() => new Array(n).fill(0)), picksByYear = [];
+  const ref = new Array(n).fill(0), e = ema(c, tf === '4h' ? 300 : 100); for (let i = 0; i < n; i++) ref[i] = e[i] > 0 && c[i] > e[i] ? 1 : 0;
+  for (let ys = T0; ys < n;){ let ye = ys; while (ye < n && yr(ye) === yr(ys)) ye++;
+    const best = {}; for (const f of fams){ const r = btRun(cd, f.pos, S, fee, fa, ms, false, ys); if (!best[f.fam] || r.sharpe > best[f.fam].sh) best[f.fam] = {f, sh: r.sharpe}; }
+    const pk = Object.values(best).sort((a, b) => b.sh - a.sh).slice(0, 3), k = pk.length; picksByYear.push({y: yr(ys), picks: pk.map(x => `${x.f.fam.split(' (')[0].replace('Price vs ', '')} ${x.f.par}`)});
+    for (let i = ys; i < ye; i++){ let sm = 0; for (const x of pk) sm += x.f.pos[i] || 0; P[0][i] = pk[0].f.pos[i] || 0; P[1][i] = sm === k ? 1 : 0; P[2][i] = sm >= Math.ceil((k + 1) / 2) ? 1 : 0; P[3][i] = sm / k; }
+    ys = ye; }
+  const defs = [['Buy and hold', new Array(n).fill(1)], [(tf === '4h' ? 'Our current rule (EMA300)' : 'Our current rule (EMA100)'), ref]].concat(names.map((nm, j) => [nm, P[j]])), rows = [];
+  for (const [name, pos] of defs){ const R = btRun(cd, pos, T0, fee, fa, ms, true); let below = 0; if (name !== 'Buy and hold') for (let q = 0; q < NS; q++){ const r = btRun(cd, btShuffle(pos, T0, 1000 + q * 7919 + name.length * 31), T0, fee, fa, ms, false); if (r.sharpe < R.sharpe) below++; }
+    rows.push({name, tot: R.tot, mdd: R.mdd, sharpe: R.sharpe, inm: R.inm, trades: R.trades, years: btYears(cd, R.curve, T0), pct: name === 'Buy and hold' ? null : below / NS * 100}); }
+  return {tf, rows, picksByYear, from: cd[T0][0], to: cd[n - 1][0]};
+}
+function btWalkRender(){
+  const out = $('btWalkOut'); if (!out) return; const R = BT.walk; if (!R || !R.length){ out.innerHTML = ''; return; }
+  const p1 = x => (x >= 0 ? '+' : '') + (x * 100).toFixed(0) + '%', cl = x => x > 0.005 ? 'up' : x < -0.005 ? 'dn' : '', d = t => new Date(t).toISOString().slice(0, 10);
+  let h = '<div style="margin:14px 0 4px;font-weight:600">Walk-forward test (long or flat)</div>';
+  for (const b of R){ const yrs = [...new Set(b.rows.flatMap(r => Object.keys(r.years)))].sort(), bh = b.rows[0], ref = b.rows[1], single = b.rows[2];
+    h += `<div class="mu" style="font-size:12px;margin:8px 0 4px">${b.tf.toUpperCase()}: ${d(b.from)} to ${d(b.to)}. Every year the rules are chosen again using only the years before it, so every number below is out of sample.</div>`;
+    h += `<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Combination</th><th>Return</th><th>Worst drop</th><th>Sharpe</th><th>In market</th><th>Trades</th><th title="Share of 100 shuffles of the same positions that it beats on Sharpe">Beats random timing</th>${yrs.map(y => `<th>${y}</th>`).join('')}</tr></thead><tbody>`;
+    for (const r of b.rows) h += `<tr${r.name === 'Buy and hold' ? ' style="background:rgba(255,255,255,.04)"' : ''}><td class="l">${r.name}</td><td class="${cl(r.tot)}">${p1(r.tot)}</td><td class="dn">${(r.mdd * 100).toFixed(0)}%</td><td class="${r !== bh && r.sharpe > ref.sharpe ? 'up' : ''}">${r.sharpe.toFixed(2)}</td><td>${(r.inm * 100).toFixed(0)}%</td><td>${r.trades}</td><td>${r.pct == null ? '–' : r.pct.toFixed(0) + '%'}</td>${yrs.map(y => `<td class="${cl(r.years[y])}">${r.years[y] == null ? '–' : p1(r.years[y])}</td>`).join('')}</tr>`;
+    h += '</tbody></table></div>';
+    const better = b.rows.slice(2).filter(r => r.sharpe > ref.sharpe && r.mdd >= ref.mdd - 0.02);
+    h += `<div style="font-size:13px;margin:6px 0"><b>Verdict:</b> ${better.length ? better.map(r => r.name).join(', ') + ' beat' + (better.length === 1 ? 's' : '') + ' our current single rule on Sharpe without a deeper drop, out of sample.' : 'no combination beats our current single rule on Sharpe without a deeper drop, out of sample. Keep the single rule.'}</div>`;
+    h += '<div class="mu" style="font-size:12px;margin:2px 0">Rules chosen each year: ' + b.picksByYear.map(x => `<b>${x.y}</b>: ${x.picks.join(', ')}`).join(' · ') + '</div>'; }
+  h += '<div class="mu" style="font-size:12px;margin:8px 0"><b>How to read:</b> unlike the Combine test, nothing here is chosen with knowledge of the period it is tested on. If the rules chosen change a lot from year to year, the choice is unstable; a combination is only worth using if it keeps beating the single rule here. The first test year comes after two years of history for the first choice. Same costs as above.</div>';
+  out.innerHTML = h;
+}
+$('btWalkRun').onclick = async () => {
+  if (BT.busy) return; const tfs = [...document.querySelectorAll('.btTf:checked')].map(x => x.value), st = $('btStatus'); if (!tfs.length){ toast('Pick at least one timeframe.'); return; }
+  const fee = Math.max(0, +$('btFee').value || 0) / 100, useF = $('btFund').checked; BT.busy = true; for (const id of ['btRun', 'btRobRun', 'btComboRun', 'btWalkRun']) $(id).disabled = true; const res = [];
+  try {
+    let fund = null; if (useF){ st.textContent = 'Reading the funding history…'; fund = await btFunding(); }
+    for (const tf of tfs){ st.textContent = `Reading the ${tf.toUpperCase()} candles…`; const cd = await getKlinesYear('BTCUSDT', tf, true, 1e6, 'all:'); if (cd.length < 900) throw new Error('not enough BTC history');
+      st.textContent = `Walk-forward on ${tf.toUpperCase()} (a minute or so)…`; await new Promise(r => setTimeout(r, 20)); res.push(btWalk(cd, tf, fee, fund)); }
+    BT.walk = res; st.textContent = 'Done.'; btWalkRender();
+  } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
+  BT.busy = false; for (const id of ['btRun', 'btRobRun', 'btComboRun', 'btWalkRun']) $(id).disabled = false;
 };
 (async () => { try { const v = await Cache.get('btRob'); if (Array.isArray(v) && v.length){ BT.rob = v; btRobRender(); } } catch {} })();
 (async () => { try { const v = await Cache.get('btLab'); if (v && Array.isArray(v.res)){ BT.res = v.res; BT.meta = v.meta || null; btRender(); } } catch {} })();
