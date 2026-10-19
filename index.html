@@ -968,6 +968,18 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <button id="swRun" class="btn">Run sweep &amp; breaker lab</button><span class="mu" id="swStatus"></span></div>
       <div id="swOut"></div>
     </details>
+    <details class="panel jfold" data-fold="ds">
+      <summary>Discount sweep lab (top 10 coins)</summary>
+      <div class="mu" style="font-size:12px;margin:6px 0">Tests the setup from a hand-drawn ENA chart: price in a <b>discount</b>, a <b>sweep</b> of the lows that closes back inside, and a stack of ingredients around it. Rules fixed before looking at results. <b>Sweep</b>: as in the lab above (50-candle range broken, close back inside; with "+ CISD" also the confirmation within 5 candles). Ingredients, each yes or no: <b>1 Discount</b>: the close is below the value area of the last 200 candles (FRVP-style profile from candle volume; for shorts above it). <b>2 Zone</b>: a valid demand zone (the last opposite candle before a 2 ATR move, never closed through) lies where the wick reached, and the candle closed back above its low. <b>3 Equal lows</b>: two or more swing lows within 0.3 ATR of the swept level. <b>4 MA</b>: the wick ended within 0.6 ATR of the EMA200. <b>5 Older profile</b>: the wick ended within 0.6 ATR of the POC, VAH or VAL of the profile of the older range (candles 400 to 150 back). <b>6 Volume</b>: the sweep candle had 2 times the average volume of the 20 before it. Entry at the next open, stop at the sweep extreme (or 0.5 ATR beyond), target 1R, 2R, 3R, back into the value area (VAL, for shorts VAH) or the POC of the 200-candle profile. Fees are taken off and every result is compared with random entries built the same way; the stacking tables compare with random entries that were in a discount too, so "buying below value" alone does not count as an edge.</div>
+      <div class="row" style="margin:6px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <label><input type="checkbox" class="dsTf" value="1h"> 1h</label><label><input type="checkbox" class="dsTf" value="4h" checked> 4h</label><label><input type="checkbox" class="dsTf" value="1d" checked> 1d</label>
+        <label>Coins <select id="dsCoins"><option value="0">Top 10 by volume (incl. BTC)</option><option value="1">Ranked 11 to 20 (holdout)</option></select></label>
+        <label>Trigger <select id="dsTrig"><option value="A" selected>Sweep, close back inside</option><option value="B">Sweep + CISD</option></select></label>
+        <label>Stop <select id="dsStop"><option value="ext" selected>at the sweep extreme</option><option value="ext5">0.5 ATR beyond it</option></select></label>
+        <label>Target <select id="dsTgt"><option value="1">1R</option><option value="2" selected>2R</option><option value="3">3R</option><option value="val">Back into value (VAL / VAH)</option><option value="poc">POC of the profile</option></select></label>
+        <button id="dsRun" class="btn">Run discount sweep lab</button><span class="mu" id="dsStatus"></span></div>
+      <div id="dsOut"></div>
+    </details>
     </div>
     <div class="jpane" id="jtRunner" hidden>
     <details class="panel jfold" data-fold="alerts">
@@ -6344,6 +6356,97 @@ function swRender(){
   out.innerHTML = h;
 }
 $('swRun').onclick = swRun; $('swStop').onchange = $('swTgt').onchange = () => { if (SW.res) swRender(); };
+/* ---- Discount sweep lab: discount (below value) + sweep + zone / equal lows / MA / older profile / volume, against random entries that were also in a discount ---- */
+const DS = {res: null, busy: false, cancel: false, GRID: {'1h': 4, '4h': 2, '1d': 1}, FEATS: ['Discount (outside value area)', 'Demand / supply zone at the wick', 'Equal lows / highs', 'EMA200 at the wick', 'Older profile level at the wick', 'Volume spike on the sweep'], START: 400, HOLD: 96};
+function dsScan(cd, at){                                                            // like swScan, but every event also carries the sweep candle and the swept level; B = sweep followed by a CISD
+  const n = cd.length, o = cd.map(k => k[1]), h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), A = [], B = [], last = {1: -99, '-1': -99};
+  for (let s = DS.START; s < n - 10; s++){
+    const a = at[s]; if (!(a > 0)) continue; let hi = -Infinity, lo = Infinity; for (let j = s - 50; j < s; j++){ if (h[j] > hi) hi = h[j]; if (l[j] < lo) lo = l[j]; }
+    const bull = l[s] < lo && c[s] > lo, bear = h[s] > hi && c[s] < hi; if (bull === bear) continue;
+    const dir = bull ? 1 : -1, ext = bull ? l[s] : h[s], lvl = bull ? lo : hi; if (s - last[dir] < 10) continue; last[dir] = s;
+    A.push({i: s, s, dir, ext, lvl, atr: a});
+    for (let j = s; j <= s + 5 && j < n - 1; j++){
+      if (!(dir > 0 ? c[j] > o[j] : c[j] < o[j])) continue;
+      let r0 = j; while (r0 - 1 >= 0 && (dir > 0 ? c[r0 - 1] < o[r0 - 1] : c[r0 - 1] > o[r0 - 1])) r0--; if (r0 === j) continue;
+      let e = dir > 0 ? Infinity : -Infinity; for (let m = r0; m <= j; m++) e = dir > 0 ? Math.min(e, l[m]) : Math.max(e, h[m]);
+      if (dir > 0 ? e > ext : e < ext) continue;
+      if (dir > 0 ? (c[j] > o[r0] && c[j] > lo) : (c[j] < o[r0] && c[j] < hi)){ B.push({i: j, s, dir, ext: e, lvl, atr: at[j] > 0 ? at[j] : a}); break; }
+    }
+  }
+  return {A, B};
+}
+function dsFeat(cd, E200, at, x, pr){                                               // the six yes / no ingredients at the sweep candle x.s
+  const s = x.s, dir = x.dir, a = at[s], ext = dir > 0 ? cd[s][3] : cd[s][2], f = [false, false, false, false, false, false];
+  f[0] = dir > 0 ? cd[s][4] < pr.val : cd[s][4] > pr.vah;
+  for (let j = s - 3; j >= Math.max(2, s - 150) && !f[1]; j--){                     // zone: last opposite candle before a 2 ATR move, never closed through, reached by the wick, reclaimed by the close
+    const K = cd[j], aj = at[j]; if (!(aj > 0)) continue; const hg = K[2] - K[3]; if (hg < 0.3 * aj || hg > 3 * aj) continue; if (!(dir > 0 ? K[4] < K[1] : K[4] > K[1])) continue;
+    let mv = 0; for (let k = j + 1; k <= j + 3; k++) mv = Math.max(mv, dir > 0 ? cd[k][2] - K[4] : K[4] - cd[k][3]); if (mv < 2 * aj) continue;
+    let ok = true; for (let k = j + 4; k < s; k++) if (dir > 0 ? cd[k][4] < K[3] : cd[k][4] > K[2]){ ok = false; break; } if (!ok) continue;
+    if (dir > 0 ? (ext <= K[2] + 0.5 * a && ext >= K[3] - 1.5 * a && cd[s][4] > K[3]) : (ext >= K[3] - 0.5 * a && ext <= K[2] + 1.5 * a && cd[s][4] < K[2])) f[1] = true; }
+  let t = 0, lastT = -99; for (let j = Math.max(1, s - 100); j < s - 1; j++){ const v = dir > 0 ? cd[j][3] : cd[j][2], loc = dir > 0 ? (v <= cd[j - 1][3] && v <= cd[j + 1][3]) : (v >= cd[j - 1][2] && v >= cd[j + 1][2]); if (loc && Math.abs(v - x.lvl) <= 0.3 * a && j - lastT >= 3){ t++; lastT = j; } } f[2] = t >= 2;
+  f[3] = E200[s] > 0 && Math.abs(ext - E200[s]) <= 0.6 * a;
+  const p2 = cfProfile(cd, s - 400, s - 150, a); f[4] = !!p2 && [p2.poc, p2.vah, p2.val].some(v => Math.abs(ext - v) <= 0.6 * a);
+  let vs = 0; for (let j = s - 20; j < s; j++) vs += cd[j][5] || 0; f[5] = vs > 0 && (cd[s][5] || 0) >= 2 * vs / 20;
+  return f;
+}
+function dsStruct(cd, dir, i, S, T, fee, a){                                        // entry at the next open, stop first on a tie, target at a structure level (reward must be 1 to 8 times the risk), 96 candles at most
+  const n = cd.length, q0 = i + 1; if (q0 >= n) return null; const E = cd[q0][1], risk = dir > 0 ? E - S : S - E, rew = dir > 0 ? T - E : E - T; if (!(risk > 0) || !(rew > 0)) return null; const rr = rew / risk; if (rr < 1 || rr > 8) return null;
+  let r = null; for (let q = q0; q < n && q < q0 + DS.HOLD; q++){ const K = cd[q]; if (dir > 0 ? K[3] <= S : K[2] >= S){ r = -1; break; } if (dir > 0 ? K[2] >= T : K[3] <= T){ r = rr; break; } }
+  if (r == null){ if (q0 + DS.HOLD - 1 > n - 1) return null; const C = cd[q0 + DS.HOLD - 1][4]; r = (dir > 0 ? C - E : E - C) / risk; }
+  return {g: r, f: 2 * fee * E / risk, ra: risk / a};
+}
+function dsEvent(cd, x, fee, tf, pr){                                               // R-multiple targets through swEvent, plus the two structure targets
+  const e = swEvent(cd, x, fee, tf, false) || {tf, t: cd[x.i][0], dir: x.dir, g: {}, f: {}, ra: {}}, st = {ext: x.ext, ext5: x.dir > 0 ? x.ext - 0.5 * x.atr : x.ext + 0.5 * x.atr};
+  for (const sk of ['ext', 'ext5']) for (const [nm, T] of [['val', x.dir > 0 ? pr.val : pr.vah], ['poc', pr.poc]]){ const r = dsStruct(cd, x.dir, x.i, st[sk], T, fee, x.atr); if (r){ e.g[sk + '|' + nm] = r.g; e.f[sk + '|' + nm] = r.f; e.ra[sk] = r.ra; } }
+  return Object.keys(e.g).length ? e : null;
+}
+async function dsRun(){
+  if (DS.busy){ DS.cancel = true; return; } DS.busy = true; DS.cancel = false; $('dsRun').textContent = 'Stop'; const st = $('dsStatus'), fee = (+$('btFee').value || 0.06) / 100;
+  try {
+    const tfs = [...document.querySelectorAll('.dsTf:checked')].map(x => x.value); if (!tfs.length) throw new Error('Pick a timeframe.'); const oo = +$('dsCoins').value;
+    st.textContent = 'Loading the coin list…'; const uni = (await getUniverse()).slice(oo * 10, oo * 10 + 10), tasks = [], res = {}; for (const u of uni) for (const tf of tfs) tasks.push([u.sym, tf]);
+    tfs.forEach(tf => res[tf] = {A: [], B: [], base: []});
+    let i = 0, done = 0;
+    async function worker(){ while (i < tasks.length && !DS.cancel){ const [sym, tf] = tasks[i++], ms = TF_MS[tf];
+      try { const cd = await getKlinesYear(sym, tf, true, CF.N[tf], 'cf:'); if (cd.length > DS.START + 220){
+        const h = cd.map(k => k[2]), l = cd.map(k => k[3]), c = cd.map(k => k[4]), at = atr(h, l, c, 14), E200 = ema(c, 200), R = res[tf], sc = dsScan(cd, at), coin = sym.replace('USDT', '');
+        for (const [k, L] of [['A', sc.A], ['B', sc.B]]) for (const x of L){ const pr = cfProfile(cd, x.s - 200, x.s, at[x.s]); if (!pr) continue; const e = dsEvent(cd, x, fee, tf, pr); if (e){ e.ft = dsFeat(cd, E200, at, x, pr); e.sym = coin; R[k].push(e); } }
+        for (let q = DS.START; q < cd.length - 2; q++){ if (Math.round(cd[q][0] / ms) % DS.GRID[tf] !== 0 || !(at[q] > 0)) continue; const pr = cfProfile(cd, q - 200, q, at[q]); if (!pr) continue;
+          for (const dir of [1, -1]){ let ex = dir > 0 ? Infinity : -Infinity; for (let m = q - 2; m <= q; m++) ex = dir > 0 ? Math.min(ex, l[m]) : Math.max(ex, h[m]);
+            const e = dsEvent(cd, {i: q, dir, ext: ex, atr: at[q]}, fee, tf, pr); if (e){ e.disc = dir > 0 ? c[q] < pr.val : c[q] > pr.vah; R.base.push(e); } } } } } catch {}
+      done++; st.textContent = `Reading and scanning ${done} of ${tasks.length} (coin and timeframe)…`; await new Promise(r => setTimeout(r, 0)); } }
+    await Promise.all([worker(), worker(), worker()]);
+    if (DS.cancel){ st.textContent = 'Stopped.'; } else { DS.res = res; DS.coins = uni.map(u => u.sym.replace('USDT', '')); DS.fee = fee; st.textContent = ''; dsRender(); }
+  } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
+  DS.busy = false; $('dsRun').textContent = 'Run discount sweep lab';
+}
+function dsRender(){
+  const out = $('dsOut'); if (!DS.res){ out.innerHTML = ''; return; } const sk = $('dsStop').value, tg = $('dsTgt').value, key = sk + '|' + tg, trig = $('dsTrig').value, tfs = Object.keys(DS.res), all = k => tfs.flatMap(tf => DS.res[tf][k]);
+  let t0 = Infinity, t1 = -Infinity; for (const k of ['A', 'B', 'base']) for (const e of all(k)){ if (e.t < t0) t0 = e.t; if (e.t > t1) t1 = e.t; } const mid = (t0 + t1) / 2;
+  const pk = (L, fn) => L.filter(e => fn(e) && e.g[key] != null && e.ra[sk] > 0).map(e => ({t: e.t, tf: e.tf, g: e.g[key], f: e.f[key], ra: e.ra[sk]})), cmp = (A, B) => { const [A2, B2] = swMatch(A, B, 3); return cfCompare(A2, B2, mid); };
+  const f2 = x => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(2), cl = x => x == null ? 'mu' : x > 0 ? 'up' : x < 0 ? 'dn' : 'mu';
+  const row = (label, sd, tf, r) => r ? `<tr><td class="l">${label}</td><td>${sd}</td><td>${tf}</td><td title="${r.raw} signals, counted as ${r.n} moments">${r.n}</td><td class="${cl(r.gm)}">${f2(r.gm)}</td><td class="dn">-${r.fm.toFixed(2)}</td><td class="${cl(r.net)}"><b>${f2(r.net)}</b></td><td>${f2(r.ch)}</td><td class="${cl(r.net - r.ch)}">${f2(r.net - r.ch)}</td><td>±${r.se.toFixed(2)}</td><td class="${cl(r.e1)}">${f2(r.e1)}</td><td class="${cl(r.e2)}">${f2(r.e2)}</td><td class="l">${r.v}</td></tr>` : '';
+  const head = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Group</th><th>Side</th><th>TF</th><th>Moments</th><th>Gross R</th><th>Fee R</th><th>Net R</th><th>Chance (net)</th><th>vs chance</th><th>Noise ±</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>', tail = '</tbody></table></div>', sides = [['Long', 1], ['Short', -1]];
+  const EV = all(trig), nf = e => e.ft.filter(Boolean).length, base = (d, disc) => pk(all('base'), b => b.dir === d && (disc == null || b.disc === disc));
+  let h = `<div class="mu" style="font-size:12px;margin:6px 0">${DS.coins.join(', ')} · fee ${(DS.fee * 100).toFixed(2)}% per side (both sides charged) · ${all('A').length} sweeps, ${all('B').length} with CISD, ${all('base').length} random entries · trigger: ${$('dsTrig').selectedOptions[0].textContent} · stop ${$('dsStop').selectedOptions[0].textContent} · target ${$('dsTgt').selectedOptions[0].textContent}.</div>`;
+  h += '<b>1. Control: the plain trigger, no ingredients</b>' + head; for (const [sd, d] of sides) for (const tf of tfs) h += row('All signals', sd, tf, cmp(pk(DS.res[tf][trig], e => e.dir === d), pk(DS.res[tf].base, e => e.dir === d))); h += tail;
+  h += '<b>2. Each ingredient on its own</b> <span class="mu">(compared with all random entries; the discount row is compared with random entries that were in a discount, or not, to match)</span>' + head;
+  DS.FEATS.forEach((nm, fi) => { for (const [sd, d] of sides) for (const w of [true, false]) h += row(`${fi + 1}. ${nm}: ${w ? 'yes' : 'no'}`, sd, 'all', cmp(pk(EV, e => e.dir === d && e.ft[fi] === w), fi === 0 ? base(d, w) : base(d))); }); h += tail;
+  h += '<b>3. Stacking, one ingredient after the other</b> <span class="mu">(each row has all the ingredients above it; compared with random entries that were also in a discount)</span>' + head;
+  for (const [sd, d] of sides) for (let k = 0; k < DS.FEATS.length; k++) h += row(DS.FEATS.slice(0, k + 1).map((_, i) => i + 1).join(' + ') + (k ? '' : ' (discount)'), sd, 'all', cmp(pk(EV, e => e.dir === d && e.ft.slice(0, k + 1).every(Boolean)), base(d, true)));
+  h += tail;
+  h += '<b>4. By number of ingredients</b> <span class="mu">(out of 6; compared with all random entries)</span>' + head;
+  for (const [lbl, fn] of [['0 or 1', x => x <= 1], ['2', x => x === 2], ['3', x => x === 3], ['4', x => x === 4], ['5 or 6', x => x >= 5]]) for (const [sd, d] of sides) h += row(`${lbl} ingredients`, sd, 'all', cmp(pk(EV, e => e.dir === d && fn(nf(e))), base(d)));
+  h += tail;
+  const combos = []; for (let m = 1; m < 64; m++) for (const [sd, d] of sides){ const A = pk(EV, e => e.dir === d && DS.FEATS.every((_, fi) => !(m & (1 << fi)) || e.ft[fi])); if (A.length < 40) continue; const r = cmp(A, base(d, m & 1 ? true : null)); if (r && r.n >= 30) combos.push({m, sd, r}); }
+  combos.sort((x, y) => y.r.z - x.r.z);
+  h += '<b>5. Best combinations</b> <span class="mu">(40+ signals and 30+ moments; best 8 by noise units out of up to 126 combinations, so a few will look good by luck)</span>' + head + (combos.length ? combos.slice(0, 8).map(x => row(DS.FEATS.map((nm, fi) => x.m & (1 << fi) ? String(fi + 1) : null).filter(Boolean).join(' + '), x.sd, 'all', x.r)).join('') : '<tr><td class="l" colspan="13">No combination has enough signals.</td></tr>') + tail;
+  const rec = EV.filter(e => nf(e) >= 4).sort((a, b) => b.t - a.t).slice(0, 10);
+  h += '<b>6. Latest signals with 4 or more ingredients</b> <span class="mu">(to compare with your own charts)</span><div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Coin</th><th>TF</th><th>Side</th><th>Date</th><th>Ingredients</th><th>Count</th></tr></thead><tbody>' + (rec.length ? rec.map(e => `<tr><td class="l">${e.sym}</td><td>${e.tf}</td><td>${e.dir > 0 ? 'Long' : 'Short'}</td><td>${new Date(e.t).toISOString().slice(0, 16).replace('T', ' ')}</td><td class="l">${e.ft.map((v, i) => v ? i + 1 : null).filter(Boolean).join(' + ')}</td><td>${nf(e)}</td></tr>`).join('') : '<tr><td class="l" colspan="6">None in this sample.</td></tr>') + '</tbody></table></div>';
+  h += `<div class="mu" style="font-size:12px;margin-top:6px">R = profit in units of the stop distance. A <b>moment</b> is one candle on one timeframe; signals on the same candle count once, as their average. Net R = Gross R minus the fee in R. "Chance" = random entries on the same coins and side, with the same stop size in ATR (within about 20%) and the same target rule; for the structure targets, entries whose target is less than 1 or more than 8 times the stop away are left out on both sides. <b>Promising</b> needs 2.5 noise units above chance and above it in both halves; rows with a negative Net R are marked "loses after fees"; under 30 moments the verdict is "Too few", which is expected for the full stack, as it is rare. What to look for: does the result rise as ingredients are stacked (sections 3 and 4)? If not, the stack adds nothing here. Then run the lab on the holdout coins (ranked 11 to 20), on a second stop and target, and on both triggers: a result that disappears there was luck. Data starts 400 candles in, so the first part of each history is skipped.</div>`;
+  out.innerHTML = h;
+}
+$('dsRun').onclick = dsRun; $('dsTrig').onchange = $('dsStop').onchange = $('dsTgt').onchange = () => { if (DS.res) dsRender(); };
 const btcTfList = o => o.tf === 'both' ? ['1d', '4h'] : [BTCT.R[o.tf] ? o.tf : '1d'];
 function btcSwingChip(){ const o = btcLoad(); if (!o.on) return ''; const px = x => Math.round(x).toLocaleString('en-US');
   return btcTfList(o).map(tf => { const n = BTCT.nows[tf]; if (!n) return '';
