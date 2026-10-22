@@ -797,7 +797,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="panel" id="obPanel">
       <div class="row">
         <b>Order book walls</b><span class="mu" title="Resting limit orders read from the exchange order books. They can be cancelled at any moment.">live · resting orders</span>
-        <label title="Smallest wall to list, in dollars">Min wall <select id="obThr"><option value="250000">$0.25M</option><option value="500000">$0.5M</option><option value="1000000" selected>$1M</option><option value="2000000">$2M</option><option value="5000000">$5M</option><option value="10000000">$10M</option></select></label>
+        <label title="Smallest wall to list, in dollars">Min wall <select id="obThr"><option value="250000">$0.25M</option><option value="500000">$0.50M</option><option value="1000000" selected>$1.00M</option><option value="2000000">$2.00M</option><option value="5000000">$5.00M</option><option value="10000000">$10.00M</option></select></label>
         <label title="Binance levels this close together (in basis points of price, 1 = 0.01%) are added into one wall">Group levels within <select id="obGrp"><option value="1">0.01%</option><option value="2" selected>0.02%</option><option value="5">0.05%</option><option value="10">0.10%</option></select></label>
         <span class="mu">Chart</span><div class="seg" id="obChartSel"><button data-v="near" class="on" title="Binance perp, every price level, but only a thin slice around the price">Binance (near)</button><button data-v="wide" title="Hyperliquid perp in coarse price buckets, reaching further from the price">Hyperliquid (wide)</button></div>
         <button id="obLoad">Refresh book</button><span class="mu" id="obStatus"></span>
@@ -5903,6 +5903,10 @@ $('lqOver').addEventListener('mouseleave', () => { $('lqTip').hidden = true; con
 setInterval(() => { if (S.view === 'liq' && !document.hidden && !LQ.loading && Date.now() - LQ.t > 3e5) loadLiq(); }, 60000);
 /* ---- Order book walls (live): Binance perp depth (closest 1000 levels) and Hyperliquid perp (coarse buckets) next to the liquidation map ---- */
 const OB = {res: null, busy: false, t: 0, chart: 'near'};
+const obDec = p => p >= 10000 ? 1 : p >= 100 ? 2 : p >= 10 ? 3 : p >= 1 ? 4 : 5;                    // one fixed number of decimals per price level, so every price in the panel lines up
+const obPx = (p, ref) => { const d = obDec(ref || p); return Number.isFinite(p) ? p.toLocaleString('en-US', {minimumFractionDigits: d, maximumFractionDigits: d}) : '—'; };
+const obUsd = v => v >= 1e9 ? '$' + (v / 1e9).toFixed(2) + 'B' : '$' + (v / 1e6).toFixed(2) + 'M';   // always millions with 2 decimals
+const obPct = (x, sign) => (sign && x >= 0 ? '+' : '') + x.toFixed(3) + '%';                          // always 3 decimals
 async function obFetch(sym){
   const coin = sym.replace('USDT', ''), res = {sym, coin, t: Date.now(), src: [], err: []};
   await Promise.all([
@@ -5911,7 +5915,7 @@ async function obFetch(sym){
   res.src.sort((a, b) => a.fine ? -1 : b.fine ? 1 : 0); return res;
 }
 function obBuild(res, grpBp, thr){                                                  // reach, totals and walls of each source
-  const first = res.src[0]; if (!first) return null; const mid = (first.bids[0][0] + first.asks[0][0]) / 2; if (!(mid > 0)) return null;
+  const first = res.src[0]; if (!first) return null; res.spread = first.fine ? first.asks[0][0] - first.bids[0][0] : null; const mid = (first.bids[0][0] + first.asks[0][0]) / 2; if (!(mid > 0)) return null;
   for (const s of res.src){
     const reachUp = (s.asks[s.asks.length - 1][0] / mid - 1) * 100, reachDn = (1 - s.bids[s.bids.length - 1][0] / mid) * 100, win = Math.min(reachUp, reachDn);
     const inWin = a => a.reduce((t, [p, q]) => t + (Math.abs(p / mid - 1) * 100 <= win ? p * q : 0), 0);
@@ -5936,12 +5940,12 @@ function obChartSvg(s){                                                         
   const B = cum(s.bids, -1), A = cum(s.asks, 1), ymax = Math.max(B[B.length - 1][1], A[A.length - 1][1]) || 1;
   const X = d => pl + (d + R) / (2 * R) * (W - pl - pr), Y = v => pt + (H - pt - pb) * (1 - v / ymax);
   const path = (P, col) => { let o = `M${X(0).toFixed(1)},${Y(0).toFixed(1)}`, py = 0; for (const [d, v] of P){ o += ` L${X(d).toFixed(1)},${Y(py).toFixed(1)} L${X(d).toFixed(1)},${Y(v).toFixed(1)}`; py = v; } return `<path d="${o} L${X(P[P.length - 1][0]).toFixed(1)},${Y(0).toFixed(1)} Z" fill="${col}" fill-opacity=".18" stroke="${col}" stroke-width="1.4"/>`; };
-  const mk = s.walls.map(w => { const d = w.d, v = (w.side > 0 ? A : B).find(q => Math.abs(q[0]) >= Math.abs(d)); return v ? `<circle cx="${X(d).toFixed(1)}" cy="${Y(v[1]).toFixed(1)}" r="3.5" fill="${w.side > 0 ? bear : bull}" stroke="#0b0b10"><title>${w.venue} ${w.side > 0 ? 'ask' : 'bid'} wall ${fmtPrice(w.p)} · ${lqUsd(w.usd)}</title></circle>` : ''; }).join('');
+  const mk = s.walls.map(w => { const d = w.d, v = (w.side > 0 ? A : B).find(q => Math.abs(q[0]) >= Math.abs(d)); return v ? `<circle cx="${X(d).toFixed(1)}" cy="${Y(v[1]).toFixed(1)}" r="3.5" fill="${w.side > 0 ? bear : bull}" stroke="#0b0b10"><title>${w.venue} ${w.side > 0 ? 'ask' : 'bid'} wall ${obPx(w.p, s.mid)} · ${obUsd(w.usd)}</title></circle>` : ''; }).join('');
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Cumulative resting orders on each side of the price, ${s.name}" style="display:block;max-height:${H}px"><rect width="${W}" height="${H}" fill="#0e0f14" rx="8"/>
     ${path(B, bull)}${path(A, bear)}${mk}
     <line x1="${X(0)}" x2="${X(0)}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 4"/>
-    <text x="${pl - 6}" y="${pt + 8}" text-anchor="end" fill="${mu}" font-size="10">${lqUsd(ymax)}</text><text x="${pl - 6}" y="${H - pb}" text-anchor="end" fill="${mu}" font-size="10">$0</text>
-    <text x="${X(-R)}" y="${H - 6}" fill="${mu}" font-size="10">−${R.toFixed(R < 1 ? 2 : 1)}%</text><text x="${X(0)}" y="${H - 6}" text-anchor="middle" fill="${mu}" font-size="10">price ${fmtPrice(s.mid)}</text><text x="${X(R)}" y="${H - 6}" text-anchor="end" fill="${mu}" font-size="10">+${R.toFixed(R < 1 ? 2 : 1)}%</text></svg>`;
+    <text x="${pl - 6}" y="${pt + 8}" text-anchor="end" fill="${mu}" font-size="10">${obUsd(ymax)}</text><text x="${pl - 6}" y="${H - pb}" text-anchor="end" fill="${mu}" font-size="10">$0</text>
+    <text x="${X(-R)}" y="${H - 6}" fill="${mu}" font-size="10">−${R.toFixed(3)}%</text><text x="${X(0)}" y="${H - 6}" text-anchor="middle" fill="${mu}" font-size="10">price ${obPx(s.mid)}</text><text x="${X(R)}" y="${H - 6}" text-anchor="end" fill="${mu}" font-size="10">+${R.toFixed(3)}%</text></svg>`;
 }
 function obRender(){
   const R = OB.res; if (!R || $('viewLiq').hidden) return; const st = $('obStatus'), thr = +$('obThr').value, grp = +$('obGrp').value;
@@ -5950,20 +5954,20 @@ function obRender(){
   st.textContent = (mid ? `Updated ${new Date(R.t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'})} · refreshes every 30 s` : '') + (R.err.length ? ` · unavailable: ${R.err.join('; ')}` : '');
   if (!mid){ out.innerHTML = ''; ch.innerHTML = ''; tb.innerHTML = `<div class="mu" style="padding:8px">No order book could be loaded${R.err.length ? ' (' + esc(R.err.join('; ')) + ')' : ''}. Check your connection, VPN or ad-blocker and press Refresh book.</div>`; return; }
   const card = (k, v, s, c2) => `<div class="stat" ${c2 ? `style="border-top-color:${c2}"` : ''}><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
-  const all = R.src.flatMap(s => s.walls), pct = x => (x >= 0 ? '+' : '') + x.toFixed(Math.abs(x) < 1 ? 3 : 2) + '%';
+  const all = R.src.flatMap(s => s.walls), pct = x => obPct(x, true);
   const nAsk = all.filter(w => w.side > 0).sort((a, b) => a.d - b.d)[0], nBid = all.filter(w => w.side < 0).sort((a, b) => b.d - a.d)[0], big = all.slice().sort((a, b) => b.usd - a.usd)[0];
-  const wcard = (k, w, col) => w ? card(k, fmtPrice(w.p), `${lqUsd(w.usd)} · <b class="${w.side > 0 ? 'dn' : 'up'}">${pct(w.d)}</b> · ${w.venue.split(' ')[0]}`, col) : card(k, '—', `none of ${lqUsd(thr)}+ in reach`);
+  const wcard = (k, w, col) => w ? card(k, obPx(w.p, mid), `${obUsd(w.usd)} · <b class="${w.side > 0 ? 'dn' : 'up'}">${pct(w.d)}</b> · ${w.venue.split(' ')[0]}`, col) : card(k, '—', `none of ${obUsd(thr)}+ in reach`);
   out.innerHTML = [
-    card(R.coin + ' price', fmtPrice(mid), 'mid of the Binance book'),
-    card('Book reach', R.src.map(s => `<span style="font-size:13px">${s.name.split(' ')[0]} −${s.reachDn.toFixed(s.reachDn < 1 ? 2 : 1)}% / +${s.reachUp.toFixed(s.reachUp < 1 ? 2 : 1)}%</span>`).join('<br>'), 'how far from the price each source shows', 'var(--accent)'),
-    card('Bid : ask in reach', R.src.map(s => { const t = s.bidUsd + s.askUsd, b = Math.round(s.bidUsd / (t || 1) * 100); return `<span style="font-size:13px">${s.name.split(' ')[0]} <b class="${b >= 50 ? 'up' : 'dn'}">${b} : ${100 - b}</b> <small>(${lqUsd(s.bidUsd)} / ${lqUsd(s.askUsd)})</small></span>`; }).join('<br>'), 'resting dollars, within ±' + R.src.map(s => s.win.toFixed(s.win < 1 ? 2 : 1) + '%').join(' / '), 'var(--warn)'),
+    card(R.coin + ' price', obPx(mid), 'mid of the Binance book'),
+    card('Book reach', R.src.map(s => `<span style="font-size:13px">${s.name.split(' ')[0]} −${s.reachDn.toFixed(2)}% / +${s.reachUp.toFixed(2)}%</span>`).join('<br>'), 'how far from the price each source shows', 'var(--accent)'),
+    card('Bid : ask in reach', R.src.map(s => { const t = s.bidUsd + s.askUsd, b = Math.round(s.bidUsd / (t || 1) * 100); return `<span style="font-size:13px">${s.name.split(' ')[0]} <b class="${b >= 50 ? 'up' : 'dn'}">${b} : ${100 - b}</b> <small>(${obUsd(s.bidUsd)} / ${obUsd(s.askUsd)})</small></span>`; }).join('<br>'), 'resting dollars, within ±' + R.src.map(s => s.win.toFixed(2) + '%').join(' / '), 'var(--warn)'),
     wcard('Nearest ask wall', nAsk, 'var(--bear)'), wcard('Nearest bid wall', nBid, 'var(--bull)'), wcard('Largest wall', big, 'var(--accent)')].join('');
   const sel = R.src.find(s => s.key === OB.chart) || R.src[0]; [...$('obChartSel').children].forEach(x => x.classList.toggle('on', x.dataset.v === sel.key));
-  ch.innerHTML = `<div style="margin-top:6px">${obChartSvg(sel)}</div><div class="mu" style="font-size:12px;margin:2px 0 6px">${esc(sel.name)}: dollars of resting orders added up from the price outward. Dots mark walls of ${lqUsd(thr)} or more. ${sel.fine ? 'Only the closest 1,000 levels are available, so the chart covers a thin slice around the price.' : 'Coarse buckets, so walls are spread over a wider price band.'}</div>`;
+  ch.innerHTML = `<div style="margin-top:6px">${obChartSvg(sel)}</div><div class="mu" style="font-size:12px;margin:2px 0 6px">${esc(sel.name)}: dollars of resting orders added up from the price outward. Dots mark walls of ${obUsd(thr)} or more. ${sel.fine ? 'Only the closest 1,000 levels are available, so the chart covers a thin slice around the price.' : 'Coarse buckets, so walls are spread over a wider price band.'}</div>`;
   const rows = all.slice().sort((a, b) => b.p - a.p), above = rows.filter(w => w.side > 0), below = rows.filter(w => w.side < 0);
-  const tr = w => `<tr><td class="l ${w.side > 0 ? 'dn' : 'up'}">${w.side > 0 ? 'Ask (sell)' : 'Bid (buy)'}</td><td class="l">${esc(w.venue)}</td><td class="mono">${fmtPrice(w.p)}</td><td><b>${lqUsd(w.usd)}</b></td><td class="${w.side > 0 ? 'dn' : 'up'}">${pct(w.d)}</td><td title="${fmtPrice(w.lo)} to ${fmtPrice(w.hi)}">${w.grp != null ? w.grp.toFixed(w.grp < 0.1 ? 2 : 1) + '%' : '—'}</td></tr>`;
-  tb.innerHTML = rows.length ? `<div class="tablewrap" style="border:0;margin-top:6px"><table class="jedge"><thead><tr><th class="l">Side</th><th class="l">Venue</th><th>Price</th><th>Size</th><th>From price</th><th>Group width</th></tr></thead><tbody>${above.map(tr).join('')}<tr><td class="l" colspan="6" style="text-align:center"><b>Price ${fmtPrice(mid)}</b></td></tr>${below.map(tr).join('')}</tbody></table></div>`
-    : `<div class="mu" style="padding:8px">No wall of ${lqUsd(thr)} or more within reach. Lower the minimum wall or group Binance levels over a wider band.</div>`;
+  const tr = w => `<tr><td class="l ${w.side > 0 ? 'dn' : 'up'}">${w.side > 0 ? 'Ask (sell)' : 'Bid (buy)'}</td><td class="l">${esc(w.venue)}</td><td class="mono">${obPx(w.p, mid)}</td><td><b>${obUsd(w.usd)}</b></td><td class="${w.side > 0 ? 'dn' : 'up'}">${pct(w.d)}</td><td title="${obPx(w.lo, mid)} to ${obPx(w.hi, mid)}">${w.grp != null ? w.grp.toFixed(2) + '%' : '—'}</td></tr>`;
+  tb.innerHTML = rows.length ? `<div class="tablewrap" style="border:0;margin-top:6px"><table class="jedge"><thead><tr><th class="l">Side</th><th class="l">Venue</th><th>Price</th><th>Size</th><th>From price</th><th>Group width</th></tr></thead><tbody>${above.map(tr).join('')}<tr><td class="l" colspan="6" style="text-align:center;background:rgba(124,92,255,.14);border-top:1px solid var(--accent);border-bottom:1px solid var(--accent);padding:7px 0"><b>Current price ${obPx(mid)}</b>${R.spread != null ? ` <span class="mu">· spread ${obPx(R.spread, mid)} (${(R.spread / mid * 100).toFixed(3)}%)</span>` : ''}</td></tr>${below.map(tr).join('')}</tbody></table></div>`
+    : `<div class="mu" style="padding:8px">No wall of ${obUsd(thr)} or more within reach. Lower the minimum wall or group Binance levels over a wider band.</div>`;
 }
 function obEnter(){ if (!OB.res || OB.res.sym !== LQ.sym || Date.now() - OB.t > 3e4) obLoad(); else obRender(); }
 $('obLoad').onclick = obLoad; $('obThr').onchange = $('obGrp').onchange = obRender;
