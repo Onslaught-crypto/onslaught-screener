@@ -1645,7 +1645,9 @@ function divergences(cd, o = {}){
       if (emitted){ if (conf) doneConf = true; else doneForm = true; }
     }
   }
-  return out.sort((x, y) => (x.bars - y.bars) || (y.score - x.score));
+  // A confirmed signal that a forming one has already undercut (same first point, same side, a newer and more extreme second swing) is superseded: hide it and mark the forming one
+  const dead = new Set(); for (const f of out) if (!f.conf) for (const cf of out) if (cf.conf && cf.side === f.side && cf.a === f.a && f.b > cf.b && (f.side > 0 ? f.pB < cf.pB : f.pB > cf.pB)){ dead.add(cf); f.sup = true; }
+  return out.filter(x => !dead.has(x)).sort((x, y) => (x.bars - y.bars) || (y.score - x.score));
 }
 /*
  * Early divergences: the same swing logic with only 2 closed candles after the swing instead of 5, so the signal arrives
@@ -4315,7 +4317,7 @@ function dvFiltered(){
     && (DIV.ind === 'all' || dvCombo(x) === DIV.ind);
   return DIV.rows.filter(f).sort((a, b) => b.score - a.score || a.bars - b.bars);
 }
-const dvAge = x => x.early ? `⚡ Early · swing ${x.bars} candles ago, last candle turned ${x.side > 0 ? 'up' : 'down'}` : x.conf ? (x.ago === 0 ? 'Confirmed on the last candle' : `Confirmed ${x.ago} candle${x.ago > 1 ? 's' : ''} ago`) : `Forming · swing ${x.bars ? x.bars + ' candle' + (x.bars > 1 ? 's' : '') + ' ago' : 'on the last candle'}`;
+const dvAge = x => x.early ? `⚡ Early · swing ${x.bars} candles ago, last candle turned ${x.side > 0 ? 'up' : 'down'}` : x.conf ? (x.ago === 0 ? 'Confirmed on the last candle' : `Confirmed ${x.ago} candle${x.ago > 1 ? 's' : ''} ago`) : `Forming · swing ${x.bars ? x.bars + ' candle' + (x.bars > 1 ? 's' : '') + ' ago' : 'on the last candle'}${x.sup ? ' · a lower low than the earlier confirmed one' : ''}`;
 const dvIndLbl = x => x.ind === 'obv' ? 'OBV' : (x.ind === 'both' ? 'RSI + MACD' : x.ind === 'rsi' ? 'RSI' : 'MACD') + (x.ov ? ' + OBV' : '');
 const dvMacd = x => x.mhA != null && x.mhA !== 0 ? Math.round((1 - Math.abs(x.mhB) / Math.abs(x.mhA)) * 100) : null;   // how much weaker the histogram swing is
 const dvCtx = x => !x.trend ? null : x.side * x.trend > 0
