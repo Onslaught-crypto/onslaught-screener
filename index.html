@@ -6553,7 +6553,7 @@ function dsRender(){
 $('dsRun').onclick = dsRun; $('dsTrig').onchange = $('dsStop').onchange = $('dsTgt').onchange = () => { if (DS.res) dsRender(); };
 /* ---- Win-rate frontier lab: does any entry win more often than random entries at the same stop and target, and still pay after fees? ---- */
 const WF = {res: null, busy: false, cancel: false, GRID: {'1h': 4, '4h': 2, '1d': 1}, START: 400, HOLD: 96, STOPS: [2, 3], RATIOS: [4, 3, 2, 1],
-  FAM: [['s25', 'Stretch fade, 2.5 ATR from EMA20'], ['s3r', 'Stretch fade, 3 ATR + RSI extreme'], ['s4', 'Stretch fade, 4 ATR'], ['sw', 'Sweep, close back inside'], ['swd', 'Sweep in a discount / premium']]};
+  FAM: [['s25', 'Stretch fade, 2.5 ATR from EMA20'], ['s3r', 'Stretch fade, 3 ATR + RSI extreme'], ['s4', 'Stretch fade, 4 ATR'], ['sw', 'Sweep, close back inside'], ['swd', 'Sweep in a discount / premium'], ['orb', 'Session-open range breakout, 1h (2h range)'], ['orf', 'Session-open range breakout, faded, 1h']], ORB_OPEN: [0, 8, 13], ORB_WIN: 6};
 function wfSim(cd, i, dir, a, fee){                                                 // all stop / target pairs in one pass; [R, win, fee in R] per pair
   const n = cd.length, q0 = i + 1; if (q0 >= n || !(a > 0)) return null; const E = cd[q0][1], st = [];
   for (const S of WF.STOPS) for (const k of WF.RATIOS) st.push({key: S + '|' + k, stop: E - dir * S * a, tgt: E + dir * (S / k) * a, rr: 1 / k, risk: S * a, done: false, g: 0, w: 0});
@@ -6582,7 +6582,7 @@ async function wfRun(){
   try {
     const tfs = [...document.querySelectorAll('.wfTf:checked')].map(x => x.value); if (!tfs.length) throw new Error('Pick a timeframe.'); const oo = +$('wfCoins').value;
     st.textContent = 'Loading the coin list…'; const uni = (await getUniverse()).slice(oo * 10, oo * 10 + 10), tasks = [], res = {}; for (const u of uni) for (const tf of tfs) tasks.push([u.sym, tf]);
-    tfs.forEach(tf => res[tf] = {ev: {s25: [], s3r: [], s4: [], sw: [], swd: []}, base: []});
+    tfs.forEach(tf => res[tf] = {ev: {s25: [], s3r: [], s4: [], sw: [], swd: [], orb: [], orf: []}, base: [], base2: []});
     let i = 0, done = 0;
     async function worker(){ while (i < tasks.length && !WF.cancel){ const [sym, tf] = tasks[i++], ms = TF_MS[tf];
       try { const cd = await getKlinesYear(sym, tf, true, CF.N[tf], 'cf:'); if (cd.length > WF.START + 220){
@@ -6590,6 +6590,12 @@ async function wfRun(){
         for (const id of ['s25', 's3r', 's4']) for (const x of sr[id]){ const r = wfSim(cd, x.i, x.dir, x.atr, fee); if (r) R.ev[id].push({tf, t: cd[x.i][0], dir: x.dir, r}); }
         for (const x of sc.A){ const a = at[x.i]; const r = wfSim(cd, x.i, x.dir, a, fee); if (!r) continue; const e = {tf, t: cd[x.i][0], dir: x.dir, r}; R.ev.sw.push(e);
           const pr = cfProfile(cd, x.s - 200, x.s, a); if (pr && (x.dir > 0 ? cd[x.s][4] < pr.val : cd[x.s][4] > pr.vah)) R.ev.swd.push(e); }
+        if (tf === '1h'){ const ix = new Map(cd.map((k, j) => [k[0], j])), hrs = new Set(); for (const o of WF.ORB_OPEN) for (let d = 2; d < 2 + WF.ORB_WIN; d++) hrs.add((o + d) % 24);
+          for (let j = WF.START; j < cd.length - 2; j++){ const t = cd[j][0], hr = new Date(t).getUTCHours(), day = t - hr * 3600000;
+            if (WF.ORB_OPEN.includes(hr)){ const j2 = ix.get(t + 3600000); if (j2 !== j + 1) continue; const hi = Math.max(cd[j][2], cd[j2][2]), lo = Math.min(cd[j][3], cd[j2][3]);
+              for (let q = j2 + 1; q <= j2 + WF.ORB_WIN && q < cd.length - 2; q++){ if (cd[q][0] !== t + (q - j) * 3600000) break; const cl = cd[q][4], dir = cl > hi ? 1 : cl < lo ? -1 : 0; if (!dir || !(at[q] > 0)) continue;
+                const r1 = wfSim(cd, q, dir, at[q], fee); if (r1) R.ev.orb.push({tf, t: cd[q][0], dir, r: r1}); const r2 = wfSim(cd, q, -dir, at[q], fee); if (r2) R.ev.orf.push({tf, t: cd[q][0], dir: -dir, r: r2}); break; } }
+            if (hrs.has(hr) && at[j] > 0) for (const dir of [1, -1]){ const r = wfSim(cd, j, dir, at[j], fee); if (r) R.base2.push({tf, t, dir, r}); } } }
         for (let q = WF.START; q < cd.length - 2; q++){ if (Math.round(cd[q][0] / ms) % WF.GRID[tf] !== 0 || !(at[q] > 0)) continue; for (const dir of [1, -1]){ const r = wfSim(cd, q, dir, at[q], fee); if (r) R.base.push({tf, t: cd[q][0], dir, r}); } } } } catch {}
       done++; st.textContent = `Reading and scanning ${done} of ${tasks.length} (coin and timeframe)…`; await new Promise(r => setTimeout(r, 0)); } }
     await Promise.all([worker(), worker(), worker()]);
@@ -6603,7 +6609,7 @@ function wfRender(){
   let t0 = Infinity, t1 = -Infinity; for (const e of baseAll){ if (e.t < t0) t0 = e.t; if (e.t > t1) t1 = e.t; } const mid = (t0 + t1) / 2;
   const sel = (L, dir, key) => L.filter(e => e.dir === dir && e.r[key]).map(e => ({t: e.t, tf: e.tf, g: e.r[key][0], w: e.r[key][1], f: e.r[key][2]}));
   const calc = (id, dir, s, k, tf) => { const ck = [id, dir, s, k, tf || ''].join('|'); if (WF.cache[ck] !== undefined) return WF.cache[ck]; const key = s + '|' + k;
-    const A = sel(tf ? WF.res[tf].ev[id] : evAll(id), dir, key), B = sel(tf ? WF.res[tf].base : baseAll, dir, key); let r = null;
+    const o2 = id === 'orb' || id === 'orf', A = sel(tf ? WF.res[tf].ev[id] : evAll(id), dir, key), B = sel(tf ? (o2 ? WF.res[tf].base2 : WF.res[tf].base) : (o2 ? tfs.flatMap(x => WF.res[x].base2) : baseAll), dir, key); let r = null;
     if (A.length && B.length){ r = cfCompare(A, B, mid); if (r) r.win = wfWin(A, B); } return (WF.cache[ck] = r); };
   const f2 = x => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(2), cl = x => x == null ? 'mu' : x > 0 ? 'up' : x < 0 ? 'dn' : 'mu', pc = x => (x * 100).toFixed(1) + '%', pp = x => (x >= 0 ? '+' : '') + (x * 100).toFixed(1);
   const row = (label, sd, tf, s, k, r) => r ? `<tr><td class="l">${label}</td><td>${sd}</td><td>${tf}</td><td>${s} ATR</td><td>1 : ${k}</td><td title="${r.raw} signals, counted as ${r.n} moments">${r.n}</td><td><b>${pc(r.win.wa)}</b></td><td>${pc(r.win.wb)}</td><td class="${cl(r.win.lift)}">${pp(r.win.lift)} pp ±${(2 * r.win.se * 100).toFixed(1)}</td><td class="${cl(r.net)}"><b>${f2(r.net)}</b></td><td>${f2(r.ch)}</td><td class="${cl(r.net - r.ch)}">${f2(r.net - r.ch)}</td><td class="${cl(r.e1)}">${f2(r.e1)}</td><td class="${cl(r.e2)}">${f2(r.e2)}</td><td class="l">${r.v}</td></tr>` : '';
@@ -6616,7 +6622,7 @@ function wfRender(){
   for (const [id, nm] of WF.FAM) for (const [sd, d] of sides) for (const k of WF.RATIOS) h += row(nm, sd, 'all', S, k, calc(id, d, S, k)); h += tail;
   if (tfs.length > 1){ h += `<br><b>3. By timeframe, target a quarter of the stop</b> <span class="mu">(stop ${S} ATR, the setups that win about 80% of the time)</span>` + head;
     for (const [id, nm] of WF.FAM) for (const [sd, d] of sides) for (const tf of tfs) h += row(nm, sd, tf, S, 4, calc(id, d, S, 4, tf)); h += tail; }
-  h += `<div class="mu" style="font-size:12px;margin-top:6px">R = profit in units of the stop distance. <b>Win rate</b> = trades that hit the target before the stop (a time exit is not a win). <b>Chance win rate</b> = random entries on the same coins and side with the same stop and target; with no edge it is close to stop / (stop + target), for example 80% at 1 : 4, 75% at 1 : 3, 67% at 1 : 2 and 50% at 1 : 1. <b>Lift</b> = win rate minus chance, in percentage points, with the noise (2 standard errors) after counting signals on the same candle once. Net R = Gross R minus the fee in R (both sides). Verdict as in the other labs: <b>Promising</b> needs 2.5 noise units above chance in net R and above it in both halves. A high win rate with a net R at or below zero means the target is simply close, not that the entry works. Run the lab again on the holdout coins (ranked 11 to 20) and with the other stop; trust only what holds on both. Many rows are shown, so one or two will look good by luck.</div>`;
+  h += `<div class="mu" style="font-size:12px;margin-top:6px">R = profit in units of the stop distance. <b>Win rate</b> = trades that hit the target before the stop (a time exit is not a win). <b>Chance win rate</b> = random entries on the same coins and side with the same stop and target; with no edge it is close to stop / (stop + target), for example 80% at 1 : 4, 75% at 1 : 3, 67% at 1 : 2 and 50% at 1 : 1. <b>Lift</b> = win rate minus chance, in percentage points, with the noise (2 standard errors) after counting signals on the same candle once. Net R = Gross R minus the fee in R (both sides). Verdict as in the other labs: <b>Promising</b> needs 2.5 noise units above chance in net R and above it in both halves. The session-open rows use only 1h (select it) and compare with random entries taken in the same hours after the session opens (00:00, 08:00 and 13:00 UTC; the range is the first 2 hourly candles; the entry is the first close outside it in the next 6 hours; 'faded' trades the other way). A high win rate with a net R at or below zero means the target is simply close, not that the entry works. Run the lab again on the holdout coins (ranked 11 to 20) and with the other stop; trust only what holds on both. Many rows are shown, so one or two will look good by luck.</div>`;
   out.innerHTML = h;
 }
 $('wfRun').onclick = wfRun; $('wfStop').onchange = () => { if (WF.res) wfRender(); };
