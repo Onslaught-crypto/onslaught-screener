@@ -485,6 +485,16 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <div id="err" class="err"></div>
 
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="kbhelp" id="kbHelp" hidden role="dialog" aria-label="Keyboard shortcuts"><div class="box"><b>Keyboard shortcuts</b>
+    <div class="r"><span>Switch tab</span><span><kbd>1</kbd>–<kbd>8</kbd></span></div>
+    <div class="r"><span>Search pairs</span><span><kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd></span></div>
+    <div class="r"><span>Simple / Full table</span><span><kbd>S</kbd></span></div>
+    <div class="r"><span>Light / dark theme</span><span><kbd>T</kbd></span></div>
+    <div class="r"><span>Scan now</span><span><kbd>R</kbd></span></div>
+    <div class="r"><span>This help</span><span><kbd>?</kbd></span></div>
+    <div style="margin-top:10px;text-align:right"><button id="kbClose">Close</button></div></div></div>
+
   <div id="viewTrend">
 
   <div class="panel fbar">
@@ -556,16 +566,6 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
   <div class="regime" id="regime"></div>
   <details class="panel todaybox" id="todayBox" open><summary>Today at a glance</summary><div id="todayBody" class="mu">Press Scan to fill this in.</div></details>
   <div class="changes" id="changes"></div>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <div class="kbhelp" id="kbHelp" hidden role="dialog" aria-label="Keyboard shortcuts"><div class="box"><b>Keyboard shortcuts</b>
-    <div class="r"><span>Switch tab</span><span><kbd>1</kbd>–<kbd>8</kbd></span></div>
-    <div class="r"><span>Search pairs</span><span><kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd></span></div>
-    <div class="r"><span>Simple / Full table</span><span><kbd>S</kbd></span></div>
-    <div class="r"><span>Light / dark theme</span><span><kbd>T</kbd></span></div>
-    <div class="r"><span>Scan now</span><span><kbd>R</kbd></span></div>
-    <div class="r"><span>This help</span><span><kbd>?</kbd></span></div>
-    <div style="margin-top:10px;text-align:right"><button id="kbClose">Close</button></div></div></div>
-
   <div class="stats" id="stats">
     <div class="stat" data-f="all" title="Show all (clear filters)"><div class="k">Pairs scanned</div><div class="v" id="sScanned">0</div><div class="s" id="sOf">of 0 perpetuals</div></div>
     <div class="stat bull" data-f="bull" title="Filter: bullish momentum"><div class="k">Bullish momentum</div><div class="v" id="sBull">0</div><div class="s">4–5 of 5 bull checks</div></div>
@@ -829,6 +829,12 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="lqgrid" id="lqGrid"><div class="lqmain"><canvas id="lqCanvas"></canvas><canvas id="lqOver"></canvas></div><canvas id="lqProf"></canvas></div>
       <div class="lqlegend"><span>Less</span><i class="lqramp"></i><span>More estimated liquidations</span><span class="sep"></span><span class="mu">Profile: <b class="dn">longs</b> below price, <b class="up">shorts</b> above</span></div>
       <div class="maptip" id="lqTip" hidden></div>
+    </div>
+    <div class="panel" id="lqExtra" hidden>
+      <div class="rot-head"><b>Cumulative liquidations and first-touch odds</b> <span class="mu">model estimate, not data</span></div>
+      <canvas id="lqCum" style="width:100%;height:190px;display:block;margin-top:8px"></canvas>
+      <div class="stats" id="lqOdds" style="margin-top:10px"></div>
+      <div class="mu" style="font-size:12px;margin-top:6px" id="lqOddsNote"></div>
     </div>
     <div class="panel" id="obPanel">
       <div class="row">
@@ -4137,6 +4143,40 @@ function renderLiq(){
   p2.fillStyle = 'rgba(7,7,11,.85)'; p2.fillRect(1, H - m.b - 18, pw - 2, 17); p2.fillStyle = '#8b8b90'; p2.font = '10.5px system-ui'; p2.textBaseline = 'middle'; p2.fillText('Active now · est.', 6, H - m.b - 9);
   p2.strokeStyle = '#2f3034'; p2.strokeRect(.5, m.t + .5, pw - 1, PH);
   ov.getContext('2d').clearRect(0, 0, ov.width, ov.height);
+  try { lqExtra(); } catch {}
+}
+/* Still-active estimated liquidations at a price bin (±1 bin), split by the leverage the model assumed. */
+function lqTiers(b){
+  const M = LQ.model; if (!M) return ''; const t = {};
+  for (const z of M.active) if (Math.abs(z.b - b) <= 1) t[z.L] = (t[z.L] || 0) + z.amt;
+  const ks = Object.keys(t).map(Number).sort((a, c) => a - c); if (!ks.length) return '<div class="mu" style="font-size:11px;margin-top:4px">Nothing still active at this price.</div>';
+  return `<div style="margin-top:5px;font-size:11px"><span class="mu">Active now by leverage (assumed mix):</span> ${ks.map(L => `<b>${L}×</b> ${lqUsd(t[L])}`).join(' · ')}</div>`;
+}
+const lqPhi = z => { const t = 1 / (1 + .2316419 * Math.abs(z)), d = .3989423 * Math.exp(-z * z / 2), q = d * t * (.3193815 + t * (-.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - q : q; };
+/* Cumulative curves of still-active estimated liquidations away from price, plus odds of reaching the nearest big clusters under a no-drift random walk. */
+function lqExtra(){
+  const M = LQ.model, D = LQ.data, box = $('lqExtra'); if (!M || !D){ box.hidden = true; return; } box.hidden = false;
+  const pAt = b => M.lo + (b + .5) / M.nb * (M.hi - M.lo), cb = Math.floor((M.cur - M.lo) / (M.hi - M.lo) * M.nb);
+  const up = [], dn = []; let a = 0, c = 0;
+  for (let b = cb + 1; b < M.nb; b++){ a += M.prof[b]; up.push([(pAt(b) / M.cur - 1) * 100, a]); }
+  for (let b = cb; b >= 0; b--){ c += M.prof[b]; dn.push([(1 - pAt(b) / M.cur) * 100, c]); }
+  const cv = $('lqCum'), dpr = window.devicePixelRatio || 1, W = cv.clientWidth || 600, H = 190, ctx = cv.getContext('2d'); cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const mx = Math.max(a, c, 1), R = LQ.range, L = 44, B = 22, T = 8, X = d => L + d / R * (W - L - 8), Y = v => H - B - v / mx * (H - B - T);
+  ctx.fillStyle = '#07070b'; ctx.fillRect(0, 0, W, H); ctx.font = '10.5px system-ui'; ctx.fillStyle = '#7d7e84'; ctx.strokeStyle = 'rgba(255,255,255,.06)';
+  for (let g = 0; g <= 4; g++){ const v = mx * g / 4, y = Y(v); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(W - 8, y); ctx.stroke(); ctx.fillText(lqUsd(v), 4, y + 3); }
+  for (let d = 0; d <= R; d += R / 4){ ctx.fillText(d.toFixed(d % 1 ? 1 : 0) + '%', X(d) - 8, H - 6); }
+  for (const [arr, col] of [[up, '#9eff00'], [dn, '#e94c2a']]){ ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); arr.forEach(([d, v], i) => i ? ctx.lineTo(X(d), Y(v)) : ctx.moveTo(X(d), Y(v))); ctx.stroke(); }
+  ctx.fillStyle = '#9eff00'; ctx.fillText('shorts above price', L + 10, 18); ctx.fillStyle = '#e94c2a'; ctx.fillText('longs below price', L + 10, 32);
+  const lr = []; for (let i = Math.max(1, D.k.length - 200); i < D.k.length; i++) lr.push(Math.log(D.k[i].c / D.k[i - 1].c));
+  const mean = lr.reduce((x, y) => x + y, 0) / lr.length, sg = Math.sqrt(lr.reduce((x, y) => x + (y - mean) ** 2, 0) / Math.max(1, lr.length - 1)), perDay = 864e5 / M.step;
+  const cl = lqNear(M, R, .3), U = cl.find(x => x.side > 0), Dn = cl.find(x => x.side < 0), f = x => (x * 100).toFixed(0) + '%';
+  const touch = (d, hrs) => { const T2 = hrs * 36e5 / M.step; return 2 * (1 - lqPhi(Math.abs(Math.log(1 + d / 100)) / (sg * Math.sqrt(T2)))); };
+  const cards = [];
+  for (const [x, nm, col] of [[U, 'above', 'var(--bull)'], [Dn, 'below', 'var(--bear)']]) if (x) cards.push(`<div class="stat" style="border-top-color:${col}"><div class="k">Cluster ${nm}: ${fmtPrice(x.price)}</div><div class="v">${f(touch(x.dist, 24))}</div><div class="s">${x.dist > 0 ? '+' : ''}${x.dist.toFixed(2)}% away · odds of touching within 24h (${f(touch(x.dist, 4))} in 4h, ${f(touch(x.dist, 72))} in 3d)</div></div>`);
+  if (U && Dn){ const au = Math.abs(Math.log(U.price / M.cur)), ad = Math.abs(Math.log(Dn.price / M.cur)), pu = ad / (au + ad);
+    cards.push(`<div class="stat"><div class="k">Which is hit first</div><div class="v">${f(pu)} up / ${f(1 - pu)} down</div><div class="s">the nearer cluster is more likely to be reached first</div></div>`); }
+  $('lqOdds').innerHTML = cards.join('') || '<div class="mu">No cluster in range.</div>';
+  $('lqOddsNote').innerHTML = `Odds use a no-drift random walk with ${D.tf} volatility measured over the last ${lr.length} candles (about ${(sg * Math.sqrt(perDay) * 100).toFixed(1)}% per day). They depend only on distance and volatility. They do not know that price tends to be pulled toward big clusters, and nothing here has been tested against what price did next, so treat them as a baseline to compare your own read against.`;
 }
 function lqHover(e){
   const M = LQ.model, D = LQ.data, G = LQ.geo, tip = $('lqTip'), ov = $('lqOver'); if (!M || !G) return;
@@ -4151,7 +4191,7 @@ function lqHover(e){
   tip.innerHTML = `<div class="tth"><b>${fmtPrice(p)}</b> <span class="${cls(d)}">${d > 0 ? '+' : ''}${d.toFixed(2)}% from now</span></div>
     <div class="ttg"><span class="mu">Est. liq.</span><b>${v ? lqUsd(v) : '—'}</b><span class="mu">Side</span><b class="${p > M.cur ? 'up' : 'dn'}">${p > M.cur ? 'shorts' : 'longs'}</b>
     <span class="mu">Candle</span><b style="grid-column:span 3">${new Date(c.t).toLocaleString([], {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})}</b>
-    <span class="mu">O/H</span><b>${fmtPrice(c.o)} / ${fmtPrice(c.h)}</b><span class="mu">L/C</span><b>${fmtPrice(c.l)} / ${fmtPrice(c.c)}</b></div>`;
+    <span class="mu">O/H</span><b>${fmtPrice(c.o)} / ${fmtPrice(c.h)}</b><span class="mu">L/C</span><b>${fmtPrice(c.l)} / ${fmtPrice(c.c)}</b></div>${lqTiers(b)}`;
   const wr = $('lqGrid').getBoundingClientRect(), pr = tip.parentElement.getBoundingClientRect(); tip.hidden = false;
   let tx = e.clientX - pr.left + 16, ty = e.clientY - pr.top + 16; if (tx + 260 > wr.width) tx -= 280; if (ty + 130 > pr.height) ty -= 140;
   tip.style.left = tx + 'px'; tip.style.top = ty + 'px';
