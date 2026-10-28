@@ -836,10 +836,16 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="stats" id="lqOdds" style="margin-top:10px"></div>
       <div class="mu" style="font-size:12px;margin-top:6px" id="lqOddsNote"></div>
     </div>
+    <div class="panel" id="lqFlow" hidden>
+      <div class="rot-head"><b>Spot vs perp flow</b> <span class="mu">who is buying: cumulative volume delta (aggressive buys minus aggressive sells), Binance spot and USDT-M perp</span></div>
+      <div class="stats" id="lqFlowCards" style="margin:8px 0"></div>
+      <canvas id="lqFlowC" style="width:100%;height:400px;display:block"></canvas>
+      <div class="mu" style="font-size:12px;margin-top:6px" id="lqFlowNote"></div>
+    </div>
     <div class="panel" id="obPanel">
       <div class="row">
         <b>Order book walls</b><span class="mu" title="Resting limit orders read from the exchange order books. They can be cancelled at any moment.">live · resting orders</span>
-        <label title="Smallest wall to list, in dollars">Min wall <select id="obThr"><option value="250000">$0.25M</option><option value="500000">$0.50M</option><option value="1000000" selected>$1.00M</option><option value="2000000">$2.00M</option><option value="5000000">$5.00M</option><option value="10000000">$10.00M</option></select></label>
+        <label title="Smallest wall to list, in dollars">Min wall <select id="obThr"><option value="250000">$0.25M</option><option value="500000">$0.50M</option><option value="1000000">$1.00M</option><option value="2000000">$2.00M</option><option value="5000000">$5.00M</option><option value="10000000" selected>$10.00M</option></select></label>
         <label title="Binance levels this close together (in basis points of price, 1 = 0.01%) are added into one wall">Group levels within <select id="obGrp"><option value="1">0.01%</option><option value="2" selected>0.02%</option><option value="5">0.05%</option><option value="10">0.10%</option></select></label>
         <span class="mu">Chart</span><div class="seg" id="obChartSel"><button data-v="near" class="on" title="Binance perp, every price level, but only a thin slice around the price">Binance (near)</button><button data-v="wide" title="Hyperliquid perp in coarse price buckets, reaching further from the price">Hyperliquid (wide)</button></div>
         <button id="obLoad">Refresh book</button><span class="mu" id="obStatus"></span>
@@ -4148,6 +4154,7 @@ function renderLiq(){
   p2.strokeStyle = '#2f3034'; p2.strokeRect(.5, m.t + .5, pw - 1, PH);
   ov.getContext('2d').clearRect(0, 0, ov.width, ov.height);
   try { lqExtra(); } catch {}
+  try { lqFlow(); } catch {}
 }
 /* Still-active estimated liquidations at a price bin (±1 bin), split by the leverage the model assumed. */
 function lqTiers(b){
@@ -4181,6 +4188,50 @@ function lqExtra(){
     cards.push(`<div class="stat"><div class="k">Which is hit first</div><div class="v">${f(pu)} up / ${f(1 - pu)} down</div><div class="s">the nearer cluster is more likely to be reached first</div></div>`); }
   $('lqOdds').innerHTML = cards.join('') || '<div class="mu">No cluster in range.</div>';
   $('lqOddsNote').innerHTML = `Odds use a no-drift random walk with ${D.tf} volatility measured over the last ${lr.length} candles (about ${(sg * Math.sqrt(perDay) * 100).toFixed(1)}% per day). They depend only on distance and volatility. They do not know that price tends to be pulled toward big clusters, and nothing here has been tested against what price did next, so treat them as a baseline to compare your own read against.`;
+}
+/* Spot vs perp flow: cumulative volume delta from taker-buy volume on both markets. Descriptive, not tested as a signal. */
+const LQF = {key: '', k: null, busy: false};
+async function lqFlow(){
+  const D = LQ.data, box = $('lqFlow'); if (!D || !D.k.length){ box.hidden = true; return; } box.hidden = false;
+  const key = D.sym + '|' + D.tf + '|' + D.k[D.k.length - 1].t;
+  if (LQF.key === key && LQF.k){ lqFlowDraw(); return; }
+  if (LQF.busy) return; LQF.busy = true;
+  try { await take(SPOTLIM, 2); const r = await fetch(`https://api.binance.com/api/v3/klines?symbol=${D.sym}&interval=${D.tf}&limit=500`); if (!r.ok) throw new Error('spot klines ' + r.status);
+    const j = await r.json(); LQF.k = new Map(j.map(x => [+x[0], {v: +x[5], tb: +x[9]}])); LQF.key = key; lqFlowDraw(); }
+  catch(e){ $('lqFlowNote').textContent = 'Spot data could not be loaded: ' + e.message; }
+  finally { LQF.busy = false; }
+}
+function lqFlowDraw(){
+  const D = LQ.data, SP = LQF.k, cv = $('lqFlowC'); if (!D || !SP) return;
+  const rows = []; let cs = 0, cp = 0;
+  for (const c of D.k){ const s = SP.get(c.t); if (!s) continue; const ds = 2 * s.tb - s.v, dp = 2 * c.tb - c.v; cs += ds; cp += dp; rows.push({t: c.t, c: c.c, ds, dp, cs, cp, vs: s.v, vp: c.v}); }
+  if (rows.length < 20) return;
+  const step = D.k.length > 1 ? D.k[1].t - D.k[0].t : 9e5, win = h => Math.max(1, Math.round(h * 36e5 / step));
+  const sum = (arr, key, n) => arr.slice(-n).reduce((a, x) => a + x[key], 0);
+  const imb = n => ({s: sum(rows, 'ds', n) / (sum(rows, 'vs', n) || 1), p: sum(rows, 'dp', n) / (sum(rows, 'vp', n) || 1)});
+  const th = .02, tag = x => x > th ? 'buying' : x < -th ? 'selling' : 'balanced';
+  const read = n => { const m = imb(n), a = tag(m.s), b = tag(m.p);
+    const t = a === 'buying' && b !== 'buying' ? 'Spot-led buying' : b === 'buying' && a !== 'buying' ? 'Perp-led buying (leverage driven)' : a === 'buying' && b === 'buying' ? 'Buying on both' : a === 'selling' && b !== 'selling' ? 'Spot-led selling' : b === 'selling' && a !== 'selling' ? 'Perp-led selling (leverage driven)' : a === 'selling' && b === 'selling' ? 'Selling on both' : 'No clear lead';
+    return {t, m}; };
+  const pc = x => (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%', card = (k, r) => `<div class="stat"><div class="k">${k}</div><div class="v" style="font-size:16px">${r.t}</div><div class="s">spot ${pc(r.m.s)} · perp ${pc(r.m.p)} of volume</div></div>`;
+  $('lqFlowCards').innerHTML = card('Last 4 hours', read(win(4))) + card('Last 24 hours', read(win(24))) + card('Whole window', read(rows.length));
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth || 700, H = 400, ctx = cv.getContext('2d'); cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const L = 8, R = 118, n = rows.length, X = i => L + (i + .5) / n * (W - L - R), pw = W - L - R;
+  ctx.fillStyle = '#07070b'; ctx.fillRect(0, 0, W, H); ctx.font = '10.5px system-ui'; ctx.textBaseline = 'middle';
+  const panel = (y0, y1, vals, cols, labels, fmt) => { const all = vals.flat(), lo = Math.min(...all), hi = Math.max(...all), sp = (hi - lo) || 1, Y = v => y1 - (v - lo) / sp * (y1 - y0 - 4) - 2;
+    ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.strokeRect(L + .5, y0 + .5, pw, y1 - y0);
+    vals.forEach((arr, k) => { ctx.strokeStyle = cols[k]; ctx.lineWidth = 1.6; ctx.beginPath(); arr.forEach((v, i) => i ? ctx.lineTo(X(i), Y(v)) : ctx.moveTo(X(i), Y(v))); ctx.stroke();
+      ctx.fillStyle = cols[k]; ctx.fillText(labels[k] + ' ' + fmt(arr[arr.length - 1]), W - R + 4, Y(arr[arr.length - 1])); }); };
+  panel(8, 130, [rows.map(r => r.c)], ['#cfd0d6'], [D.sym.replace('USDT', '')], v => fmtPrice(v));
+  const fq = v => (Math.abs(v) >= 1e3 ? (v / 1e3).toFixed(1) + 'K' : v.toFixed(0)) + ' $';
+  const px = rows.map(r => r.c), toUsd = (a, k) => a; // CVD in dollars: sum of delta quote volume
+  let qs = 0, qp = 0; const cvS = [], cvP = []; for (const r of rows){ qs += r.ds * r.c; qp += r.dp * r.c; cvS.push(qs); cvP.push(qp); }
+  const fm = v => (v < 0 ? '-' : '') + lqUsd(Math.abs(v));
+  panel(146, 270, [cvS, cvP], ['#3b82f6', '#e8457a'], ['Spot CVD', 'Perp CVD'], fm);
+  for (const [k, y0, col, nm] of [['ds', 280, '#3b82f6', 'Δ Spot'], ['dp', 340, '#e8457a', 'Δ Perp']]){ const mx = Math.max(...rows.map(r => Math.abs(r[k]))) || 1, mid = y0 + 27, bw = Math.max(1, (pw / n) * .7);
+    ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.strokeRect(L + .5, y0 + .5, pw, 54); ctx.fillStyle = col; rows.forEach((r, i) => { const h = r[k] / mx * 25; ctx.fillRect(X(i) - bw / 2, h >= 0 ? mid - h : mid, bw, Math.max(1, Math.abs(h))); });
+    ctx.fillStyle = col; ctx.fillText(nm, W - R + 4, mid); }
+  $('lqFlowNote').textContent = 'CVD in dollars, from zero at the start of the window. "Of volume" = net aggressive buying divided by traded volume over that period; within ±2% counts as balanced. This describes who was pushing price, not what happens next, and it has not been tested as a signal.';
 }
 function lqHover(e){
   const M = LQ.model, D = LQ.data, G = LQ.geo, tip = $('lqTip'), ov = $('lqOver'); if (!M || !G) return;
