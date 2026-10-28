@@ -1487,7 +1487,7 @@ function renderToday(market, c){
   el.innerHTML = `<div class="todaygrid">
     <div><h4>Top bullish setups <span class="mu">(${L.length})</span></h4><div class="tl">${L.length ? L.slice(0, 6).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
     <div><h4>Top bearish setups <span class="mu">(${Sh.length})</span></h4><div class="tl">${Sh.length ? Sh.slice(0, 6).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
-    <div><h4>Strongest divergences</h4><div class="tl">${dv.length ? dv.map(dchip).join('') : (DIV.t ? '<span class="mu">None right now.</span>' : '<button data-act="divscan">Scan divergences</button>')}</div></div></div>
+    <div><h4>Strongest divergences</h4><div class="tl">${dv.length ? dv.map(dchip).join('') : (DIV.t ? '<span class="mu">None right now.</span>' : '<span class="mu">' + (DIV.scanning ? 'Scanning…' : 'Updates after each Scan.') + '</span>')}</div></div></div>
     <div class="todaynote">Setups are ranked by 24h volume (most liquid first). Number next to each divergence = strength score.</div>`;
 }
 document.addEventListener('click', e => { const b = e.target.closest('#todayBody [data-dv]'); if (b){ const [sym, tf] = b.dataset.dv.split('|'); anaOpen(sym, tf); return; }
