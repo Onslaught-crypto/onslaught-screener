@@ -2892,6 +2892,8 @@ async function scan(){
     setStatus('err', 'Error'); showErr(location.protocol === 'about:' ? SANDBOX_MSG : e.message);
   } finally {
     S.scanning = false; $('scanBtn').disabled = false; render();
+    // keep the Today panel's divergences fresh: scan them after the market scan when they are missing or older than 10 minutes
+    try { if (S.rows && S.rows.length && !DIV.scanning && Date.now() - (DIV.t || 0) > 6e5) setTimeout(() => { if (!DIV.scanning) divScan().catch(() => {}); }, 1500); } catch {}
     setTimeout(() => { if (!S.scanning) $('prog').style.width = '0'; }, 800);
   }
 }
