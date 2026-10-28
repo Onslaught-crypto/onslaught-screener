@@ -608,7 +608,10 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <li><b>Ext (ATR)</b>: how far the close is from EMA20, measured in ATRs. Above +3 or below −3 (⚠) means the move is stretched. The trend may be real, but entries there have poor risk/reward, so wait for a pullback.</li>
         <li><b>Aligned</b> = 4 or 5 of 5 checks in one direction. <b>NEW</b> = alignment appeared on the latest candle (it wasn't aligned on the one before).</li>
         <li>Hover any check to see the raw values. Click a row to open its trade plan (chart, entry, stop, targets, sizing). The ↗ next to a pair opens TradingView.</li>
-      </ul>
+      
+        <li><b>Today at a glance</b> (top of the Scanner) lists the top bullish setups and top bearish setups (triggered setups, most liquid first by 24h volume) and the strongest divergences (by strength score, refreshed after each Scan). Volume order is about easy entry and exit; the journal shows no grade or rule has beaten random entries yet.</li>
+        <li><b>Simple / Full</b> switches the table between the few key columns and every column. Press <b>?</b> for keyboard shortcuts and <b>T</b> for light or dark.</li>
+</ul>
     </details>
   </div>
 
@@ -866,7 +869,12 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <li><b>Brighter = more estimated liquidations</b> at that price. Bands <b class="up">above</b> price are short liquidations (forced buying that can fuel a squeeze up); bands <b class="dn">below</b> are long liquidations (forced selling that can fuel a flush down).</li>
         <li>Price is often drawn toward big nearby clusters (liquidity "magnets"), and the move frequently reverses once a cluster has been swept. Use it for timing and for placing stops away from obvious clusters, not as a signal on its own.</li>
         <li>Falling open interest removes liquidity across the map (positions closed). The right-hand profile shows what is still active now.</li>
-      </ul></details></div>
+      
+        <li><b>Cumulative liquidations</b> (chart under the map) adds up the still-active estimate as you move away from price: <b class="up">shorts above</b>, <b class="dn">longs below</b>. A steep step is a wall; a flat stretch is empty space. Hover the map for the leverage split (10×, 25×, 50×, 100×) of what is still active at that price. The split is the model's assumed mix, not data.</li>
+        <li><b>First-touch odds</b> are the chance that price reaches the nearest big cluster above and below within 4 hours, 24 hours and 3 days, and which one is hit first. They come from a no-drift random walk using recent volatility, so they depend only on distance. A far cluster reads 0% in a day; that means far, not safe. They are untested against what price did next.</li>
+        <li><b>Spot vs perp flow</b> shows cumulative volume delta (aggressive buys minus aggressive sells, in dollars) for Binance spot and the perp. Spot rising while the perp is flat reads as spot-led buying; the perp rising alone reads as leverage driven and tends to be less durable. The cards compare net buying with traded volume over 4 hours, 24 hours and the whole window; within ±2% counts as balanced. It describes who pushed price, not what happens next, and is not tested as a signal.</li>
+        <li><b>Order book walls</b> list resting orders at or above the minimum wall (default $10M). They can be cancelled at any moment, so a wall is a hint, not a floor.</li>
+</ul></details></div>
     </div>
   </div><!-- /viewLiq -->
 
@@ -1088,7 +1096,9 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 <li>Two Scoreboard rows split the triggered setups by what <b>BTC</b> was doing at signal time: above or below its daily EMA100 (last closed daily candle). Each is compared with random entries taken in the same BTC state. Re-run Run all tests once to fill those baselines.</li>
       <li>The Alert results box (above the Setup study) is only for people who run the Onslaught runner server: load the files it saves (send /export to its Telegram bot) to see how its alerts really did. It is not needed to use the Journal.</li>
       <li>It only logs what you scanned: if the screener is closed, signals in that time are missed. Leave auto-refresh on to build the sample faster. Data stays in this browser; use Backup / Restore to move it.</li>
-    </ul></details></div>
+    
+        <li><b>Signals against a random control</b>: for every new signal the journal also follows one random coin on the same candle and side with no signal, using the same stop and target. The card compares the two per moment and says whether the gap is within noise; judge it after about 150 matched moments. The journal now holds up to 12,000 entries.</li>
+</ul></details></div>
   </div><!-- /viewJournal -->
 
   <footer>Data: <code>fapi.binance.com</code> klines (cached in your browser, topped up incrementally) · OI from <code>openInterestHist</code> · market cap from CoinGecko. Requests come from your own browser, no keys or backend. Not financial advice. Confirm on the chart.</footer>
@@ -6922,6 +6932,9 @@ scan: ['Como ler isto', `<ul>
 <li><b>Ext (ATR)</b>: a que distância o fecho está da EMA20, medida em ATR. Acima de +3 ou abaixo de −3 (⚠) o movimento está esticado. A tendência pode ser real, mas as entradas aí têm mau risco/retorno, por isso espera por um pullback.</li>
 <li><b>Aligned</b> = 4 ou 5 de 5 verificações na mesma direção. <b>NEW</b> = o alinhamento surgiu na última vela (não estava alinhado na anterior).</li>
 <li>Passa o cursor sobre qualquer verificação para ver os valores. Clica numa linha para abrir o plano de trade (gráfico, entrada, stop, alvos, dimensionamento). O ↗ ao lado de um par abre o TradingView.</li>
+
+<li><b>Hoje num relance</b> (topo do Scanner) lista os melhores setups de alta e de baixa (setups disparados, os mais líquidos primeiro por volume 24h) e as divergências mais fortes (por pontuação, atualizadas após cada Scan). A ordem por volume serve para entrar e sair com facilidade; o diário mostra que nenhum grau ou regra bateu entradas aleatórias até agora.</li>
+<li><b>Simple / Full</b> alterna a tabela entre poucas colunas essenciais e todas as colunas. Carrega em <b>?</b> para os atalhos de teclado e em <b>T</b> para claro ou escuro.</li>
 </ul>`],
 map: ['Como ler o Market Map', `<ul>
 <li><b>Horizontal</b>: força relativa a 7 dias. À direita do centro = a moeda superou o BTC (ou o ETH) esta semana.</li>
@@ -6962,6 +6975,11 @@ liq: ['Como ler o mapa de liquidações', `<ul>
 <li><b>Mais brilhante = mais liquidações estimadas</b> nesse preço. As bandas <b class="up">acima</b> do preço são liquidações de shorts (compra forçada que pode alimentar um squeeze para cima); as bandas <b class="dn">abaixo</b> são liquidações de longs (venda forçada que pode alimentar uma queda).</li>
 <li>O preço é muitas vezes atraído para grandes aglomerados próximos ("ímanes" de liquidez), e o movimento reverte com frequência depois de um aglomerado ser varrido. Usa-o para timing e para colocar stops longe de aglomerados óbvios, não como sinal isolado.</li>
 <li>Open interest a cair retira liquidez em todo o mapa (posições fechadas). O perfil do lado direito mostra o que ainda está ativo agora.</li>
+
+<li><b>Liquidações acumuladas</b> (gráfico por baixo do mapa) soma a estimativa ainda ativa à medida que te afastas do preço: <b class="up">shorts acima</b>, <b class="dn">longs abaixo</b>. Um degrau acentuado é uma parede; um troço plano é espaço vazio. Passa o rato no mapa para ver a divisão por alavancagem (10×, 25×, 50×, 100×) do que ainda está ativo nesse preço. A divisão é a mistura assumida pelo modelo, não dados reais.</li>
+<li><b>Probabilidade de toque</b> é a hipótese de o preço chegar ao aglomerado grande mais próximo acima e abaixo em 4 horas, 24 horas e 3 dias, e qual é atingido primeiro. Vem de um passeio aleatório sem tendência com a volatilidade recente, por isso depende só da distância. Um aglomerado longe mostra 0% num dia; isso quer dizer longe, não seguro. Não foi testado contra o que o preço fez a seguir.</li>
+<li><b>Fluxo spot vs perp</b> mostra o volume delta acumulado (compras agressivas menos vendas agressivas, em dólares) do spot e do perp da Binance. Spot a subir com o perp parado lê-se como compra liderada pelo spot; só o perp a subir lê-se como alavancagem e tende a ser menos duradouro. Os cartões comparam a compra líquida com o volume negociado em 4 horas, 24 horas e na janela toda; dentro de ±2% conta como equilibrado. Descreve quem empurrou o preço, não o que acontece a seguir, e não está testado como sinal.</li>
+<li><b>Paredes do livro de ordens</b> listam ordens em espera iguais ou acima da parede mínima (por defeito $10M). Podem ser canceladas a qualquer momento, por isso uma parede é uma pista, não um chão.</li>
 </ul>`],
 journal: ['Como funciona o journal', `<ul>
 <li>Após cada scan do Crypto Scanner com velas fechadas, regista cada <b>setup com trigger</b> (cooldown de 6 velas por par, lado e timeframe) e cada <b>novo alinhamento</b> (alinhado apenas na última vela). Guarda o contexto nesse momento: pontuação, triggers, regime, MTF, extensão, positioning e funding.</li>
@@ -6979,6 +6997,8 @@ journal: ['Como funciona o journal', `<ul>
 <li>Duas linhas do Scoreboard dividem os setups disparados pelo que o <b>BTC</b> fazia na altura do sinal: acima ou abaixo da EMA100 diária (último candle diário fechado). Cada uma compara com entradas aleatórias no mesmo estado do BTC. Corre Run all tests uma vez para preencher essas bases.</li>
 <li>A caixa Alert results (acima do Setup study) serve apenas para quem usa o servidor runner da Onslaught: carrega os ficheiros que ele guarda (envia /export ao bot de Telegram) para ver como os alertas correram na realidade. Não é preciso para usar o Journal.</li>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
+
+<li><b>Sinais contra um controlo aleatório</b>: por cada novo sinal o diário segue também uma moeda aleatória na mesma vela e lado sem sinal, com o mesmo stop e alvo. O cartão compara os dois por momento e diz se a diferença está dentro do ruído; avalia depois de cerca de 150 momentos emparelhados. O diário guarda agora até 12 000 entradas.</li>
 </ul>`]
 };
 function helpApply(lang){
