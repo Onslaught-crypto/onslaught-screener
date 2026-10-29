@@ -68,6 +68,9 @@ input[type=checkbox]{accent-color:var(--accent)}
 button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
 button.primary:hover{background:var(--accent-dk);border-color:var(--accent-lt)}
 button:disabled{opacity:.5;cursor:default}
+@keyframes scanGlow{0%,100%{box-shadow:0 0 6px 1px rgba(168,85,247,.55),0 0 0 0 rgba(168,85,247,.45)}50%{box-shadow:0 0 18px 5px rgba(168,85,247,.85),0 0 0 6px rgba(168,85,247,0)}}
+button.needscan{animation:scanGlow 1.8s ease-in-out infinite;border-color:var(--accent-lt)}
+@media (prefers-reduced-motion:reduce){button.needscan{animation:none;box-shadow:0 0 14px 3px rgba(168,85,247,.8)}}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .seg button{border:0;border-radius:0;padding:6px 11px}
 .seg button.on{background:var(--accent-dk);color:#fff;font-weight:600;box-shadow:inset 0 -2px 0 var(--accent-lt)}
@@ -2578,7 +2581,9 @@ function loadSettings(){
   if (o.alertWhat) $('alertWhat').value = o.alertWhat;
   if (o.jOn != null) $('jOn').checked = o.jOn; if (o.jWhat) $('jWhat').value = o.jWhat;
 }
-function setStatus(kind, text){ $('dot').className = 'dot ' + (kind || ''); $('statusText').textContent = text; }
+function setStatus(kind, text){ $('dot').className = 'dot ' + (kind || ''); $('statusText').textContent = text; scanGlow(); }
+/* The Scan button glows until the first scan has produced rows, so it is obvious that nothing has been scanned yet. */
+function scanGlow(){ try { const b = $('scanBtn'); if (b) b.classList.toggle('needscan', !S.scanning && !(S.rows && S.rows.length)); } catch {} }
 function showErr(msg){ const e = $('err'); e.textContent = msg || ''; e.style.display = msg ? 'block' : 'none'; }
 
 /* ---------- Formatting ---------- */
@@ -2907,7 +2912,7 @@ async function scan(){
   } catch(e){
     setStatus('err', 'Error'); showErr(location.protocol === 'about:' ? SANDBOX_MSG : e.message);
   } finally {
-    S.scanning = false; $('scanBtn').disabled = false; render();
+    S.scanning = false; $('scanBtn').disabled = false; render(); scanGlow();
     // keep the Today panel's divergences fresh: scan them after the market scan when they are missing or older than 10 minutes
     try { if (S.rows && S.rows.length && !DIV.scanning && Date.now() - (DIV.t || 0) > 6e5) setTimeout(() => { if (!DIV.scanning) divScan().catch(() => {}); }, 1500); } catch {}
     setTimeout(() => { if (!S.scanning) $('prog').style.width = '0'; }, 800);
@@ -3315,11 +3320,18 @@ function renderChanges(){
   if (!ch){ el.innerHTML = ''; return; }
   if (ch.baseline){ el.innerHTML = `<span class="mu">Baseline saved for ${S.tf.toUpperCase()}. Pairs entering or leaving alignment will show here from the next scan.</span>`; return; }
   const chip = e => `<button class="chg ${e.dir > 0 ? 'b' : 's'}" data-open="${e.sym}" title="${e.kind === 'setup' ? 'Triggered setup' : 'Aligned'} ${e.dir > 0 ? 'long' : 'short'}">${WATCH.has(e.sym) ? '★ ' : ''}${e.sym.replace('USDT', '')} ${e.dir > 0 ? '▲' : '▼'}${e.kind === 'setup' ? ' ⚡' : ''}</button>`;
-  const since = new Date(ch.t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-  el.innerHTML = `<span class="lbl">Since ${since}</span>
-    <span class="grp"><b class="up">Entered ${ch.entered.length}</b> ${ch.entered.map(chip).join('') || '<span class="mu">none</span>'}</span>
-    <span class="grp"><b class="mu">Exited ${ch.exited.length}</b> ${ch.exited.slice(0, 12).map(e => `<span class="chg out">${e.sym.replace('USDT', '')}</span>`).join('')}${ch.exited.length > 12 ? `<span class="mu"> +${ch.exited.length - 12}</span>` : ''}</span>`;
+  const since = new Date(ch.t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}), mins = Math.round((Date.now() - ch.t) / 6e4), ago = mins >= 120 ? Math.round(mins / 60) + ' h ago' : mins + ' min ago';
+  const vol = new Map((S.rows || []).map(r => [r.sym, r.qv || 0])), byVol = (a, b) => (vol.get(b.sym) || 0) - (vol.get(a.sym) || 0);
+  const E = ch.entered, up = E.filter(e => e.dir > 0).length, dn = E.length - up, trg = E.filter(e => e.kind === 'setup');
+  const pri = E.filter(e => e.kind === 'setup' || WATCH.has(e.sym)).sort(byVol), rest = E.filter(e => !(e.kind === 'setup' || WATCH.has(e.sym))).sort(byVol);
+  const show = S.chgAll ? [...pri, ...rest] : (pri.length ? pri : rest).slice(0, 10), hidden = E.length - show.length;
+  const sorted = [...ch.exited].sort(byVol);
+  el.innerHTML = `<span class="lbl">Since ${since} (${ago})</span>
+    <span class="grp"><b class="up">Entered ${E.length}</b> <span class="mu">▲${up} ▼${dn}${trg.length ? ` · ⚡${trg.length} triggered` : ''}</span> ${show.map(chip).join('') || '<span class="mu">none</span>'}</span>
+    <span class="grp"><b class="mu">Exited ${ch.exited.length}</b>${S.chgAll ? ' ' + sorted.map(e => `<span class="chg out">${e.sym.replace('USDT', '')}</span>`).join('') : ''}</span>
+    ${hidden > 0 || (!S.chgAll && ch.exited.length) ? `<button class="chg" data-act="chgall" title="Show every pair that entered or left">Show all</button>` : S.chgAll ? `<button class="chg" data-act="chgall">Show less</button>` : ''}`;
 }
+document.addEventListener('click', e => { if (e.target.closest('#changes [data-act=chgall]')){ S.chgAll = !S.chgAll; renderChanges(); } });
 const ALERT = {on: false, ctx: null};
 try { ALERT.on = JSON.parse(localStorage.getItem(ALERT_KEY) || 'false'); } catch {}   // stays on after reload even without desktop-notification permission
 function paintAlertBtn(){ $('alertBtn').textContent = ALERT.on ? '🔔 Alerts on' : '🔕 Alerts off'; $('alertBtn').classList.toggle('on', ALERT.on); }
@@ -6306,6 +6318,7 @@ $('themeBtn').onclick = () => setTheme(document.documentElement.dataset.theme ==
 /* The toast is a bar at the bottom: keep the page clear of it while it shows */
 new MutationObserver(() => { document.body.style.paddingBottom = $('toast').classList.contains('show') ? $('toast').offsetHeight + 'px' : ''; }).observe($('toast'), {attributes: true, attributeFilter: ['class']});
 /* Keyboard shortcuts */
+scanGlow();
 const kbOpen = () => { $('kbHelp').hidden = false; $('kbClose').focus(); }, kbShut = () => { $('kbHelp').hidden = true; };
 $('kbBtn').onclick = kbOpen; $('kbClose').onclick = kbShut; $('kbHelp').onclick = e => { if (e.target === $('kbHelp')) kbShut(); };
 document.addEventListener('keydown', e => {
