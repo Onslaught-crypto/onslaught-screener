@@ -33,7 +33,9 @@
 .kbhelp .r{display:flex;justify-content:space-between;gap:14px;padding:4px 0;border-bottom:1px solid var(--line)}
 details.todaybox{margin:10px 0}
 details.todaybox>summary{cursor:pointer;font-weight:600;padding:2px 0}
-.todaygrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px}
+.todaygrid{display:grid;grid-template-columns:1.1fr 1.1fr .95fr 1.3fr;gap:12px;margin-top:8px}
+.todaygrid .tl{flex-wrap:nowrap!important;overflow:hidden;gap:4px} .todaygrid .chg{padding:2px 6px;font-size:11px;white-space:nowrap;flex:0 0 auto}
+@media (max-width:1250px){.todaygrid{grid-template-columns:1fr 1fr}.todaygrid .tl{flex-wrap:wrap!important}}
 .todaygrid h4{margin:0 0 6px;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
 .todaygrid .tl{display:flex;flex-wrap:wrap;gap:5px}
 .todaynote{margin-top:8px;font-size:12px;color:var(--muted)}
@@ -1525,8 +1527,8 @@ function renderToday(market, c){
   const dchip = x => `<button class="chg ${x.side > 0 ? 'b' : 's'}" data-dv="${x.sym}|${x.tf}" title="Open the chart for ${x.sym.replace('USDT', '')} ${x.tf}">${x.sym.replace('USDT', '')} ${x.tf.toUpperCase()} ${x.side > 0 ? '▲' : '▼'} ${x.score}</button>`;
   const none = (market || []).length ? 'None right now.' : 'Press Scan.';
   el.innerHTML = `<div class="todaygrid">
-    <div><h4>Top bullish setups <span class="mu">(${L.length})</span></h4><div class="tl">${L.length ? L.slice(0, 6).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
-    <div><h4>Top bearish setups <span class="mu">(${Sh.length})</span></h4><div class="tl">${Sh.length ? Sh.slice(0, 6).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
+    <div><h4>Top bullish setups <span class="mu">(${L.length})</span></h4><div class="tl">${L.length ? L.slice(0, 5).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
+    <div><h4>Top bearish setups <span class="mu">(${Sh.length})</span></h4><div class="tl">${Sh.length ? Sh.slice(0, 5).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
     <div><h4>Strongest bullish divergences</h4><div class="tl">${dvB.length ? dvB.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : DIV.scanning ? 'Scanning…' : 'Updates after each Scan.') + '</span>'}</div></div>
     <div><h4>Strongest bearish divergences</h4><div class="tl">${dvS.length ? dvS.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : DIV.scanning ? 'Scanning…' : 'Updates after each Scan.') + '</span>'}</div></div></div></div>
     <div class="todaynote">Setups are ranked by 24h volume (most liquid first). Number next to each divergence = strength score.</div>`;
