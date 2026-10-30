@@ -37,6 +37,11 @@ details.todaybox>summary{cursor:pointer;font-weight:600;padding:2px 0}
 .todaygrid h4{margin:0 0 6px;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
 .todaygrid .tl{display:flex;flex-wrap:wrap;gap:5px}
 .todaynote{margin-top:8px;font-size:12px;color:var(--muted)}
+table.jedge td.rulecell{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Grades are unproven (journal: grade A has not beaten C), so they no longer look like a quality ranking */
+.gr.gA,.gr.gB,.gr.gC{background:var(--panel2)!important;color:var(--muted)!important;box-shadow:none!important}
+#tbody tr.tA td:nth-child(2),#tbody tr.tB td:nth-child(2){box-shadow:none!important} #tbody tr.tA,#tbody tr.tA:hover{background:transparent!important}
+body.simple #stats .stat .s{display:none}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 a{color:inherit}
@@ -782,7 +787,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label>Age <select id="dvAge"><option value="3">last 3 candles</option><option value="5" selected>last 5 candles</option><option value="10">last 10 candles</option></select></label>
         <label>Strength <select id="dvStr"><option value="0">Any</option><option value="50">Medium or better</option><option value="70">Strong only</option></select></label>
         <button id="dvScan" class="primary">Scan</button>
-        <span class="mu" id="dvStatus"></span>
+        <span class="mu" id="dvStatus"></span> <span id="dvActive" hidden></span>
       </div>
       <div class="progress" style="margin:10px 0 0"><div id="dvProg"></div></div>
     </div>
@@ -1479,19 +1484,35 @@ function gradeEvLine(grade){
   const band = 2 * g.se, tag = Math.abs(g.mean) <= band ? 'not distinguishable from chance yet' : g.mean > 0 ? 'above zero' : 'below zero';
   return `Your journal so far: grade ${grade} averaged ${g.mean >= 0 ? '+' : ''}${g.mean.toFixed(2)}R over ${g.n} moments (±${band.toFixed(2)}), ${tag} (before fees).`;
 }
+/* How many independent observations the journal really holds, by timeframe. */
+function jIndepHtml(){
+  const sig = J.entries.filter(e => e.kind !== 'div' && e.out && e.out.res), by = {};
+  for (const e of sig){ const k = e.tf, o = by[k] || (by[k] = {m: new Set(), n: 0}); o.m.add(e.ct + '|' + e.dir); o.n++; }
+  const tot = Object.values(by).reduce((a, o) => a + o.m.size, 0), parts = ['1h', '4h', '1d'].map(t => `${t.toUpperCase()} ${by[t] ? by[t].m.size : 0}`).join(' · ');
+  const thin = ['4h', '1d'].some(t => !by[t] || by[t].m.size < 30);
+  return `<div class="rot-head"><b>Independent observations</b> <span class="mu">${sig.length} journal entries come from only <b>${tot}</b> separate moments (same candle and side counts once): ${parts}</span></div>
+    <div class="mu" style="font-size:12px;margin:4px 0 8px">Conclusions need at least 30 moments in a timeframe. Each scan now logs at most ${J_PER} signals per kind and side (most liquid first), so the count grows by distinct moments, not by one wave repeated.${thin ? ' 4H and 1D are thin because the journal only logs the timeframe the scanner is on.' : ''}</div>
+    <button id="jLogMore" title="Switches the scanner to 4H, scans, then 1D, scans, then returns to where you were. Takes a couple of minutes.">Log 4H and 1D now</button> <span class="mu" id="jLogMoreSt" style="font-size:12px"></span>`;
+}
+document.addEventListener('click', async e => { if (!e.target.closest('#jLogMore')) return;
+  const st = $('jLogMoreSt'), back = S.tf, btn = e.target.closest('#jLogMore'); btn.disabled = true;
+  try { if (!$('jOn').checked){ st.textContent = 'Turn on journaling in Settings first.'; return; }
+    for (const tf of ['4h', '1d']){ st.textContent = 'Scanning ' + tf.toUpperCase() + '…'; while (S.scanning) await new Promise(r => setTimeout(r, 500)); const b = $('tfSeg').querySelector(`[data-v="${tf}"]`); if (b) b.click(); await new Promise(r => setTimeout(r, 1200)); while (S.scanning) await new Promise(r => setTimeout(r, 500)); }
+    const b2 = $('tfSeg').querySelector(`[data-v="${back}"]`); if (b2) b2.click(); st.textContent = 'Done. Back on ' + back.toUpperCase() + '.'; }
+  catch(err){ st.textContent = 'Stopped: ' + err.message; } finally { btn.disabled = false; renderJournal(); } });
 function jCtlBox(){
   const el = $('jCtl'); if (!el) return;
   const sig = J.entries.filter(e => e.kind !== 'div'), key = e => e.tf + '|' + e.ct + '|' + e.dir, S1 = jMoments(sig, key), C1 = jMoments(J.ctl, key), d = [], a = [], b = [];
   for (const [k, o] of S1){ const c2 = C1.get(k); if (!c2) continue; const x = o.s / o.n, y = c2.s / c2.n; d.push(x - y); a.push(x); b.push(y); }
   const nCtl = J.ctl.filter(e => jR(e) != null).length;
-  if (d.length < 8){ el.innerHTML = `<div class="rot-head"><b>Signals against a random control</b></div><div class="mu" style="font-size:12px">For every new signal the journal now also follows one random coin on the same candle and side with no signal, using the same stop and target. ${J.ctl.length ? `${J.ctl.length} controls logged, ${nCtl} with a result, ${d.length} moments matched so far.` : 'None logged yet: they start with the next scan.'} The comparison appears once 8 moments are matched.</div>`; return; }
+  if (d.length < 8){ el.innerHTML = `<div class="rot-head"><b>Signals against a random control</b></div><div class="mu" style="font-size:12px">For every new signal the journal now also follows one random coin on the same candle and side with no signal, using the same stop and target. ${J.ctl.length ? `${J.ctl.length} controls logged, ${nCtl} with a result, ${d.length} moments matched so far.` : 'None logged yet: they start with the next scan.'} The comparison appears once 8 moments are matched.</div><div style="margin-top:12px">${jIndepHtml()}</div>`; return; }
   const D = jMeanSe(d), A = jMeanSe(a), B = jMeanSe(b), band = 2 * D.se, f = x => (x >= 0 ? '+' : '') + x.toFixed(2) + 'R';
   const verdict = Math.abs(D.mean) <= band ? 'Within noise: the signals do no better or worse than random coins on the same candles.' : D.mean > 0 ? 'Signals beat the random control by more than the noise.' : 'Signals do worse than the random control by more than the noise.';
   el.innerHTML = `<div class="rot-head"><b>Signals against a random control</b> <span class="mu">same candle, same side, random coin with no signal, same stop and target (before fees)</span></div>
     <div class="stats" style="margin:8px 0"><div class="stat"><div class="k">Signals</div><div class="v">${f(A.mean)}</div><div class="s">${A.n} matched moments</div></div>
     <div class="stat"><div class="k">Random control</div><div class="v">${f(B.mean)}</div><div class="s">${nCtl} controls with a result</div></div>
     <div class="stat ${Math.abs(D.mean) <= band ? '' : D.mean > 0 ? 'bull' : 'bear'}"><div class="k">Difference</div><div class="v">${f(D.mean)}</div><div class="s">±${band.toFixed(2)} noise</div></div></div>
-    <div class="mu" style="font-size:12px">${verdict} Judge it after about 150 matched moments.</div>`;
+    <div class="mu" style="font-size:12px">${verdict} Judge it after about 150 matched moments.</div><div style="margin-top:12px">${jIndepHtml()}</div>`;
 }
 /* Today at a glance (Crypto Scanner): the best setups, the strongest divergences and what the journal says so far. */
 function renderToday(market, c){
@@ -2634,7 +2655,7 @@ function trigCell(r){
   const shown = r.trig.slice(0, 3).map(t => `<span class="tg ${t.dir > 0 ? 'b' : t.dir < 0 ? 's' : 'n'}" title="${t.name}${t.t === 'coil' ? '' : ', ' + (t.ago === 0 ? 'last candle' : t.ago + ' candle' + (t.ago > 1 ? 's' : '') + ' ago')}">${TRIG_SHORT[t.t]}${t.ago && t.t !== 'coil' ? '<sub>' + t.ago + '</sub>' : ''}</span>`).join('');
   return shown + (r.trig.length > 3 ? `<span class="tg n" title="${r.trig.slice(3).map(t => t.name).join(', ')}">+${r.trig.length - 3}</span>` : '');
 }
-const COL_HELP = {"star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "spark": "Price over the last 30 candles of the selected timeframe (green = up over that span, red = down). Sort to rank by that move.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
+const COL_HELP = {"star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "spark": "Price over the last 30 candles of the selected timeframe (green = up over that span, red = down). Sort to rank by that move.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Alignment score (unproven: in the journal grade A has not done better than C, so treat it as a description of how many checks agree, not as quality). Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
 const COLS_BASE = [
   {k:'star', t:'★', c:'c'}, {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'spark', t:'Trend', c:'c'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA', c:'c'},
@@ -2952,6 +2973,7 @@ function setView(v){
   if (v === 'macro'){ renderMacro(); if (!S.macro || Date.now() - S.macro.t > 36e5) loadMacro(false); }
   if (v === 'div'){ dvSync(); renderDiv(); if (!DIV.t || Date.now() - DIV.t > 3e5) divScan(); }
   if (v === 'liq') liqEnter();
+  if (v === 'sectors' && !SEC.rows.length && !SEC.loading) loadSectors();
   if (v === 'ta' && !ANA.sym && ANA.recent && ANA.recent[0]) anaOpen(ANA.recent[0]);
   if (v === 'ta') anaEnter();
 }
@@ -3067,7 +3089,7 @@ function exportSectors(){
 
 /* ---------- Signal journal ---------- */
 const J = {entries: [], ctl: [], page: 0, busy: false};
-const J_MAX = 12000, J_CTL_MAX = 12000;
+const J_MAX = 12000, J_CTL_MAX = 12000, J_PER = 5;
 async function loadJournal(){ const v = await Cache.get('journal'); J.entries = Array.isArray(v) ? v : []; const vc = await Cache.get('journalCtl'); J.ctl = Array.isArray(vc) ? vc : []; try { if (S.regimeArgs) renderToday(...S.regimeArgs); } catch {} if (S.view === 'journal') renderJournal(); if (S.view === 'div') dvRecord(); }
 async function saveJournal(){ if (J.entries.length > J_MAX) J.entries = J.entries.slice(-J_MAX); await Cache.set('journal', J.entries); }
 async function saveCtl(){ if (J.ctl.length > J_CTL_MAX) J.ctl = J.ctl.slice(-J_CTL_MAX); await Cache.set('journalCtl', J.ctl); }
@@ -3081,7 +3103,7 @@ async function journalLog(tf){
   if (!$('jOn').checked || !c.closed) return;
   const ms = TF_MS[tf], seen = new Set(J.entries.map(e => e.id)), lastBy = new Map();
   for (const e of J.entries) lastBy.set(e.key, e.ct);
-  let added = 0; const fresh = [];
+  let added = 0; const fresh = [], queue = [];
   for (const r of S.rows){
     const x = derive(r, c); if (!x.d || !x.d.atr) continue;
     const cand = [];
@@ -3091,13 +3113,15 @@ async function journalLog(tf){
       const key = `${r.sym}|${tf}|${kind}|${dir}`, id = key + '|' + x.d.lastTime;
       if (seen.has(id)) continue;
       if (kind === 'setup' && lastBy.has(key) && x.d.lastTime - lastBy.get(key) < 6 * ms) continue;
-      J.entries.push({id, key, sym: r.sym, tf, kind, dir, ct: x.d.lastTime, price: x.d.lastClose, atr: x.d.atr,
+      queue.push({kind, dir, qv: r.qv || 0, key, id, ct: x.d.lastTime, mk: () => ({id, key, sym: r.sym, tf, kind, dir, ct: x.d.lastTime, price: x.d.lastClose, atr: x.d.atr,
         score: dir > 0 ? x.bull : x.bear, rs7: x.rs?.b7 ?? null, pts: x.G ? x.G.pts : null, grade: x.G && (x.setup === dir || (!x.setup && (dir > 0 ? x.bull : x.bear) >= 4)) ? x.G.grade : null, trig: x.trig.filter(t => t.dir === dir).map(t => t.t),
         mc: r.mcap > 0 ? r.mcap : null, qv: r.qv ?? null, ...macroNums(), regime: S.regimeDir || 0, mtf: r.mtf ? (x.mtfAll === dir ? 'all' : x.mtfAll === -dir ? 'against' : 'mixed') : null,
-        ext: x.ext, pos: x.pos, fFlag: x.fFlag, macro: S.macro && S.macro.reg ? S.macro.reg.name : null, out: null}); fresh.push(J.entries.at(-1));
-      seen.add(id); lastBy.set(key, x.d.lastTime); added++;
+        ext: x.ext, pos: x.pos, fFlag: x.fFlag, macro: S.macro && S.macro.reg ? S.macro.reg.name : null, out: null})});
     }
   }
+  // A big wave of same-side signals on one candle is one market move, not many independent bets: keep the most liquid J_PER per kind and side.
+  { const grp = new Map(); for (const q of queue){ const k = q.kind + '|' + q.dir; (grp.get(k) || grp.set(k, []).get(k)).push(q); }
+    for (const arr of grp.values()){ arr.sort((a, b) => b.qv - a.qv); for (const q of arr.slice(0, J_PER)){ J.entries.push(q.mk()); fresh.push(J.entries.at(-1)); seen.add(q.id); lastBy.set(q.key, q.ct); added++; } } }
   if (added){                                                    // wave size: how many signals of the same kind and side were logged on this scan (a big wave is one market move, not many bets)
     const cnt = new Map(); for (const e of fresh){ const k = e.kind + '|' + e.dir; cnt.set(k, (cnt.get(k) || 0) + 1); }
     for (const e of fresh) e.wave = cnt.get(e.kind + '|' + e.dir);
@@ -4233,7 +4257,7 @@ function lqFlowDraw(){
   const imb = n => ({s: sum(rows, 'ds', n) / (sum(rows, 'vs', n) || 1), p: sum(rows, 'dp', n) / (sum(rows, 'vp', n) || 1)});
   const th = .02, tag = x => x > th ? 'buying' : x < -th ? 'selling' : 'balanced';
   const read = n => { const m = imb(n), a = tag(m.s), b = tag(m.p);
-    const t = a === 'buying' && b !== 'buying' ? 'Spot-led buying' : b === 'buying' && a !== 'buying' ? 'Perp-led buying (leverage driven)' : a === 'buying' && b === 'buying' ? 'Buying on both' : a === 'selling' && b !== 'selling' ? 'Spot-led selling' : b === 'selling' && a !== 'selling' ? 'Perp-led selling (leverage driven)' : a === 'selling' && b === 'selling' ? 'Selling on both' : 'No clear lead';
+    const t = a === 'buying' && b === 'selling' ? 'Spot buying, perp selling' : a === 'selling' && b === 'buying' ? 'Spot selling, perp buying' : a === 'buying' && b !== 'buying' ? 'Spot-led buying' : b === 'buying' && a !== 'buying' ? 'Perp-led buying (leverage driven)' : a === 'buying' && b === 'buying' ? 'Buying on both' : a === 'selling' && b !== 'selling' ? 'Spot-led selling' : b === 'selling' && a !== 'selling' ? 'Perp-led selling (leverage driven)' : a === 'selling' && b === 'selling' ? 'Selling on both' : 'No clear lead';
     return {t, m}; };
   const pc = x => (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%', card = (k, r) => `<div class="stat"><div class="k">${k}</div><div class="v" style="font-size:16px">${r.t}</div><div class="s">spot ${pc(r.m.s)} · perp ${pc(r.m.p)} of volume</div></div>`;
   $('lqFlowCards').innerHTML = card('Last 4 hours', read(win(4))) + card('Last 24 hours', read(win(24))) + card('Whole window', read(rows.length));
@@ -4340,6 +4364,7 @@ function afterRender(pageRows){
 /* Columns, density, presets */
 const COLS_KEY = 'onslaught-cols', PRESET_KEY = 'onslaught-presets', MODE_KEY = 'onslaught-mode', SIMPLE_COLS = new Set(['star', 'sym', 'price', 'chg', 'spark', 'bull', 'bear', 'grade', 'mtfNet', 'trig']);
 function applyCols(){
+  document.body.classList.toggle('simple', UI.mode === 'simple');
   let css = '';
   COLS.forEach(c => { if (UI.hidden.has(c.k) || (UI.mode === 'simple' && !SIMPLE_COLS.has(c.k))) css += `#thead th[data-k="${c.k}"],#tbody td[data-c="${c.k}"]{display:none}`; });
   let st = $('colStyle'); if (!st){ st = document.createElement('style'); st.id = 'colStyle'; document.head.appendChild(st); }
@@ -4600,9 +4625,17 @@ function dvCard(x){
     <div class="dvf"><span class="dvs ${x.level}" title="Strength 0–100: indicators that agree, RSI zone, size of the disagreement, how far price pushed, confirmation and freshness">${x.level[0].toUpperCase() + x.level.slice(1)} · ${x.score}</span>${ctx ? `<span title="${ctx[1]}">${ctx[0]}</span>` : ''}</div>
   </article>`;
 }
+function dvActiveChip(){
+  const el = $('dvActive'); if (!el) return; const on = [];
+  if (DIV.tfs.size !== DV_TFS.length) on.push([...DIV.tfs].map(t => DV_LBL[t] || t).join('/'));
+  if (DIV.ind !== 'all') on.push(DIV.ind.toUpperCase()); if (DIV.dir) on.push(DIV.dir > 0 ? 'Bullish only' : 'Bearish only');
+  if (!DIV.conf) on.push(DIV.early ? 'Early only' : 'incl. forming'); if (DIV.age !== 5) on.push('age ' + DIV.age); if (DIV.str) on.push(DIV.str >= 70 ? 'Strong only' : 'Medium+');
+  el.hidden = !on.length; el.innerHTML = on.length ? `<button class="chg" data-act="dvreset" title="Back to all timeframes, indicators and directions">Filters on: ${on.join(' · ')} ✕ Reset</button>` : '';
+}
+document.addEventListener('click', e => { if (!e.target.closest('[data-act=dvreset]')) return; DIV.tfs = new Set(DV_TFS); DIV.ind = 'all'; DIV.dir = 0; DIV.conf = true; DIV.early = false; DIV.age = 5; DIV.str = 0; dvSave(); dvSync(); dvActiveChip(); renderDiv(); });
 function renderDiv(){
   if ($('viewDiv').hidden) return;
-  dvRecord();
+  dvRecord(); dvActiveChip();
   const all = dvFiltered(), rows = all.slice(0, DV_MAX);
   const nb = all.filter(x => x.side > 0).length, nboth = all.filter(x => x.ind === 'both').length;
   $('dvSum').innerHTML = DIV.t ? `<b>${all.length}</b> signal${all.length === 1 ? '' : 's'} · <span class="up">▲ ${nb} bullish</span> · <span class="dn">▼ ${all.length - nb} bearish</span> · ${all.filter(x => dvCombo(x).includes('+')).length} with 2+ indicators · ${all.filter(x => dvCombo(x) === 'rsi+macd+obv').length} with all 3${all.length > DV_MAX ? ` · showing the ${DV_MAX} strongest` : ''}` : '';
@@ -4774,6 +4807,7 @@ async function anaUniverse(){
   const list = await getUniverse(); ANA.uni = {t: Date.now(), list}; return list;
 }
 function anaOpen(sym, tf){
+  if (!tf && ANA_TFS.includes(S.tf) && S.view !== 'ta'){ ANA.tf = S.tf; anaSave(); }   // open on the timeframe the scanner is on, not a stale saved one
   if (tf && ANA_TFS.includes(tf)){ ANA.tf = tf; anaSave(); }
   ANA.sym = sym; if (S.view !== 'ta') setView('ta'); else anaLoad(sym);
 }
@@ -5020,6 +5054,12 @@ function anaRelChart(L, cd, btc, w){
     <text x="${w - pad.r + 6}" y="${(Y(B.at(-1)) + 3 + (Math.abs(Y(B.at(-1)) - Y(A.at(-1))) < 11 ? 11 : 0)).toFixed(1)}" fill="${mu}" font-size="10">BTC ${(B.at(-1) - 100 >= 0 ? '+' : '') + (B.at(-1) - 100).toFixed(1)}%</text>
     <text x="${pad.l + 6}" y="14" fill="${dl >= 0 ? col : bad}" font-size="11" font-weight="600">${dl >= 0 ? 'Outperforming' : 'Underperforming'} BTC by ${Math.abs(dl).toFixed(1)} pp over ${pts.length} candles</text></svg>`;
 }
+function anaConflict(){
+  const M = ANA.mtf; if (!M) return ''; const got = ANA_TFS.map(t => M[t]).filter(Boolean), bu = got.filter(x => x.trend > 0).length, be = got.filter(x => x.trend < 0).length, me = M[ANA.tf] && M[ANA.tf].trend;
+  if (me > 0 && be >= 3) return `<b class="dn">Conflict: ${ANA.tf.toUpperCase()} reads bullish, but ${be} of ${got.length} timeframes are bearish by structure.</b> `;
+  if (me < 0 && bu >= 3) return `<b class="up">Conflict: ${ANA.tf.toUpperCase()} reads bearish, but ${bu} of ${got.length} timeframes are bullish by structure.</b> `;
+  return '';
+}
 function anaMtfStrip(L){
   const M = ANA.mtf, tfs = ANA_TFS, arr = v => v > 0 ? '<b class="up">▲ Bullish</b>' : v < 0 ? '<b class="dn">▼ Bearish</b>' : '<b class="mu">◆ Ranging</b>';
   if (!M) return `<div class="panel anamtf"><h4>Timeframe confluence</h4><span class="mu">Loading the other timeframes…</span></div>`;
@@ -5065,7 +5105,7 @@ function anaRender(){
   else { const sup = f.max || f.tot;
     facts = `<div class="anaf">${rowf('Mkt cap', fmtBig(f.mc))}${f.rank ? rowf('Rank', '#' + f.rank) : ''}${f.fdv && f.mc ? rowf('FDV / MCap', (f.fdv / f.mc).toFixed(2) + '×') : ''}${sup && f.circ ? rowf('Circulating', Math.min(100, f.circ / sup * 100).toFixed(0) + '%') : ''}${f.ath != null ? rowf('From ATH', `<span class="${cls(f.ath)}">${f.ath.toFixed(0)}%</span>`) : ''}${info ? rowf('Vol 24h', fmtBig(info.qv)) : ''}</div>`; }
   const b = info ? info.base.replace(/^(1000000|1000|1M)/, '') : '', cg = f && f.id ? `https://www.coingecko.com/en/coins/${f.id}` : `https://www.coingecko.com/en/search?query=${encodeURIComponent(b)}`;
-  body.innerHTML = `<div class="panel anaverdict"><b>Technical analysis.</b> ${anaSummary(L, row, ANA.tf)}<span class="mu">Rule-based summary of the screener's own data and the levels below, not a prediction.</span></div>
+  body.innerHTML = `<div class="panel anaverdict"><b>Technical analysis.</b> ${anaConflict()}${anaSummary(L, row, ANA.tf)}<span class="mu">Rule-based summary of the screener's own data and the levels below, not a prediction.</span></div>
   ${anaMtfStrip(L)}
   <div class="anagrid">
     <div class="panel"><div class="row anatog" id="anaTog">
@@ -5767,7 +5807,7 @@ function sbRender(){
   const order = {History: 0, Baseline: 1, 'Live journal': 2, Runner: 3};
   for (const r of rows.slice().sort((a, b) => order[a.src] - order[b.src])){
     const hd = sbHead(r.per, r.bk), [vt0, vc0] = r.src === 'Baseline' ? ['Baseline', 'mu'] : sbVerdict(hd), vt = vt0, vc = vc0, n = r.per.reduce((a, p) => a + p.n, 0);
-    h += `<tr${hd ? '' : ' style="opacity:.6"'}><td class="l">${esc(r.name)}</td><td class="l">${r.side}</td><td class="l">${r.src}</td><td class="l mu">${esc(r.rule)}</td><td>${n}</td><td class="${hd ? cls(hd.m) : ''}">${hd ? f2(hd.m) : '–'}</td><td class="mu" title="${hd && !hd.real ? 'No random-entry baseline for this row yet: the fixed -0.04R is used. Press Run all tests.' : 'Random entries, same rule'}">${hd ? f2(hd.ch) + (hd.real ? '' : '*') : '–'}</td><td class="${hd && r.src !== 'Baseline' ? cls(hd.ex) : ''}">${hd && r.src !== 'Baseline' ? f2(hd.ex) : '–'}</td><td>${hd ? '±' + (2 * hd.se).toFixed(2) : '–'}</td>${tfv(r.per, '1h')}${tfv(r.per, '4h')}${tfv(r.per, '1d')}<td class="${hd ? cls(hd.h1) : ''}">${hd ? f2(hd.h1) : '–'}</td><td class="${hd ? cls(hd.h2) : ''}">${hd ? f2(hd.h2) : '–'}</td><td class="l ${vc}">${vt}</td></tr>`;
+    h += `<tr${hd ? '' : ' style="opacity:.6"'}><td class="l">${esc(r.name)}</td><td class="l">${r.side}</td><td class="l">${r.src}</td><td class="l mu rulecell" title="${esc(r.rule)}">${esc(r.rule)}</td><td>${n}</td><td class="${hd ? cls(hd.m) : ''}">${hd ? f2(hd.m) : '–'}</td><td class="mu" title="${hd && !hd.real ? 'No random-entry baseline for this row yet: the fixed -0.04R is used. Press Run all tests.' : 'Random entries, same rule'}">${hd ? f2(hd.ch) + (hd.real ? '' : '*') : '–'}</td><td class="${hd && r.src !== 'Baseline' ? cls(hd.ex) : ''}">${hd && r.src !== 'Baseline' ? f2(hd.ex) : '–'}</td><td>${hd ? '±' + (2 * hd.se).toFixed(2) : '–'}</td>${tfv(r.per, '1h')}${tfv(r.per, '4h')}${tfv(r.per, '1d')}<td class="${hd ? cls(hd.h1) : ''}">${hd ? f2(hd.h1) : '–'}</td><td class="${hd ? cls(hd.h2) : ''}">${hd ? f2(hd.h2) : '–'}</td><td class="l ${vc}">${vt}</td></tr>`;
   }
   h += '</tbody></table></div>';
   const cov = []; for (const [k, nm] of [['cfg', 'Triggered setups'], ['sweep', 'Sweeps'], ['fund', 'Funding'], ['pull', 'Pullbacks'], ['range', 'Ranges'], ['classic', 'Classic signals'], ['div', 'Divergences']]){ const ev = SU.ev[k] || []; if (!ev.length) continue; const parts = [];
