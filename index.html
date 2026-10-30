@@ -1519,7 +1519,7 @@ function renderToday(market, c){
   const el = $('todayBody'); if (!el) return;
   // Grades have not separated winners from losers in the journal, so setups are listed by liquidity (24h volume): the easiest to enter and exit, not a claim of edge.
   const all = (market || []).filter(r => r.setup), by = d => all.filter(r => r.setup === d).sort((a, b) => (b.qv || 0) - (a.qv || 0)), L = by(1), Sh = by(-1);
-  const dv = (DIV.rows || []).filter(x => x.conf || x.early).sort((a, b) => b.score - a.score).slice(0, 5);
+  const dall = (DIV.rows || []).filter(x => x.conf || x.early).sort((a, b) => b.score - a.score), dvB = dall.filter(x => x.side > 0).slice(0, 5), dvS = dall.filter(x => x.side < 0).slice(0, 5);
   const m = v => v >= 1e9 ? (v / 1e9).toFixed(1) + 'B' : v >= 1e6 ? (v / 1e6).toFixed(0) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : '';
   const chip = r => `<button class="chg ${r.setup > 0 ? 'b' : 's'}" data-open="${r.sym}" title="Open ${r.sym.replace('USDT', '')}: grade ${r.G ? r.G.grade : '–'}, 24h volume $${m(r.qv || 0)}">${r.sym.replace('USDT', '')} <span class="mu">$${m(r.qv || 0)}</span></button>`;
   const dchip = x => `<button class="chg ${x.side > 0 ? 'b' : 's'}" data-dv="${x.sym}|${x.tf}" title="Open the chart for ${x.sym.replace('USDT', '')} ${x.tf}">${x.sym.replace('USDT', '')} ${x.tf.toUpperCase()} ${x.side > 0 ? '▲' : '▼'} ${x.score}</button>`;
@@ -1527,7 +1527,8 @@ function renderToday(market, c){
   el.innerHTML = `<div class="todaygrid">
     <div><h4>Top bullish setups <span class="mu">(${L.length})</span></h4><div class="tl">${L.length ? L.slice(0, 6).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
     <div><h4>Top bearish setups <span class="mu">(${Sh.length})</span></h4><div class="tl">${Sh.length ? Sh.slice(0, 6).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
-    <div><h4>Strongest divergences</h4><div class="tl">${dv.length ? dv.map(dchip).join('') : (DIV.t ? '<span class="mu">None right now.</span>' : '<span class="mu">' + (DIV.scanning ? 'Scanning…' : 'Updates after each Scan.') + '</span>')}</div></div></div>
+    <div><h4>Strongest bullish divergences</h4><div class="tl">${dvB.length ? dvB.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : DIV.scanning ? 'Scanning…' : 'Updates after each Scan.') + '</span>'}</div></div>
+    <div><h4>Strongest bearish divergences</h4><div class="tl">${dvS.length ? dvS.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : DIV.scanning ? 'Scanning…' : 'Updates after each Scan.') + '</span>'}</div></div></div></div>
     <div class="todaynote">Setups are ranked by 24h volume (most liquid first). Number next to each divergence = strength score.</div>`;
 }
 document.addEventListener('click', e => { const b = e.target.closest('#todayBody [data-dv]'); if (b){ const [sym, tf] = b.dataset.dv.split('|'); anaOpen(sym, tf); return; }
