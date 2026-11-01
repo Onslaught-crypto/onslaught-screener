@@ -1517,6 +1517,11 @@ function jCtlBox(){
     <div class="mu" style="font-size:12px">${verdict} Judge it after about 150 matched moments.</div><div style="margin-top:12px">${jIndepHtml()}</div>`;
 }
 /* Today at a glance (Crypto Scanner): the best setups, the strongest divergences and what the journal says so far. */
+/* How much journal evidence stands behind these lists: independent moments (same candle and side count once). */
+function todayEvidence(){
+  try { const m = k => new Set(J.entries.filter(e => (k === 'div' ? e.kind === 'div' : e.kind !== 'div') && e.out && e.out.res).map(e => e.tf + '|' + e.ct + '|' + e.dir)).size, a = m('sig'), b = m('div');
+    return `Journal evidence so far: ${a} independent setup moments, ${b} divergence moments (30 needed per timeframe before a result means anything).`; } catch { return ''; }
+}
 function renderToday(market, c){
   const el = $('todayBody'); if (!el) return;
   // Grades have not separated winners from losers in the journal, so setups are listed by liquidity (24h volume): the easiest to enter and exit, not a claim of edge.
@@ -1531,7 +1536,7 @@ function renderToday(market, c){
     <div><h4>Top bearish setups <span class="mu">(${Sh.length})</span></h4><div class="tl">${Sh.length ? Sh.slice(0, 5).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
     <div><h4>Strongest bullish divergences</h4><div class="tl">${dvB.length ? dvB.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : DIV.scanning ? 'Scanning…' : 'Updates after each Scan.') + '</span>'}</div></div>
     <div><h4>Strongest bearish divergences</h4><div class="tl">${dvS.length ? dvS.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : DIV.scanning ? 'Scanning…' : 'Updates after each Scan.') + '</span>'}</div></div></div></div>
-    <div class="todaynote">Setups are ranked by 24h volume (most liquid first). Number next to each divergence = strength score.</div>`;
+    <div class="todaynote">Setups are ranked by 24h volume (most liquid first). Number next to each divergence = strength score. ${todayEvidence()}</div>`;
 }
 document.addEventListener('click', e => { const b = e.target.closest('#todayBody [data-dv]'); if (b){ const [sym, tf] = b.dataset.dv.split('|'); anaOpen(sym, tf); return; }
   if (e.target.closest('#todayBody [data-act=divscan]')){ divScan(); } });
@@ -4505,6 +4510,7 @@ async function divScan(o = {}){
           for (const s of es) out.push({...s, sym: u.sym, tf}); }
         catch (e){ if (/418|banned|refused/.test(e.message)) throw e; fails++; lastErr = e; }
         done++;
+        if (done % 6 === 0) await new Promise(r => setTimeout(r, 0));   // let the page breathe: the divergence maths is heavy
         if (done % 20 === 0 || done === jobs.length){ pr(2 + 98 * done / jobs.length); st(`Scanning ${done}/${jobs.length}…`); }
         if (done % 100 === 0 && done < jobs.length){ DIV.rows = out.slice(); renderDiv(); }
       }
@@ -5837,7 +5843,7 @@ function sbRender(){
   const order = {History: 0, Baseline: 1, 'Live journal': 2, Runner: 3};
   for (const r of rows.slice().sort((a, b) => order[a.src] - order[b.src])){
     const hd = sbHead(r.per, r.bk), [vt0, vc0] = r.src === 'Baseline' ? ['Baseline', 'mu'] : sbVerdict(hd), vt = vt0, vc = vc0, n = r.per.reduce((a, p) => a + p.n, 0);
-    h += `<tr${hd ? '' : ' style="opacity:.6"'}><td class="l">${esc(r.name)}</td><td class="l">${r.side}</td><td class="l">${r.src}</td><td class="l mu rulecell" title="${esc(r.rule)}">${esc(r.rule)}</td><td>${n}</td><td class="${hd ? cls(hd.m) : ''}">${hd ? f2(hd.m) : '–'}</td><td class="mu" title="${hd && !hd.real ? 'No random-entry baseline for this row yet: the fixed -0.04R is used. Press Run all tests.' : 'Random entries, same rule'}">${hd ? f2(hd.ch) + (hd.real ? '' : '*') : '–'}</td><td class="${hd && r.src !== 'Baseline' ? cls(hd.ex) : ''}">${hd && r.src !== 'Baseline' ? f2(hd.ex) : '–'}</td><td>${hd ? '±' + (2 * hd.se).toFixed(2) : '–'}</td>${tfv(r.per, '1h')}${tfv(r.per, '4h')}${tfv(r.per, '1d')}<td class="${hd ? cls(hd.h1) : ''}">${hd ? f2(hd.h1) : '–'}</td><td class="${hd ? cls(hd.h2) : ''}">${hd ? f2(hd.h2) : '–'}</td><td class="l ${vc}">${vt}</td></tr>`;
+    h += `<tr${hd ? '' : ' style="opacity:.6"'}><td class="l">${esc(r.name)}</td><td class="l">${r.side}</td><td class="l">${r.src}</td><td class="l mu rulecell" title="${esc(r.rule)}">${esc(r.rule)}</td><td${n < 30 ? ' class="mu" title="Under 30 moments: too few to judge"' : ''}>${n < 30 ? '⚠ ' : ''}${n}</td><td class="${hd ? cls(hd.m) : ''}">${hd ? f2(hd.m) : '–'}</td><td class="mu" title="${hd && !hd.real ? 'No random-entry baseline for this row yet: the fixed -0.04R is used. Press Run all tests.' : 'Random entries, same rule'}">${hd ? f2(hd.ch) + (hd.real ? '' : '*') : '–'}</td><td class="${hd && r.src !== 'Baseline' ? cls(hd.ex) : ''}">${hd && r.src !== 'Baseline' ? f2(hd.ex) : '–'}</td><td>${hd ? '±' + (2 * hd.se).toFixed(2) : '–'}</td>${tfv(r.per, '1h')}${tfv(r.per, '4h')}${tfv(r.per, '1d')}<td class="${hd ? cls(hd.h1) : ''}">${hd ? f2(hd.h1) : '–'}</td><td class="${hd ? cls(hd.h2) : ''}">${hd ? f2(hd.h2) : '–'}</td><td class="l ${vc}">${vt}</td></tr>`;
   }
   h += '</tbody></table></div>';
   const cov = []; for (const [k, nm] of [['cfg', 'Triggered setups'], ['sweep', 'Sweeps'], ['fund', 'Funding'], ['pull', 'Pullbacks'], ['range', 'Ranges'], ['classic', 'Classic signals'], ['div', 'Divergences']]){ const ev = SU.ev[k] || []; if (!ev.length) continue; const parts = [];
