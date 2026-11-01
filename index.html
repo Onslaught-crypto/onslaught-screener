@@ -1534,8 +1534,8 @@ function renderToday(market, c){
   el.innerHTML = `<div class="todaygrid">
     <div><h4>Top bullish setups <span class="mu">(${L.length})</span></h4><div class="tl">${L.length ? L.slice(0, 5).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
     <div><h4>Top bearish setups <span class="mu">(${Sh.length})</span></h4><div class="tl">${Sh.length ? Sh.slice(0, 5).map(chip).join('') : '<span class="mu">' + none + '</span>'}</div></div>
-    <div><h4>Strongest bullish divergences</h4><div class="tl">${dvB.length ? dvB.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : DIV.scanning ? 'Scanning…' : 'Updates after each Scan.') + '</span>'}</div></div>
-    <div><h4>Strongest bearish divergences</h4><div class="tl">${dvS.length ? dvS.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : DIV.scanning ? 'Scanning…' : 'Updates after each Scan.') + '</span>'}</div></div></div></div>
+    <div><h4>Strongest bullish divergences</h4><div class="tl">${dvB.length ? dvB.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : (DIV.scanning || S.scanning || (S.rows && S.rows.length)) ? 'Scanning divergences…' : 'Updates after each Scan.') + '</span>'}</div></div>
+    <div><h4>Strongest bearish divergences</h4><div class="tl">${dvS.length ? dvS.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : (DIV.scanning || S.scanning || (S.rows && S.rows.length)) ? 'Scanning divergences…' : 'Updates after each Scan.') + '</span>'}</div></div></div></div>
     <div class="todaynote">Setups are ranked by 24h volume (most liquid first). Number next to each divergence = strength score. ${todayEvidence()}</div>`;
 }
 document.addEventListener('click', e => { const b = e.target.closest('#todayBody [data-dv]'); if (b){ const [sym, tf] = b.dataset.dv.split('|'); anaOpen(sym, tf); return; }
@@ -2942,7 +2942,7 @@ async function scan(){
   } catch(e){
     setStatus('err', 'Error'); showErr(location.protocol === 'about:' ? SANDBOX_MSG : e.message);
   } finally {
-    S.scanning = false; $('scanBtn').disabled = false; render(); scanGlow();
+    S.scanning = false; $('scanBtn').disabled = false; $('prog').style.width = '0'; render(); scanGlow();
     // keep the Today panel's divergences fresh: scan them after the market scan when they are missing or older than 10 minutes
     try { if (S.rows && S.rows.length && !DIV.scanning && Date.now() - (DIV.t || 0) > 6e5) setTimeout(() => { if (!DIV.scanning) divScan().catch(() => {}); }, 1500); } catch {}
     setTimeout(() => { if (!S.scanning) $('prog').style.width = '0'; }, 800);
@@ -5743,7 +5743,15 @@ const jPane = () => S.view === 'journal' ? ([...document.querySelectorAll('.jpan
 const jLab = () => jPane() === 'Lab', jScore = () => jPane() === 'Score';
 const jFoldOpen = id => { const d = $(id) && $(id).closest('details'); return !d || d.open; };
 document.addEventListener('toggle', e => { const d = e.target; if (d && d.matches && d.matches('details.jfold') && d.open) jFlush(); }, true);
-function jLazyLoad(){ if (LAZY.loaded) return; LAZY.loaded = true; brkLoad(); suLoad(); rbLoad(); btLoadAll(); }
+function jLazyLoad(){
+  if (LAZY.loaded) return; LAZY.loaded = true;
+  let b = $('jLoading');
+  if (!b){ b = document.createElement('div'); b.id = 'jLoading'; b.style.cssText = 'margin:8px 0;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--muted);font-size:12px'; const pane = $('jtScore'); pane.parentNode.insertBefore(b, pane); }
+  b.hidden = false; b.textContent = 'Loading the study data (a few seconds the first time). The page may pause briefly…';
+  const t0 = Date.now();
+  const jobs = [brkLoad(), suLoad(), rbLoad()]; try { btLoadAll(); } catch {}
+  Promise.allSettled(jobs).then(() => { b.textContent = 'Study data loaded in ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s.'; setTimeout(() => { b.hidden = true; }, 2500); });
+}
 /* Leaving the Journal for a while frees the study stores (hundreds of thousands of events): a big heap makes every garbage collection, and so every scan, stall. */
 function jUnload(){
   if (S.view === 'journal' || SU.running || BRK.running) return;
