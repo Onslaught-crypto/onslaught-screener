@@ -578,6 +578,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       </div></div>
       <div class="fgrp"><h4>Strength</h4><div class="row">
         <label title="Relative strength filter over 7 days">RS <select id="rsF"><option value="">Any</option><option value="lb">Leaders vs BTC</option><option value="lbe">Leaders vs BTC + ETH</option><option value="gb">Laggards vs BTC</option></select></label>
+        <label title="Bull Market Support Band: price against the 20-week average and 21-week EMA of the weekly close. Loaded for the 100 most-traded coins">Band <select id="bmF"><option value="">Any</option><option value="above">Above</option><option value="inside">Inside</option><option value="below">Below</option></select></label>
         <label title="Multi-timeframe filter: All bull / All bear = 1D, 4H and 1H all agree">MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
       </div></div>
     </div>
@@ -2655,13 +2656,13 @@ function cfg(){
 }
 function saveSettings(){
   const o = {tf: S.tf, auto: $('auto').value, universe: $('universe').value, mcap: $('mcap').value, oiThr: $('oiThr').value, oiN: $('oiN').value,
-    closed: $('closed').checked, mtfOn: $('mtfOn').checked, jOn: $('jOn').checked, jWhat: $('jWhat').value, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertMcapMin: $('alertMcapMin').value, alertMcapMax: $('alertMcapMax').value, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value, minLiq: $('minLiq').value, extremeFund: $('extremeFund').value, gradeF: $('gradeF').value, rsF: $('rsF').value, alertGrade: $('alertGrade').value, alertCap: $('alertCap').value};
+    closed: $('closed').checked, mtfOn: $('mtfOn').checked, jOn: $('jOn').checked, jWhat: $('jWhat').value, pinStar: $('pinStar').checked, alertWhat: $('alertWhat').value, alertStar: $('alertStar').checked, alertMcapMin: $('alertMcapMin').value, alertMcapMax: $('alertMcapMax').value, alertSound: $('alertSound').checked, trigN: $('trigN').value, pageSize: $('pageSize').value, rsiLen: $('rsiLen').value, rsiEmaLen: $('rsiEmaLen').value, dmiLen: $('dmiLen').value, adxThr: $('adxThr').value, obvLen: $('obvLen').value, fundHot: $('fundHot').value, fundCold: $('fundCold').value, minLiq: $('minLiq').value, extremeFund: $('extremeFund').value, gradeF: $('gradeF').value, rsF: $('rsF').value, bmF: $('bmF').value, alertGrade: $('alertGrade').value, alertCap: $('alertCap').value};
   store.set(o);
 }
 function loadSettings(){
   const o = store.get();
   if (o.tf && TFS.includes(o.tf)) S.tf = o.tf;
-  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold','minLiq','extremeFund','gradeF','alertGrade','alertCap','alertMcapMin','alertMcapMax','rsF']) if (o[k] != null) $(k).value = o[k];
+  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold','minLiq','extremeFund','gradeF','alertGrade','alertCap','alertMcapMin','alertMcapMax','rsF','bmF']) if (o[k] != null) $(k).value = o[k];
   if (o.closed != null) $('closed').checked = o.closed;
   if (o.mtfOn != null) $('mtfOn').checked = o.mtfOn;
   for (const k of ['pinStar','alertStar','alertSound']) if (o[k] != null) $(k).checked = o[k];
@@ -2721,11 +2722,11 @@ function trigCell(r){
   const shown = r.trig.slice(0, 3).map(t => `<span class="tg ${t.dir > 0 ? 'b' : t.dir < 0 ? 's' : 'n'}" title="${t.name}${t.t === 'coil' ? '' : ', ' + (t.ago === 0 ? 'last candle' : t.ago + ' candle' + (t.ago > 1 ? 's' : '') + ' ago')}">${TRIG_SHORT[t.t]}${t.ago && t.t !== 'coil' ? '<sub>' + t.ago + '</sub>' : ''}</span>`).join('');
   return shown + (r.trig.length > 3 ? `<span class="tg n" title="${r.trig.slice(3).map(t => t.name).join(', ')}">+${r.trig.length - 3}</span>` : '');
 }
-const COL_HELP = {"star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "spark": "Price over the last 30 candles of the selected timeframe (green = up over that span, red = down). Sort to rank by that move.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Alignment score (unproven: in the journal grade A has not done better than C, so treat it as a description of how many checks agree, not as quality). Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
+const COL_HELP = {"bm": "Bull Market Support Band: where the price sits against the 20-week average and 21-week EMA of the weekly close. \u25b2 above (healthy trend), \u25c6 inside (indecision), \u25bc below (weak). Loaded for the 100 most-traded coins; hover for the distance. Trend context, not a signal.", "star": "Watchlist: click a row\u2019s star to save the pair. Starred pairs can be pinned to the top (Pin \u2605) or filtered (\u2605 only).", "sym": "Pair. Click the row for the trade plan; \u2197 opens TradingView.", "sector": "Sector tags (a coin can have several). Used by the Sector filter and the Sector Flow tab.", "price": "Last price.", "chg": "Price change over the last 24 hours.", "qv": "24h traded volume in USDT.", "mcap": "Market cap from CoinGecko (approximate; matched by ticker).", "dmi": "DMI: \u25b2 when +DI > \u2212DI with ADX \u2265 threshold (an uptrend with strength), \u25bc the opposite, \u00b7 when ADX is too low (no real trend).", "rsiEma": "RSI vs its own EMA: \u25b2 = momentum improving, \u25bc = fading.", "rsi50": "RSI vs 50: \u25b2 = bullish momentum regime, \u25bc = bearish.", "obv": "On-Balance Volume vs its EMA50: \u25b2 = volume flow is confirming the move up, \u25bc = money flowing out.", "oiUp": "Open interest rose by at least the OI % over the last N candles: new positions are entering. Counts toward both Bull and Bear scores.", "oiD": "Open interest change over the last N candles.", "pos": "Who is driving the move, from price vs OI over N candles: New longs (P\u2191 OI\u2191), New shorts (P\u2193 OI\u2191), Short covering (P\u2191 OI\u2193), Long liquidation (P\u2193 OI\u2193).", "fund": "Last funding rate. \ud83d\udd25 = extreme: high positive means crowded longs, very negative means crowded shorts. Crowded sides are fuel for squeezes against them.", "ext": "Extension: how far the close is from its 20-EMA, in ATRs (average candle ranges). +3 or more (\u26a0) = stretched far above the average, \u22123 or less = far below. The trend may be real, but entering there has poor risk/reward; better to wait for a pullback.", "spark": "Price over the last 30 candles of the selected timeframe (green = up over that span, red = down). Sort to rank by that move.", "rs": "Relative strength over 7 days, in percentage points: \u20bf = vs BTC, \u039e = vs ETH. +12 means the coin did 12 points better than BTC. Leaders (green) make the best longs in a risk-on market; laggards (red) the best shorts. Hover for the 24h values.", "grade": "Alignment score (unproven: in the journal grade A has not done better than C, so treat it as a description of how many checks agree, not as quality). Setup quality for the aligned side. A = strong (timeframes, regime and positioning agree, not stretched), B = decent, C = weak or risky. Hover a grade for its reasons. ! = capped by a risk flag (new listing, extreme funding, thin liquidity).", "bull": "Bull score 0\u20135: DMI, RSI>EMA, RSI>50 and OBV pointing up, plus OI rising. 4\u20135 = bull-aligned. A dashed outline means it is against the market regime.", "bear": "Bear score 0\u20135: the same five checks pointing down. 4\u20135 = bear-aligned.", "mtfNet": "Multi-timeframe: the trend on 1D, 4H and 1H for this pair (green = bull, red = bear, grey = mixed). All three agreeing with the setup is the strongest case.", "trig": "Fresh events in the last N candles (subscript = candles ago): crosses (DMI\u00d7, RSI50\u00d7, RSI\u00d7EMA, OBV\u00d7), SQZ squeeze fired, Coil squeeze building, RVOL volume spike, Div / H-Div RSI divergence. LONG / SHORT = aligned + trigger in the same direction."};
 const COLS_BASE = [
   {k:'star', t:'★', c:'c'}, {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'spark', t:'Trend', c:'c'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA', c:'c'},
-  {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'rs', t:'RS 7D', c:'c'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'grade', t:'Grade', c:'c'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
+  {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'rs', t:'RS 7D', c:'c'}, {k:'bm', t:'Band', c:'c'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'grade', t:'Grade', c:'c'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
 ];
 const COLS = COLS_BASE.slice(), COLORD_KEY = 'onslaught-colorder', COL_FIXED = new Set(['star', 'sym']);
 function applyColOrder(){
@@ -2745,6 +2746,7 @@ function sortVal(r, k){
   if (k === 'score') return r.score * 1e13 + r.qv;
   if (k === 'spark') return r.d && r.d.tail ? r.d.tail.at(-1) / r.d.tail[0] - 1 : -1e9;
   if (k === 'rs') return r.rs?.b7 ?? -1e9;
+  if (k === 'bm') { const b = bmFor(r.sym); return b ? b.dist : -1e9; }
   if (k === 'grade') return r.G ? GRADE_RANK[r.G.grade] * 100 + r.G.pts : -1;
   if (k === 'trig') return r.setup ? 100 + r.trig.length : r.trig.length;
   if (k === 'pos') return {longs: 4, cover: 3, flat: 2, liq: 1, shorts: 0}[r.pos] ?? -1;
@@ -2786,6 +2788,7 @@ function filtered(core){
     const gf = $('gradeF').value;
     if (gf === 'A' && !(r.G && r.G.grade === 'A')) return false;
     if (gf === 'AB' && !(r.G && r.G.grade !== 'C')) return false;
+    const bf = $('bmF').value; if (bf){ const b = bmFor(r.sym); if (!b || b.st !== bf) return false; }
     const rf = $('rsF').value, x = r.rs;
     if (rf === 'lb' && !(x && x.b7 > 0)) return false;
     if (rf === 'lbe' && !(x && x.b7 > 0 && x.e7 > 0)) return false;
@@ -2868,7 +2871,7 @@ function renderPager(total, size, pages, start, n){
   el.innerHTML = h;
 }
 function anyFilter(){
-  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked || $('gradeF').value || $('rsF').value || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
+  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked || $('gradeF').value || $('rsF').value || $('bmF').value || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
 }
 function syncCards(){
   const st = {all: !anyFilter(), bull: S.show === 'bull', bear: S.show === 'bear', new: $('newOnly').checked, oi: S.mf.oi === '1', inc: S.incOnly, setup: S.setupOnly, star: $('starOnly').checked};
@@ -2895,7 +2898,7 @@ function render(){
   const rows = filtered(), {k, dir} = S.sort;
   rows.sort((a, b) => { const x = sortVal(a, k), y = sortVal(b, k); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
   if ($('pinStar').checked) rows.sort((a, b) => WATCH.has(b.sym) - WATCH.has(a.sym));   // stable: keeps the sort within each group
-  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value, $('starOnly').checked, $('pinStar').checked, $('gradeF').value, $('minLiq').value, $('extremeFund').value, $('rsF').value]);
+  const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value, $('starOnly').checked, $('pinStar').checked, $('gradeF').value, $('minLiq').value, $('extremeFund').value, $('rsF').value, $('bmF').value]);
   if (sig !== S.sig){ S.sig = sig; S.page = 0; }            // any filter/sort change → back to page 1
   const size = +$('pageSize').value || rows.length || 1, pages = Math.max(1, Math.ceil(rows.length / size));
   S.page = Math.min(S.page, pages - 1);
@@ -2932,6 +2935,7 @@ function render(){
       fund: `<td class="${r.fFlag ? 'fhot' : r.fund > 0 ? 'mu' : r.fund < 0 ? 'fneg' : 'mu'}" title="Last funding rate${r.fFlag === 1 ? ': longs crowded' : r.fFlag === -1 ? ': shorts crowded' : ''}">${r.fund == null ? '—' : (r.fund > 0 ? '+' : '') + r.fund.toFixed(4) + '%'}${r.fFlag ? ' 🔥' : ''}</td>`,
       ext: `<td class="${r.ext != null && Math.abs(r.ext) >= 3 ? 'ext' : 'mu'}" title="Close vs EMA20 in ATR units. 3 or more = stretched, high chase risk">${r.ext == null ? '—' : (r.ext > 0 ? '+' : '') + r.ext.toFixed(1)}${r.ext != null && Math.abs(r.ext) >= 3 ? ' ⚠' : ''}</td>`,
       rs: `<td class="c">${rsCell(r)}</td>`,
+      bm: (() => { const b = bmFor(r.sym); return b ? `<td class="c ${b.st === 'above' ? 'up' : b.st === 'below' ? 'dn' : 'mu'}" title="${b.st === 'inside' ? 'Inside the band' : (b.dist >= 0 ? '+' : '') + b.dist.toFixed(1) + '% from the band'} (band ${fmtPrice(b.lo)} to ${fmtPrice(b.hi)})">${b.st === 'above' ? '▲' : b.st === 'below' ? '▼' : '◆'}</td>` : '<td class="c mu">—</td>'; })(),
       bull: `<td><span class="score ${sb} ${r.against && r.bull >= 4 ? 'against' : ''}" ${r.against && r.bull >= 4 ? 'title="Bullish setup against a risk-off regime"' : ''}>${d ? r.bull : '—'}</span></td>`,
       bear: `<td><span class="score ${sr} ${r.against && r.bear >= 4 ? 'against' : ''}" ${r.against && r.bear >= 4 ? 'title="Bearish setup against a risk-on regime"' : ''}>${d ? r.bear : '—'}</span></td>`,
       grade: `<td class="c">${gradeCell(r)}</td>`,
@@ -3003,6 +3007,7 @@ async function scan(){
     // keep the Today panel's divergences fresh: scan them after the market scan when they are missing or older than 10 minutes
     try { if (S.rows && S.rows.length && !DIV.scanning && Date.now() - (DIV.t || 0) > 6e5) setTimeout(() => { if (!DIV.scanning) divScan().catch(() => {}); }, 1500); } catch {}
     setTimeout(() => { if (!S.scanning) $('prog').style.width = '0'; }, 800);
+    setTimeout(() => { try { if (!PS.bm.loading && (!PS.bm.rows.length || Date.now() - PS.bm.t > 36e5)) bmLoad(false); } catch {} }, 4000);
   }
 }
 
@@ -3168,6 +3173,10 @@ function psTrRender(){
 }
 setInterval(psTrRender, 1000);
 /* --- Bull Market Support Band --- */
+const BMX = new Map();
+const bmFor = sym => BMX.get(sym) || null, bmSt = sym => (BMX.get(sym) || {}).st || null;
+function bmIndex(rows){ BMX.clear(); for (const x of rows || []) BMX.set(x.sym, x); }
+async function bmFetch(sym){ if (BMX.has(sym)) return BMX.get(sym); try { const r = bmCalc(await getJSON(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=1d&limit=499`, WEIGHT, 2)); if (r){ r.sym = sym; BMX.set(sym, r); } return r; } catch { return null; } }
 function bmCalc(k){
   const wk = t => Math.floor((t / 864e5 + 3) / 7), cl = []; let lw = null;
   for (const x of k){ const w = wk(x[0]); if (w === lw) cl[cl.length - 1] = +x[4]; else { cl.push(+x[4]); lw = w; } }
@@ -3177,13 +3186,13 @@ function bmCalc(k){
 }
 async function bmLoad(force){
   const B = PS.bm; if (B.loading) return;
-  try { const ck = await Cache.get('bmsb:v1'); if (!force && ck && Date.now() - ck.t < 36e5){ B.rows = ck.rows; B.t = ck.t; $('bmSt').textContent = 'Cached · refreshes hourly'; bmRender(); posStats(); return; } } catch {}
+  try { const ck = await Cache.get('bmsb:v1'); if (!force && ck && Date.now() - ck.t < 36e5){ B.rows = ck.rows; B.t = ck.t; bmIndex(B.rows); if (S.rows && S.rows.length) render(); $('bmSt').textContent = 'Cached · refreshes hourly'; bmRender(); posStats(); return; } } catch {}
   B.loading = true; $('bmLoad').disabled = true;
   try {
     const top = (await getUniverse()).slice(0, 100), out = []; let i = 0, n = 0;
     const worker = async () => { while (i < top.length){ const u = top[i++]; try { const k = await getJSON(`${FAPI}/fapi/v1/klines?symbol=${u.sym}&interval=1d&limit=499`, WEIGHT, 2), r = bmCalc(k); if (r) out.push({sym: u.sym, base: u.base, ...r}); } catch {} $('bmSt').textContent = `Loading ${++n}/${top.length}…`; } };
     await Promise.all([worker(), worker(), worker(), worker()]);
-    B.rows = out; B.t = Date.now(); await Cache.set('bmsb:v1', {t: B.t, rows: out}); $('bmSt').textContent = `Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})} · ${out.length} coins`;
+    B.rows = out; B.t = Date.now(); bmIndex(out); if (S.rows && S.rows.length) render(); await Cache.set('bmsb:v1', {t: B.t, rows: out}); $('bmSt').textContent = `Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})} · ${out.length} coins`;
     bmRender(); posStats();
   } catch(e){ $('bmSt').textContent = 'Could not load: ' + e.message; }
   finally { B.loading = false; $('bmLoad').disabled = false; }
@@ -3351,7 +3360,7 @@ async function journalLog(tf){
       const key = `${r.sym}|${tf}|${kind}|${dir}`, id = key + '|' + x.d.lastTime;
       if (seen.has(id)) continue;
       if (kind === 'setup' && lastBy.has(key) && x.d.lastTime - lastBy.get(key) < 6 * ms) continue;
-      queue.push({kind, dir, qv: r.qv || 0, key, id, ct: x.d.lastTime, mk: () => ({id, key, sym: r.sym, tf, kind, dir, ct: x.d.lastTime, price: x.d.lastClose, atr: x.d.atr,
+      queue.push({kind, dir, qv: r.qv || 0, key, id, ct: x.d.lastTime, mk: () => ({id, key, sym: r.sym, tf, kind, dir, ct: x.d.lastTime, price: x.d.lastClose, atr: x.d.atr, bm: bmSt(r.sym),
         score: dir > 0 ? x.bull : x.bear, rs7: x.rs?.b7 ?? null, pts: x.G ? x.G.pts : null, grade: x.G && (x.setup === dir || (!x.setup && (dir > 0 ? x.bull : x.bear) >= 4)) ? x.G.grade : null, trig: x.trig.filter(t => t.dir === dir).map(t => t.t),
         mc: r.mcap > 0 ? r.mcap : null, qv: r.qv ?? null, ...macroNums(), regime: S.regimeDir || 0, mtf: r.mtf ? (x.mtfAll === dir ? 'all' : x.mtfAll === -dir ? 'against' : 'mixed') : null,
         ext: x.ext, pos: x.pos, fFlag: x.fFlag, macro: S.macro && S.macro.reg ? S.macro.reg.name : null, out: null})});
@@ -4619,7 +4628,7 @@ function loadView(){
   applyCols(); renderPresets();
 }
 function saveView(){ try { localStorage.setItem(COLS_KEY, JSON.stringify({hidden: [...UI.hidden], dens: UI.dens})); } catch {} }
-const PRESET_FIELDS = ['newOnly','starOnly','gradeF','rsF','trigF','mtfF','sector'];
+const PRESET_FIELDS = ['newOnly','starOnly','gradeF','rsF','bmF','trigF','mtfF','sector'];
 const BUILTIN = [
   {name: 'A-grade setups', v: {setupOnly: true, gradeF: 'A'}},
   {name: 'Leaders · long side', v: {show: 'bull', rsF: 'lbe', gradeF: 'AB'}},
@@ -4763,7 +4772,7 @@ async function divJournal(rows){
     const id = `${x.sym}|${x.tf}|div|${x.side}|${x.tB}|${x.ind}${x.early ? '|E' : ''}`; if (seen.has(id)) continue;
     const v = x.view, n = v.c.length, i = n - 1 - x.ago, A = atr(v.h, v.l, v.c, 14)[i];
     if (!(A > 0) || !(v.c[i] > 0)) continue;
-    J.entries.push({id, key: `${x.sym}|${x.tf}|div|${x.side}`, sym: x.sym, tf: x.tf, kind: 'div', dir: x.side, ct: v.t[i], price: v.c[i], atr: A, score: null,
+    J.entries.push({id, key: `${x.sym}|${x.tf}|div|${x.side}`, sym: x.sym, tf: x.tf, kind: 'div', dir: x.side, ct: v.t[i], price: v.c[i], atr: A, bm: bmSt(x.sym), score: null,
       ds: x.score, dind: x.ind, dov: !!x.ov, early: !!x.early, dtr: x.trend ? x.side * x.trend : 0, rs7: null, grade: null, trig: [], regime: S.regimeDir || 0, mtf: null, ext: null, pos: null, fFlag: 0, out: null});
     seen.add(id); added++;
   }
@@ -5058,7 +5067,7 @@ function anaEnter(){
 function anaTfSync(){ [...$('anaTf').children].forEach(b => b.classList.toggle('on', b.dataset.v === ANA.tf)); }
 async function anaLoad(sym){
   const tok = ++ANA.tok, tf = ANA.tf, c = cfg();
-  Object.assign(ANA, {sym, cd: null, L: null, row: null, facts: null, err: '', busy: true, loadedSym: sym, mtf: null, btc: null, sel: null, anchorT: null, deriv: null, view: {N: null, off: 0}});
+  Object.assign(ANA, {sym, cd: null, L: null, row: null, facts: null, err: '', busy: true, loadedSym: sym, mtf: null, btc: null, sel: null, anchorT: null, deriv: null, bm: null, view: {N: null, off: 0}});
   anaTfSync(); anaRender();
   try {
     const info = (await anaUniverse()).find(u => u.sym === sym);
@@ -5068,6 +5077,7 @@ async function anaLoad(sym){
     if (tok !== ANA.tok) return;
     const live = LIVE.q.get(sym);
     ANA.cd = cd; ANA.L = taLevels(cd, {price: live ? live[0] : info.price}); if (ANA.L) ANA.L.tf = tf;
+    ANA.bm = bmFor(sym); if (!ANA.bm) bmFetch(sym).then(b => { if (b && ANA.sym === sym){ ANA.bm = b; anaRender(); } });
     ANA.busy = false; if (!ANA.L) ANA.err = `Not enough ${tf.toUpperCase()} candle history for ${sym.replace('USDT', '')}.`;
     ANA.recent = [sym, ...ANA.recent.filter(x => x !== sym)].slice(0, 6); anaSave(); anaQuick(); anaRender();
     let base = tf === S.tf ? S.rows.find(r => r.sym === sym) : null;               // screener context: grade, trend checks, funding, positioning
@@ -5130,6 +5140,10 @@ function anaChart(L, cd, w, h){
     const r = L.range;
     o.push(`<rect x="${xr.toFixed(1)}" y="${Y(r.hi).toFixed(1)}" width="${(w - pad.r - xr).toFixed(1)}" height="${(Y(r.eq) - Y(r.hi)).toFixed(1)}" fill="${bear}" opacity=".07"/><rect x="${xr.toFixed(1)}" y="${Y(r.eq).toFixed(1)}" width="${(w - pad.r - xr).toFixed(1)}" height="${(Y(r.lo) - Y(r.eq)).toFixed(1)}" fill="${bull}" opacity=".06"/>`);
     o.push(`<line x1="${xr.toFixed(1)}" x2="${w - pad.r}" y1="${Y(r.eq).toFixed(1)}" y2="${Y(r.eq).toFixed(1)}" stroke="${mu}" stroke-dasharray="2 4"/>${txt(xr + 6, Y(r.eq) - 4, 'Equilibrium 50%', mu)}${txt(xr + 6, Math.max(Y(r.hi), pad.t) + 13, 'PREMIUM', bear)}${txt(xr + 6, Math.min(Y(r.lo), pad.t + ph) - 6, 'DISCOUNT', bull)}`);
+  }
+  if (show.bm && ANA.bm){
+    const b = ANA.bm, y1 = Y(b.hi), y2 = Y(b.lo);
+    o.push(`<rect x="${pad.l}" y="${y1.toFixed(1)}" width="${pw}" height="${Math.max(y2 - y1, 2).toFixed(1)}" fill="${acc}" opacity=".10"/><line x1="${pad.l}" x2="${w - pad.r}" y1="${y1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="${acc}" stroke-dasharray="6 3" opacity=".7"/><line x1="${pad.l}" x2="${w - pad.r}" y1="${y2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${acc}" stroke-dasharray="6 3" opacity=".7"/>${txt(pad.l + 6, Math.min(y1, y2) - 4, 'Bull Market Support Band (weekly)', acc)}`);
   }
   const zone = (it, x0, col, label, op, dash) => { const y1 = Y(it.hi), y2 = Y(it.lo), hh = Math.max(y2 - y1, 3);
     o.push(`<rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="${col}" opacity="${op}"/><rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="none" stroke="${col}" stroke-opacity=".75"${dash ? ' stroke-dasharray="4 3"' : ''}/>${txt(x0 + 4, y1 + 11, label, col)}`); };
@@ -5215,11 +5229,13 @@ function anaSummary(L, row, tf){
   const d = x => `${x.name.toLowerCase()} ${Math.abs(x.dist).toFixed(1)}% away (${x.distAtr.toFixed(1)} ATR)`;
   if (a || b) s += `Nearest ${a ? 'level above: ' + d(a) : ''}${a && b ? '; ' : ''}${b ? (a ? 'below: ' : 'level below: ') + d(b) : ''}. `;
   s += anaInvalid(L, tf);
+  { const b = ANA.bm; if (b) s += `Weekly Bull Market Support Band: price is <b class="${b.st === 'above' ? 'up' : b.st === 'below' ? 'dn' : ''}">${b.st}</b> the band${b.st === 'inside' ? '' : ` (${b.dist >= 0 ? '+' : ''}${b.dist.toFixed(1)}% from its edge)`}, ${fmtPrice(b.lo)} to ${fmtPrice(b.hi)}. `; }
   if (row){
     const bits = [];
     if (row.fund != null) bits.push(`funding ${row.fund > 0 ? '+' : ''}${row.fund.toFixed(4)}%${row.fFlag ? ' (crowded)' : ''}`);
     if (row.pos) bits.push(POS[row.pos][0].toLowerCase());
     const dv = ANA.deriv; if (dv && dv.ls){ const t = anaLsTag(dv.ls); if (t[0] !== 'balanced') bits.push(`${t[0]} accounts (long/short ${dv.ls.ratio.toFixed(2)})`); }
+    const tpv = dv && dv.tp; if (tpv != null && dv.ls){ const g = dv.ls.ratio; if (g >= 1.2 && tpv <= 0.95) bits.push(`largest traders lean short (${tpv.toFixed(2)}) against the crowd`); else if (g <= 0.85 && tpv >= 1.05) bits.push(`largest traders lean long (${tpv.toFixed(2)}) against the crowd`); }
     if (row.rs && row.rs.b7 != null) bits.push(`${ppf(row.rs.b7)} pp vs BTC over 7 days`);
     if (bits.length) s += `Derivatives and strength: ${bits.join(', ')}. `;
     if (row.G) s += `Screener grade <b>${row.G.grade}</b>${row.setup ? `, <b class="${row.setup > 0 ? 'up' : 'dn'}">${row.setup > 0 ? 'LONG' : 'SHORT'}</b> setup` : ''}. `;
@@ -5231,12 +5247,13 @@ const SPOTLIM = {win: 60000, cap: 600, log: []}, DERIV = new Map();
 async function anaDeriv(sym, info, tok){
   const hit = DERIV.get(sym); if (hit && Date.now() - hit.t < 3e5){ ANA.deriv = hit.v; anaRender(); return; }
   const out = {};
+  const tp = (async () => { try { const d = await getJSON(`${FAPI}/futures/data/topLongShortPositionRatio?symbol=${sym}&period=1h&limit=1`, OILIM, 1); if (Array.isArray(d) && d.length) out.tp = +d.at(-1).longShortRatio; } catch {} })();
   const ls = (async () => { try {
     const d = await getJSON(`${FAPI}/futures/data/globalLongShortAccountRatio?symbol=${sym}&period=1h&limit=24`, OILIM, 1);
     if (Array.isArray(d) && d.length){ const a = d.at(-1), b = d[0]; out.ls = {ratio: +a.longShortRatio, long: +a.longAccount, prev: +b.longShortRatio}; } } catch {} })();
   const sp = (async () => { const cands = [sym, sym.replace(/^(1000000|1000)/, '')].filter((x, i, a) => a.indexOf(x) === i);
     for (const c of cands){ try { await take(SPOTLIM, 2); const r = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${c}`); if (!r.ok) continue; const j = await r.json(); const q = +j.quoteVolume; if (q > 0){ out.spot = {qv: q, perp: info.qv}; return; } } catch {} } out.spot = {none: true}; })();
-  await Promise.all([ls, sp]);
+  await Promise.all([ls, sp, tp]);
   if (tok !== ANA.tok) return; DERIV.set(sym, {t: Date.now(), v: out}); ANA.deriv = out; anaRender();
 }
 function anaLsTag(ls){ return ls.ratio >= 1.8 ? ['crowded long', 'dn'] : ls.ratio <= 0.7 ? ['crowded short', 'up'] : ['balanced', 'mu']; }
@@ -5348,7 +5365,7 @@ function anaRender(){
   ${anaMtfStrip(L)}
   <div class="anagrid">
     <div class="panel"><div class="row anatog" id="anaTog">
-      ${[['sr', 'S/R'], ['srp', 'S/R prices'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity'], ['vp', 'Volume profile'], ['vw', 'AVWAP'], ...(sym === 'BTCUSDT' ? [] : [['rel', 'vs BTC']])].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
+      ${[['sr', 'S/R'], ['srp', 'S/R prices'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity'], ['vp', 'Volume profile'], ['vw', 'AVWAP'], ['bm', 'Support band'], ...(sym === 'BTCUSDT' ? [] : [['rel', 'vs BTC']])].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
       ${ANA.show.vw ? `<button class="tachip" data-av="mode" title="Which swings the two AVWAP lines start from. Auto uses the major swings on 1D and 1W, where the latest ones are only a few candles old, and the latest swings on shorter timeframes.">AVWAP anchor: ${ANA.avm === 'latest' ? 'latest swing' : ANA.avm === 'major' ? 'major swing' : 'auto (' + (ANA.tf === '1d' || ANA.tf === '1w' ? 'major' : 'latest') + ')'}</button>${ANA.anchorT != null ? '<button class="tachip" data-av="reset" title="Remove the picked-candle AVWAP">Clear picked</button>' : ''}` : ''}
       <span class="anazoom"><button class="tachip" data-z="out" title="Zoom out (mouse wheel)" aria-label="Zoom out">−</button><button class="tachip" data-z="in" title="Zoom in (mouse wheel)" aria-label="Zoom in">+</button><button class="tachip" data-z="reset" ${ANA.view && (ANA.view.N || ANA.view.off) ? '' : 'hidden'}>Reset zoom</button></span>
       <span class="mu anahov" id="anaHov"></span></div><div class="mu anaavi" id="anaAvInfo"></div><div id="anaChartBox"></div><div id="anaRelBox" class="anarel"></div></div>
@@ -5475,7 +5492,7 @@ $('tfSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('showSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   S.show = b.dataset.v; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x === b)); render(); };
 document.querySelectorAll('.mf').forEach(s => s.onchange = () => { S.mf[s.dataset.k] = s.value; render(); });
-$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('starOnly').checked = false; $('gradeF').value = ''; $('rsF').value = ''; $('trigF').value = ''; $('mtfF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
+$('clearBtn').onclick = () => { document.querySelectorAll('.mf').forEach(s => s.value = ''); S.mf = {}; S.incOnly = false; S.setupOnly = false; $('starOnly').checked = false; $('gradeF').value = ''; $('rsF').value = ''; $('bmF').value = ''; $('trigF').value = ''; $('mtfF').value = ''; $('newOnly').checked = false; $('search').value = ''; $('sector').value = '';
   S.show = 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === 'all')); render(); };
 for (const id of ['oiThr','oiN','sector','mcap','newOnly']) $(id).onchange = () => { saveSettings(); render(); };
 $('search').oninput = render;
@@ -5498,6 +5515,7 @@ function renderFChips(){
   if ($('search').value.trim()) L.push(['Search: ' + $('search').value.trim(), el('search', 'input')]);
   document.querySelectorAll('.mf').forEach(m => { if (m.value !== '') L.push([m.parentNode.firstChild.textContent.trim() + ': ' + selTxt(m), () => { m.value = ''; m.dispatchEvent(new Event('change', {bubbles: true})); }]); });
   if ($('rsF').value) L.push(['RS: ' + selTxt($('rsF')), el('rsF')]);
+  if ($('bmF').value) L.push(['Band: ' + selTxt($('bmF')), el('bmF')]);
   if ($('mtfF').value) L.push(['MTF: ' + selTxt($('mtfF')), el('mtfF')]);
   if (S.incOnly) L.push(['Incomplete data', () => { S.incOnly = false; render(); }]);
   if (S.setupOnly) L.push(['Triggered setups', () => { S.setupOnly = false; render(); }]);
@@ -5512,7 +5530,7 @@ $('universe').onchange = saveSettings; $('closed').onchange = saveSettings; $('m
 for (const id of ['trigF','mtfF']) $(id).onchange = render;
 $('trigN').onchange = () => { saveSettings(); render(); };
 for (const id of ['rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) $(id).onchange = saveSettings;
-for (const id of ['fundHot','fundCold','minLiq','extremeFund','gradeF','rsF']) $(id).onchange = () => { saveSettings(); render(); };
+for (const id of ['fundHot','fundCold','minLiq','extremeFund','gradeF','rsF','bmF']) $(id).onchange = () => { saveSettings(); render(); };
 $('alertGrade').onchange = saveSettings; $('alertCap').onchange = saveSettings;
 for (const id of ['alertMcapMin', 'alertMcapMax']) $(id).onchange = () => { const lo = +$('alertMcapMin').value, hi = +$('alertMcapMax').value; if (lo && hi && lo >= hi){ $('alertMcapMax').value = '0'; toast('The upper market cap must be above the lower one, so the upper limit was reset to Any.'); } saveSettings(); };
 $('auto').onchange = () => { saveSettings(); setAuto(); };
