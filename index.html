@@ -2434,7 +2434,8 @@ const Cache = (() => {
     mem.clear();
     try { const db = await open(); db.transaction('kv', 'readwrite').objectStore('kv').clear(); } catch {}
   }
-  return {get, set, clear};
+  function drop(k){ mem.delete(k); }
+  return {get, set, clear, drop};
 })();
 
 /* ---------- Rate limiting ---------- */
@@ -2971,7 +2972,8 @@ function setView(v){
   $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Technical Analysis', liq: 'Liquidation Map', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
-  if (v === 'journal') renderJournal();
+  clearTimeout(LAZY.t); if (v !== 'journal' && LAZY.loaded) LAZY.t = setTimeout(jUnload, 45000);
+  if (v === 'journal'){ renderJournal(); jLazyLoad(); jFlush(); }
   if (v === 'map'){ MAP.anim = true; renderMap(); }
   if (v === 'macro'){ renderMacro(); if (!S.macro || Date.now() - S.macro.t > 36e5) loadMacro(false); }
   if (v === 'div'){ dvSync(); renderDiv(); if (!DIV.t || Date.now() - DIV.t > 3e5) divScan(); }
@@ -5305,6 +5307,7 @@ function brkMoments(tr, vari){
   return {n: m.size, avg: avgs.length ? avgs.reduce((x, y) => x + y, 0) / avgs.length : 0};
 }
 function brkRender(){
+  if (!jLab()) return;
   queueMicrotask(rxRender);
   const out = $('brkOut'); if (!out) return;
   if (!BRK.ev.length){ out.innerHTML = '<div class="mu" style="margin-top:8px">No study run yet. Pick timeframes and press Run study.</div>'; return; }
@@ -5426,6 +5429,7 @@ function rxStat(list){
     an: A1.length, aw: A1.length ? 100 * A1.filter(v => v > 0).length / A1.length : null, a1: avg(A1), a2: avg(A2), am: mo, bn: B1.length, bw: B1.length ? 100 * B1.filter(v => v > 0).length / B1.length : null, b1: avg(B1), b2: avg(B2)};
 }
 function rxRender(){
+  if (!jLab()) return;
   const out = $('rxOut'); if (!out) return;
   const withRx = BRK.ev.filter(e => e.rx).length;
   if (!BRK.ev.length){ out.innerHTML = ''; return; }
@@ -5468,7 +5472,7 @@ $('brkTop').onchange = () => { BRK.top = +$('brkTop').value; brkRender(); };
 $('brkSince').onchange = () => { const v = $('brkSince').value; BRK.since = v ? Date.parse(v + 'T00:00:00Z') : 0; brkRender(); };
 $('brkFwd').onclick = () => { $('brkSince').value = '2026-10-12'; BRK.view = 'frozen'; $('brkSince').onchange(); };
 $('brkRun').onclick = brkRun; $('brkCsv').onclick = brkCsv;
-loadJournal(); brkLoad();
+loadJournal();
 /* ---------- Setup study (Journal tab): sweeps and funding extremes, same trade rules for each idea ---------- */
 const FRLIM = {win: 300000, cap: 400, log: []};
 const SU = {kind: 'sweep', ev: {}, meta: {}, running: false, cancel: false, vari: 'ext|2', since: 0, setSel: ''};
@@ -5577,6 +5581,7 @@ function suCompare(VARS, f2, cls){
   return h + `<div class="mu" style="font-size:12px;margin:6px 0">${v}</div>`;
 }
 function suRender(){
+  if (!jLab()) return;
   const out = $('suOut'); if (!out) return;
   const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), raw = SU.ev[SU.kind] || [];
   if (!VARS[SU.vari]) SU.vari = VARS['a15|2'] ? 'a15|2' : Object.keys(VARS)[1];
@@ -5725,13 +5730,28 @@ $('alType').onchange = ev => { AL.type = ev.target.value; alRender(); };
 async function alLoad(){ try { const v = await Cache.get('alertRows'); AL.rows = Array.isArray(v) ? v : []; } catch { AL.rows = []; } alRender(); }
 $('alClear').onclick = async () => { AL.rows = []; try { await Cache.set('alertRows', []); } catch {} $('alStatus').textContent = ''; alRender(); };
 alLoad();
+/* ---- Lazy Journal work ----
+   The study stores hold well over 200,000 events. Reading and analysing them at start-up froze the page for about 40 s even when you never opened the Journal, so they now load, and render, only when the Journal tab is open. */
+const LAZY = {loaded: false};
+const jPane = () => S.view === 'journal' ? ([...document.querySelectorAll('.jpane')].find(p => !p.hidden)?.id.slice(2) || '') : '';
+const jLab = () => jPane() === 'Lab', jScore = () => jPane() === 'Score';
+function jLazyLoad(){ if (LAZY.loaded) return; LAZY.loaded = true; brkLoad(); suLoad(); rbLoad(); btLoadAll(); }
+/* Leaving the Journal for a while frees the study stores (hundreds of thousands of events): a big heap makes every garbage collection, and so every scan, stall. */
+function jUnload(){
+  if (S.view === 'journal' || SU.running || BRK.running) return;
+  SU.ev = {}; SU.meta = {}; BRK.ev = []; BRK.meta = null; RB.m = null; RB.meta = null; BT.res = null;
+  for (const k of Object.keys(SU_KINDS)) Cache.drop('setupStudy:' + k);
+  for (const k of ['brkStudy', 'randBase', 'btLab', 'btRob']) Cache.drop(k);
+  LAZY.loaded = false;
+}
+function jFlush(){ const p = jPane(); if (p === 'Score') sbRender(); else if (p === 'Lab'){ brkRender(); suRender(); rxRender(); btRender(); btRobRender(); } }
 /* ---- Journal tabs and the Scoreboard ---- */
 const SB_BASE = -0.04, SB_MIN_DAYS = 300;
 function jTab(v){
   for (const b of document.querySelectorAll('#jTabs button')) b.classList.toggle('on', b.dataset.v === v);
   for (const p of document.querySelectorAll('.jpane')) p.hidden = p.id !== 'jt' + v;
   try { localStorage.setItem('onslaught-jtab', v); } catch {}
-  if (v === 'Score') sbRender();
+  if (S.view === 'journal' && (v === 'Score' || v === 'Lab')){ jLazyLoad(); jFlush(); }
 }
 for (const b of document.querySelectorAll('#jTabs button')) b.onclick = () => jTab(b.dataset.v);
 const sbAvg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
@@ -5802,7 +5822,7 @@ function sbRowsData(){
   return rows;
 }
 function sbRender(){
-  const out = $('sbOut'); if (!out) return;
+  const out = $('sbOut'); if (!out || !jScore()) return;
   const rows = sbRowsData(), f2 = x => x == null ? '–' : (x >= 0 ? '+' : '') + x.toFixed(2), cls = x => x == null ? '' : x > 0.02 ? 'up' : x < -0.02 ? 'dn' : '';
   if (!rows.length){ out.innerHTML = '<div class="mu" style="padding:8px 0">Nothing to show yet. Press <b>Run all tests</b> below to build the history tests, or use the Journal and Runner tabs.</div>'; return; }
   let h = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Strategy</th><th class="l">Side</th><th class="l">Source</th><th class="l">Trade rule</th><th>Moments</th><th>Avg R per moment</th><th title="What random entries earn with the same stop, target, side and period">Chance</th><th>vs chance</th><th>Noise ±</th><th>1H</th><th>4H</th><th>1D</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>';
@@ -5882,7 +5902,6 @@ $('sbRun').onclick = async () => {
   } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
   if (tick) clearInterval(tick); SU.cancel = false; BRK.cancel = false; sbBusy = false; $('sbRun').textContent = 'Run all tests'; sbRender();
 };
-rbLoad();
 for (const n of ['suRender', 'brkRender', 'alRender', 'renderJournal']){ const o = window[n]; if (typeof o === 'function') window[n] = function(){ const r = o.apply(this, arguments); try { if (!$('jtScore').hidden) sbRender(); } catch {} return r; }; }
 { let v = 'Score'; try { v = localStorage.getItem('onslaught-jtab') || 'Score'; } catch {} if (!document.getElementById('jt' + v)) v = 'Score'; jTab(v); }
 
@@ -5936,6 +5955,7 @@ function btAnalyse(cd, tf, fee, fund){
   return {rows, from: cd[S][0], to: cd[cd.length - 1][0], candles: cd.length - S};
 }
 function btRender(){
+  if (!jLab()) return;
   const out = $('btOut'); if (!out) return; const R = BT.res; if (!R || !R.length){ out.innerHTML = ''; return; }
   const p1 = x => x == null ? '–' : (x >= 0 ? '+' : '') + (x * 100).toFixed(0) + '%', p0 = x => (x * 100).toFixed(0) + '%', cl = x => x > 0.005 ? 'up' : x < -0.005 ? 'dn' : '', yrs = [...new Set(R.flatMap(b => b.rows.flatMap(r => Object.keys(r.years))))].sort();
   let h = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Rule</th><th class="l">Position</th><th class="l">TF</th><th>Total return</th><th>Per year</th><th>Worst drop</th><th>Sharpe</th><th>Return / drop</th><th>In market</th><th>Trades</th><th title="Share of 200 shuffles of the same trades (same time in the market) that the rule beats on Sharpe">Beats random timing</th>' + yrs.map(y => `<th>${y}</th>`).join('') + '</tr></thead><tbody>';
@@ -5985,6 +6005,7 @@ function btRobust(cd, tf, fee, fund){
   return {tf, bh: {all: sl(bh.all), h1: sl(bh.h1), h2: sl(bh.h2)}, rows, from: cd[S][0], mid: cd[M][0], to: cd[n - 1][0]};
 }
 function btRobRender(){
+  if (!jLab()) return;
   const out = $('btRob'); if (!out) return; const R = BT.rob; if (!R || !R.length){ out.innerHTML = ''; return; }
   const p1 = x => (x >= 0 ? '+' : '') + (x * 100).toFixed(0) + '%', cl = x => x > 0.005 ? 'up' : x < -0.005 ? 'dn' : '', d = t => new Date(t).toISOString().slice(0, 10);
   let h = '<div style="margin:14px 0 4px;font-weight:600">Robustness check (long or flat)</div>';
@@ -6101,13 +6122,14 @@ $('btWalkRun').onclick = async () => {
   } catch (e){ st.textContent = 'Failed: ' + (e && e.message || e); }
   BT.busy = false; for (const id of ['btRun', 'btRobRun', 'btComboRun', 'btWalkRun']) $(id).disabled = false;
 };
+function btLoadAll(){
 (async () => { try { const v = await Cache.get('btRob'); if (Array.isArray(v) && v.length){ BT.rob = v; btRobRender(); } } catch {} })();
 (async () => { try { const v = await Cache.get('btLab'); if (v && Array.isArray(v.res)){ BT.res = v.res; BT.meta = v.meta || null; btRender(); } } catch {} })();
+}
 $('suKind').onchange = () => { SU.kind = $('suKind').value; $('suThrL').hidden = SU.kind !== 'fund'; suRender(); };
 $('suTop').onchange = () => { SU.top = +$('suTop').value; suRender(); };
 $('suSince').onchange = () => { const v = $('suSince').value; SU.since = v ? Date.parse(v + 'T00:00:00Z') : 0; suRender(); };
 $('suRun').onclick = suRun; $('suCsv').onclick = suCsv;
-suLoad();
 
 $('jUpdate').onclick = () => updateOutcomes(true);
 try { const v = JSON.parse(localStorage.getItem('onslaught.jh') || 'null'); if (Array.isArray(v)){ $('jhStart').value = v[0]; $('jhRisk').value = v[1]; $('jhFee').value = v[2]; } } catch {}
