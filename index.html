@@ -405,6 +405,18 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
 .pager .gap{color:var(--muted);padding:0 2px}
 .stat .s{font-size:11px;color:var(--muted)}
 .stat.bull .v{color:var(--bull)} .stat.bear .v{color:var(--bear)}
+.stat .v.s{font-size:17px}
+.pftbl{min-width:0;font-size:12.5px}
+.pftbl td,.pftbl th{padding:6px 9px;text-align:right;white-space:nowrap}
+.pftbl th.l,.pftbl td.l{text-align:left}
+.pftbl tbody tr{cursor:pointer}.pftbl tbody tr:hover{background:var(--panel2)}
+.pftbl td.l b{font-weight:700}
+.ppgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:10px}
+.ppcard{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.ppcard .t{font-size:11.5px;color:var(--muted)} .ppcard .v{font:600 15px var(--mono);margin:2px 0}
+.ppcard svg{width:100%;height:56px;display:block}
+.fgbar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:6px}
+.fgbar i{flex:1}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
 table{border-collapse:collapse;width:100%;min-width:1100px}
 th[title]{cursor:help} th[title].sortable{cursor:pointer}
@@ -490,6 +502,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <button role="tab" data-view="div">Divergences<span class="newb" id="divNew" hidden>NEW</span></button>
     <button role="tab" data-view="ta">Technical Analysis</button>
     <button role="tab" data-view="liq">Liquidations</button>
+    <button role="tab" data-view="pos">Positioning</button>
     <button role="tab" data-view="journal">Journal</button>
   </nav>
 
@@ -497,7 +510,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="kbhelp" id="kbHelp" hidden role="dialog" aria-label="Keyboard shortcuts"><div class="box"><b>Keyboard shortcuts</b>
-    <div class="r"><span>Switch tab</span><span><kbd>1</kbd>–<kbd>8</kbd></span></div>
+    <div class="r"><span>Switch tab</span><span><kbd>1</kbd>–<kbd>9</kbd></span></div>
     <div class="r"><span>Search pairs</span><span><kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd></span></div>
     <div class="r"><span>Simple / Full table</span><span><kbd>S</kbd></span></div>
     <div class="r"><span>Light / dark theme</span><span><kbd>T</kbd></span></div>
@@ -820,6 +833,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <a id="anaTv" class="abtn" target="_blank" rel="noopener" hidden>↗ TradingView</a>
       <button id="anaClose" hidden title="Close this coin and clear the analysis">✕ Close</button><button id="anaLink" hidden title="Copy a link that opens this coin in the Technical Analysis tab">Copy link</button>
       <button id="anaPlan" class="primary" hidden title="Open the trade plan for this coin">Trade plan</button>
+      <button id="anaPos" hidden title="Funding, long/short ratios, open interest and large trades for this coin">Positioning</button>
     </div>
     <div class="anaquick" id="anaQuick"></div>
     <div id="anaBody"><div class="panel mu">Press <kbd style="border:1px solid var(--line);border-radius:4px;padding:0 5px">/</kbd> and type a coin (e.g. BTC), click one of the chips above, or press <b>⌖</b> next to any pair in the Crypto Scanner, to see its structure, key levels and a short summary.</div></div>
@@ -888,6 +902,49 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </div>
   </div><!-- /viewLiq -->
 
+  <div id="viewPos" hidden>
+    <div class="stats" id="posStats"></div>
+    <div class="panel">
+      <div class="row">
+        <b>Funding rates</b>
+        <input id="pfQ" placeholder="Search coin…" style="width:130px">
+        <div class="seg" id="pfF"><button data-v="all" class="on">All</button><button data-v="long" title="Funding at or above +0.03% per 8 hours: longs are paying a lot, so the long side is crowded">Crowded long</button><button data-v="short" title="Funding at or below −0.03% per 8 hours: shorts are paying a lot, so the short side is crowded">Crowded short</button><button data-v="neg">Negative</button></div>
+        <label class="mu">Min 24h volume <select id="pfV"><option value="0">any</option><option value="1000000">$1M</option><option value="10000000" selected>$10M</option><option value="50000000">$50M</option></select></label>
+        <button id="pfLoad">Refresh</button><button id="pfCsv" title="Download the rows shown as a CSV file">CSV</button>
+        <span class="mu" id="pfSt"></span>
+      </div>
+      <div class="tablewrap" style="max-height:440px;overflow:auto;margin-top:10px"><table class="pftbl"><thead><tr>
+        <th class="l" data-k="base">Coin</th><th data-k="price">Mark price</th><th data-k="chg">24h</th><th data-k="qv">24h volume</th><th data-k="r8" title="Funding rate converted to a per-8-hours basis so coins with different intervals compare">Funding / 8h</th><th data-k="rate">Funding (own interval)</th><th data-k="ih">Interval</th><th data-k="nf">Next payment</th><th data-k="apr" title="Funding rate × payments per year. What holding the position costs (longs pay when positive) or earns, if the rate stayed the same all year">Annualised</th></tr></thead><tbody id="pfBody"></tbody></table></div>
+      <div class="dnote" id="pfNote"></div>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <b>Positioning</b>
+        <input id="ppSym" value="BTC" maxlength="12" style="width:90px" title="Coin symbol, for example BTC, ETH, SOL">
+        <div class="seg" id="ppTf"><button data-v="1h" class="on">1H</button><button data-v="4h">4H</button><button data-v="1d">1D</button></div>
+        <button id="ppLoad">Load</button><span class="mu" id="ppSt"></span>
+      </div>
+      <div id="ppRead" class="lqnote" hidden style="margin-top:10px"></div>
+      <div class="ppgrid" id="ppOut"></div>
+      <div class="dnote">Account ratios count traders; the top-trader position ratio weighs by size. When they disagree, the large accounts and the crowd are on opposite sides. Context, not a signal: none of these has been tested as an entry rule.</div>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <b>Large trades and liquidations</b>
+        <label class="mu">Min size <select id="btMin"><option value="100000">$100k</option><option value="250000" selected>$250k</option><option value="1000000">$1M</option></select></label>
+        <div class="seg" id="btKind"><button data-v="all" class="on">Both</button><button data-v="liq">Liquidations</button><button data-v="trade">Trades</button></div>
+        <span class="mu" id="btSt"></span>
+      </div>
+      <div class="tablewrap" style="max-height:300px;overflow:auto;margin-top:10px"><table class="pftbl"><thead><tr><th class="l">Time</th><th class="l">Coin</th><th class="l">Type</th><th class="l">Side</th><th>Price</th><th>Size</th></tr></thead><tbody id="btBody"></tbody></table></div>
+      <div class="dnote">Liquidations: every coin, live from Binance. Trades: the coin chosen in Positioning above. The feed starts when you open this tab and stops when you leave.</div>
+    </div>
+    <div class="panel">
+      <div class="row"><b>Bull Market Support Band</b><span class="mu">20-week average and 21-week EMA of the weekly close · top 100 coins by volume</span><button id="bmLoad">Refresh</button><span class="mu" id="bmSt"></span></div>
+      <div class="stats" id="bmStats" style="margin-top:10px"></div>
+      <div class="tablewrap" style="max-height:360px;overflow:auto"><table class="pftbl"><thead><tr><th class="l" data-k="base">Coin</th><th data-k="price">Price</th><th class="l" data-k="st">Position</th><th data-k="dist" title="Distance from the nearest edge of the band, positive when above">From band</th><th data-k="lo">Band low</th><th data-k="hi">Band high</th></tr></thead><tbody id="bmBody"></tbody></table></div>
+      <div class="dnote">Above the band is read as healthy trend, inside as indecision, below as weak. Trend context, not a signal.</div>
+    </div>
+  </div>
   <div id="viewJournal" hidden>
     <div class="seg jtabs" id="jTabs" style="margin:0 0 10px"><button data-v="Score" class="on">Scoreboard</button><button data-v="Live">Live log</button><button data-v="Lab">Study lab</button><button data-v="Runner">Runner results</button></div>
     <div class="jpane" id="jtScore">
@@ -2972,9 +3029,9 @@ try { if (!localStorage.getItem('onslaught-newseen')) $('divNew').hidden = false
 function setView(v){
   S.view = v;
   if (v === 'div'){ try { localStorage.setItem('onslaught-newseen', '1'); } catch {} $('divNew').hidden = true; }
-  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div'; $('viewTa').hidden = v !== 'ta';
+  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div'; $('viewTa').hidden = v !== 'ta'; $('viewPos').hidden = v !== 'pos';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Technical Analysis', liq: 'Liquidation Map', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
+  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Technical Analysis', liq: 'Liquidation Map', pos: 'Positioning', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   clearTimeout(LAZY.t); if (v !== 'journal' && LAZY.loaded) LAZY.t = setTimeout(jUnload, 45000);
@@ -2983,10 +3040,181 @@ function setView(v){
   if (v === 'macro'){ renderMacro(); if (!S.macro || Date.now() - S.macro.t > 36e5) loadMacro(false); }
   if (v === 'div'){ dvSync(); renderDiv(); if (!DIV.t || Date.now() - DIV.t > 3e5) divScan(); }
   if (v === 'liq') liqEnter();
+  if (v !== 'pos') btStop(); else posEnter();
   if (v === 'sectors' && !SEC.rows.length && !SEC.loading) loadSectors();
   if (v === 'ta' && !ANA.sym && ANA.recent && ANA.recent[0]) anaOpen(ANA.recent[0]);
   if (v === 'ta') anaEnter();
 }
+
+/* ---------- Positioning: funding, long/short, large trades, Bull Market Support Band, Fear & Greed ---------- */
+const PS = {f: {rows: [], t: 0, sort: {k: 'r8', dir: -1}, filt: 'all', loading: false}, pp: {tf: '1h', sym: null, t: 0, loading: false}, bt: {ws: {}, rows: [], kind: 'all', min: 250000, dirty: false, want: false}, bm: {rows: [], t: 0, loading: false, sort: {k: 'dist', dir: -1}}, fg: null};
+const posM = v => !Number.isFinite(v) ? '—' : v >= 1e9 ? (v / 1e9).toFixed(2) + 'B' : v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v.toFixed(0);
+function csvDownload(name, head, rows){
+  const q = v => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const blob = new Blob([[head, ...rows].map(r => r.map(q).join(',')).join('\n')], {type: 'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+/* --- funding table --- */
+async function pfLoad(){
+  const F = PS.f; if (F.loading) return; F.loading = true; $('pfLoad').disabled = true; $('pfSt').textContent = 'Loading…';
+  try {
+    const [uni, prem, fi] = await Promise.all([getUniverse(), getJSON(FAPI + '/fapi/v1/premiumIndex', WEIGHT, 10), getJSON(FAPI + '/fapi/v1/fundingInfo', WEIGHT, 1).catch(() => [])]);
+    const ih = new Map((Array.isArray(fi) ? fi : []).map(x => [x.symbol, +x.fundingIntervalHours || 8])), pm = new Map(prem.map(x => [x.symbol, x]));
+    F.rows = uni.filter(u => pm.has(u.sym) && pm.get(u.sym).lastFundingRate !== '').map(u => { const p = pm.get(u.sym), h = ih.get(u.sym) || 8, rate = +p.lastFundingRate * 100;
+      return {sym: u.sym, base: u.base, price: +p.markPrice, chg: u.chg, qv: u.qv, rate, ih: h, r8: rate * 8 / h, nf: +p.nextFundingTime, apr: rate * (24 / h) * 365}; });
+    F.t = Date.now(); $('pfSt').textContent = `Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})} · ${F.rows.length} pairs`;
+    pfRender(); posStats();
+  } catch(e){ $('pfSt').textContent = 'Could not load: ' + e.message; }
+  finally { F.loading = false; $('pfLoad').disabled = false; }
+}
+const pfShown = () => {
+  const F = PS.f, q = $('pfQ').value.trim().toUpperCase(), mv = +$('pfV').value;
+  let r = F.rows.filter(x => x.qv >= mv && (!q || x.base.includes(q)) && (F.filt === 'all' || (F.filt === 'long' && x.r8 >= 0.03) || (F.filt === 'short' && x.r8 <= -0.03) || (F.filt === 'neg' && x.rate < 0)));
+  const {k, dir} = F.sort; return r.sort((a, b) => k === 'base' ? dir * a.base.localeCompare(b.base) : dir * ((a[k] ?? 0) - (b[k] ?? 0)));
+};
+function pfRender(){
+  if ($('viewPos').hidden) return;
+  const r = pfShown(), cd = t => { const s = Math.max(0, Math.round((t - Date.now()) / 1000)); return `${Math.floor(s / 3600)}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
+  $('pfBody').innerHTML = r.slice(0, 400).map(x => { const hot = Math.abs(x.r8) >= 0.03;
+    return `<tr data-sym="${x.sym}"><td class="l"><b>${x.base}</b></td><td>${fmtPrice(x.price)}</td><td class="${cls(x.chg)}">${fmtPct(x.chg)}</td><td>${posM(x.qv)}</td>
+    <td class="${cls(x.r8)}" ${hot ? 'style="font-weight:700"' : ''}>${x.r8.toFixed(4)}%${hot ? (x.r8 > 0 ? ' ⚠' : ' ⚠') : ''}</td><td class="mu">${x.rate.toFixed(4)}%</td><td class="mu">${x.ih}h</td><td class="mu" data-nf="${x.nf}">${cd(x.nf)}</td><td class="${cls(x.apr)}">${x.apr >= 0 ? '+' : ''}${x.apr.toFixed(0)}%</td></tr>`; }).join('') || '<tr><td colspan="9" class="mu" style="text-align:center;padding:14px">No pairs match.</td></tr>';
+  $('pfNote').textContent = `${r.length} pairs shown. Positive funding: longs pay shorts. ⚠ = funding at least 0.03% per 8 hours either way (the normal level is about +0.01%). Click a row to open its chart.`;
+  document.querySelectorAll('#viewPos th[data-k]').forEach(th => { if (th.closest('table').querySelector('tbody').id === 'pfBody') th.classList.toggle('srt', th.dataset.k === PS.f.sort.k); });
+}
+setInterval(() => { if (S.view !== 'pos' || document.hidden) return; const now = Date.now();
+  document.querySelectorAll('#pfBody [data-nf]').forEach(td => { const s = Math.max(0, Math.round((+td.dataset.nf - now) / 1000)); td.textContent = `${Math.floor(s / 3600)}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; });
+  if (now - PS.f.t > 60000 && !PS.f.loading) pfLoad(); }, 1000);
+/* --- Fear & Greed + header stats --- */
+async function fgLoad(){
+  try { const ck = await Cache.get('fng:v1'); if (ck && Date.now() - ck.t < 36e5){ PS.fg = ck.v; posStats(); return; } } catch {}
+  try { const d = await getJSON('https://api.alternative.me/fng/?limit=31', {win: 60000, cap: 20, log: []}, 1); PS.fg = (d.data || []).map(x => ({v: +x.value, c: x.value_classification, t: +x.timestamp * 1000})); await Cache.set('fng:v1', {t: Date.now(), v: PS.fg}); posStats(); } catch { PS.fg = PS.fg || []; posStats(); }
+}
+function posStats(){
+  if ($('viewPos').hidden) return;
+  const fg = PS.fg, F = PS.f.rows, top = F.slice(0, 50), med = a => { const s = a.map(x => x.r8).sort((p, q) => p - q); return s.length ? s[Math.floor(s.length / 2)] : null; };
+  const m = med(top), cl = F.filter(x => x.qv >= 1e7 && x.r8 >= 0.03).length, cs = F.filter(x => x.qv >= 1e7 && x.r8 <= -0.03).length, btc = F.find(x => x.sym === 'BTCUSDT');
+  const bm = PS.bm.rows, up = bm.filter(x => x.st === 'above').length;
+  const fgc = v => v <= 25 ? 'var(--bear)' : v <= 45 ? 'var(--warn)' : v <= 55 ? 'var(--muted)' : v <= 75 ? 'var(--accent-lt)' : 'var(--bull)';
+  const fgBox = fg && fg.length ? `<div class="stat"><div class="mu">Fear &amp; Greed</div><div class="v s" style="color:${fgc(fg[0].v)}">${fg[0].v} · ${fg[0].c}</div><div class="mu" style="font-size:11.5px">yesterday ${fg[1]?.v ?? '—'} · 7d ago ${fg[7]?.v ?? '—'} · 30d ago ${fg[30]?.v ?? '—'}</div></div>` : `<div class="stat"><div class="mu">Fear &amp; Greed</div><div class="v s">${fg ? 'unavailable' : 'loading…'}</div><div class="mu" style="font-size:11.5px">alternative.me</div></div>`;
+  $('posStats').innerHTML = fgBox +
+    `<div class="stat"><div class="mu">Funding, top 50 by volume</div><div class="v s ${cls(m)}">${m == null ? '—' : (m >= 0 ? '+' : '') + m.toFixed(4) + '%'}</div><div class="mu" style="font-size:11.5px">median per 8h · BTC ${btc ? btc.r8.toFixed(4) + '%' : '—'}</div></div>` +
+    `<div class="stat"><div class="mu">Crowded (≥$10M volume)</div><div class="v s">${cl} long · ${cs} short</div><div class="mu" style="font-size:11.5px">funding beyond ±0.03% per 8h</div></div>` +
+    `<div class="stat"><div class="mu">Above the support band</div><div class="v s">${bm.length ? Math.round(100 * up / bm.length) + '%' : '—'}</div><div class="mu" style="font-size:11.5px">${bm.length ? `${up} of ${bm.length} coins` : 'loads below'}</div></div>`;
+}
+/* --- positioning for one coin --- */
+function posSpark(v, base){
+  const W = 240, H = 56, p = 4, lo = Math.min(...v, base ?? Infinity), hi = Math.max(...v, base ?? -Infinity), rg = hi - lo || 1, X = i => p + i / Math.max(1, v.length - 1) * (W - 2 * p), Y = x => H - p - (x - lo) / rg * (H - 2 * p);
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${base != null ? `<line x1="0" x2="${W}" y1="${Y(base).toFixed(1)}" y2="${Y(base).toFixed(1)}" stroke="var(--muted)" stroke-dasharray="3 3" stroke-width="1" vector-effect="non-scaling-stroke"/>` : ''}<polyline points="${v.map((x, i) => X(i).toFixed(1) + ',' + Y(x).toFixed(1)).join(' ')}" fill="none" stroke="var(--accent-lt)" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+}
+async function ppLoad(){
+  const P = PS.pp; if (P.loading) return;
+  const base = $('ppSym').value.trim().toUpperCase().replace(/USDT$/, ''), syms = (infoCache && infoCache.syms) || (await getUniverse().then(u => u.map(x => x.sym)));
+  const sym = ['', '1000', '1000000', '1M'].map(p => p + base + 'USDT').find(s => syms.includes(s));
+  if (!sym){ $('ppSt').textContent = `No USDT perpetual found for “${base}”.`; return; }
+  P.loading = true; $('ppLoad').disabled = true; $('ppSt').textContent = 'Loading…'; P.sym = sym; btRestartTrades();
+  const tf = P.tf, g = ep => getJSON(`${FAPI}/futures/data/${ep}?symbol=${sym}&period=${tf}&limit=48`, OILIM, 1).catch(() => []);
+  try {
+    const [gl, ta, tp, tk, oi, fr, kl] = await Promise.all([g('globalLongShortAccountRatio'), g('topLongShortAccountRatio'), g('topLongShortPositionRatio'), g('takerlongshortRatio'), g('openInterestHist'),
+      getJSON(`${FAPI}/fapi/v1/fundingRate?symbol=${sym}&limit=60`, FRLIM, 1).catch(() => []), getJSON(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=${tf}&limit=48`, WEIGHT, 1).catch(() => [])]);
+    const A = (a, f) => (Array.isArray(a) ? a : []).map(f).filter(Number.isFinite);
+    const S1 = {gl: A(gl, x => +x.longShortRatio), ta: A(ta, x => +x.longShortRatio), tp: A(tp, x => +x.longShortRatio), tk: A(tk, x => +x.buySellRatio), oi: A(oi, x => +x.sumOpenInterestValue), fr: A(fr, x => +x.fundingRate * 100), px: A(kl, x => +x[4])};
+    const card = (t, v, base, fmt, tip) => v.length < 2 ? `<div class="ppcard"><div class="t">${t}</div><div class="mu" style="padding:14px 0">No data</div></div>` : `<div class="ppcard" title="${tip}"><div class="t">${t}</div><div class="v">${fmt(v.at(-1))}</div>${posSpark(v, base)}<div class="t">${v.length} × ${tf} · first ${fmt(v[0])}</div></div>`;
+    const r2 = x => x.toFixed(2), M = x => '$' + posM(x), pc = x => x.toFixed(4) + '%';
+    $('ppOut').innerHTML = card('All accounts, long ÷ short', S1.gl, 1, r2, 'Ratio of accounts holding longs to accounts holding shorts. Above 1 = more accounts long') + card('Top traders, accounts', S1.ta, 1, r2, 'Same ratio for the largest traders, counted by account') +
+      card('Top traders, positions', S1.tp, 1, r2, 'Same ratio for the largest traders, weighted by position size') + card('Taker buy ÷ sell volume', S1.tk, 1, r2, 'Above 1: market buys outweigh market sells') +
+      card('Open interest', S1.oi, null, M, 'Value of open contracts') + card('Funding rate (per payment)', S1.fr, 0, pc, 'Last 60 funding payments') + card('Price', S1.px, null, fmtPrice, 'Close of each period');
+    const gL = S1.gl.at(-1), tP = S1.tp.at(-1), pΔ = S1.px.length > 1 ? (S1.px.at(-1) / S1.px[0] - 1) * 100 : null, oΔ = S1.oi.length > 1 ? (S1.oi.at(-1) / S1.oi[0] - 1) * 100 : null, nm = baseOf(sym);
+    const out = [];
+    if (gL != null && tP != null){
+      if (gL >= 1.2 && tP <= 0.95) out.push(['wr', `${nm}: the crowd is long (${gL.toFixed(2)}) but the largest traders lean short (${tP.toFixed(2)}). Long side looks crowded.`]);
+      else if (gL <= 0.85 && tP >= 1.05) out.push(['wr', `${nm}: the crowd is short (${gL.toFixed(2)}) but the largest traders lean long (${tP.toFixed(2)}). Short side looks crowded, which can fuel squeezes.`]);
+      else out.push(['', `${nm}: the crowd (${gL.toFixed(2)}) and the largest traders (${tP.toFixed(2)}) are on the same side or neutral. No disagreement.`]);
+    }
+    if (pΔ != null && oΔ != null && (Math.abs(pΔ) > .3 || Math.abs(oΔ) > .3)){
+      const w = pΔ > 0 ? (oΔ > 0 ? 'price up with open interest up: new longs entering' : 'price up with open interest down: short covering') : (oΔ > 0 ? 'price down with open interest up: new shorts entering' : 'price down with open interest down: longs closing');
+      out.push(['', `Over these ${S1.px.length} ${tf} candles: price ${pΔ >= 0 ? '+' : ''}${pΔ.toFixed(1)}%, open interest ${oΔ >= 0 ? '+' : ''}${oΔ.toFixed(1)}% — ${w}.`]);
+    }
+    $('ppRead').hidden = !out.length; $('ppRead').className = 'lqnote' + (out.some(x => x[0]) ? ' dn' : ''); $('ppRead').innerHTML = out.map(x => x[1]).join('<br>');
+    P.t = Date.now(); $('ppSt').textContent = `${nm} · updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})}`;
+  } catch(e){ $('ppSt').textContent = 'Could not load: ' + e.message; }
+  finally { P.loading = false; $('ppLoad').disabled = false; }
+}
+/* --- large trades and liquidations (live) --- */
+function btOpen(key, url, onMsg){
+  if (PS.bt.ws[key]) return;
+  let w; try { w = new WebSocket(url); } catch { $('btSt').textContent = 'Live feed not available in this browser.'; return; }
+  PS.bt.ws[key] = w; $('btSt').textContent = 'Live';
+  w.onmessage = e => { try { onMsg(JSON.parse(e.data)); } catch {} };
+  w.onclose = () => { if (PS.bt.ws[key] === w){ delete PS.bt.ws[key]; if (PS.bt.want && S.view === 'pos') setTimeout(btStart, 3000); } };
+  w.onerror = () => { $('btSt').textContent = 'Live feed interrupted, reconnecting…'; };
+}
+function btPush(r){ if (r.usd < PS.bt.min) return; PS.bt.rows.unshift(r); if (PS.bt.rows.length > 120) PS.bt.rows.length = 120; PS.bt.dirty = true; }
+function btStart(){
+  PS.bt.want = true;
+  btOpen('liq', 'wss://fstream.binance.com/ws/!forceOrder@arr', m => { const o = m.o; if (!o) return; const px = +o.ap || +o.p, usd = px * +o.z; btPush({t: o.T, base: baseOf(o.s), type: 'Liquidation', side: o.S === 'SELL' ? 'Long liquidated' : 'Short liquidated', dir: o.S === 'SELL' ? -1 : 1, px, usd}); });
+  btRestartTrades();
+}
+function btRestartTrades(){
+  if (!PS.bt.want) return; const sym = PS.pp.sym || 'BTCUSDT';
+  if (PS.bt.ws.trade && PS.bt.tradeSym !== sym){ const w = PS.bt.ws.trade; delete PS.bt.ws.trade; try { w.close(); } catch {} }
+  PS.bt.tradeSym = sym;
+  btOpen('trade', `wss://fstream.binance.com/ws/${sym.toLowerCase()}@aggTrade`, m => { const px = +m.p, usd = px * +m.q; btPush({t: m.T, base: baseOf(m.s), type: 'Trade', side: m.m ? 'Market sell' : 'Market buy', dir: m.m ? -1 : 1, px, usd}); });
+}
+function btStop(){ PS.bt.want = false; for (const k of Object.keys(PS.bt.ws)){ const w = PS.bt.ws[k]; delete PS.bt.ws[k]; try { w.close(); } catch {} } }
+function psTrRender(){
+  if (S.view !== 'pos' || !PS.bt.dirty && $('btBody').children.length) return; PS.bt.dirty = false;
+  const k = PS.bt.kind, r = PS.bt.rows.filter(x => k === 'all' || (k === 'liq') === (x.type === 'Liquidation')).slice(0, 60);
+  $('btBody').innerHTML = r.map(x => `<tr data-sym="${x.base}USDT"><td class="l mu">${new Date(x.t).toLocaleTimeString([], {hourCycle: 'h23'})}</td><td class="l"><b>${x.base}</b></td><td class="l mu">${x.type}</td><td class="l ${x.dir > 0 ? 'up' : 'dn'}">${x.side}</td><td>${fmtPrice(x.px)}</td><td><b>$${posM(x.usd)}</b></td></tr>`).join('') || `<tr><td colspan="6" class="mu" style="text-align:center;padding:14px">Waiting for trades above $${posM(PS.bt.min)}… (liquidations arrive in bursts)</td></tr>`;
+}
+setInterval(psTrRender, 1000);
+/* --- Bull Market Support Band --- */
+function bmCalc(k){
+  const wk = t => Math.floor((t / 864e5 + 3) / 7), cl = []; let lw = null;
+  for (const x of k){ const w = wk(x[0]); if (w === lw) cl[cl.length - 1] = +x[4]; else { cl.push(+x[4]); lw = w; } }
+  if (cl.length < 24) return null;
+  const sma = cl.slice(-20).reduce((a, b) => a + b, 0) / 20, ema = emaSeries(cl, 21).at(-1), lo = Math.min(sma, ema), hi = Math.max(sma, ema), px = cl.at(-1);
+  return {price: px, lo, hi, st: px > hi ? 'above' : px < lo ? 'below' : 'inside', dist: px > hi ? (px / hi - 1) * 100 : px < lo ? (px / lo - 1) * 100 : 0};
+}
+async function bmLoad(force){
+  const B = PS.bm; if (B.loading) return;
+  try { const ck = await Cache.get('bmsb:v1'); if (!force && ck && Date.now() - ck.t < 36e5){ B.rows = ck.rows; B.t = ck.t; $('bmSt').textContent = 'Cached · refreshes hourly'; bmRender(); posStats(); return; } } catch {}
+  B.loading = true; $('bmLoad').disabled = true;
+  try {
+    const top = (await getUniverse()).slice(0, 100), out = []; let i = 0, n = 0;
+    const worker = async () => { while (i < top.length){ const u = top[i++]; try { const k = await getJSON(`${FAPI}/fapi/v1/klines?symbol=${u.sym}&interval=1d&limit=499`, WEIGHT, 2), r = bmCalc(k); if (r) out.push({sym: u.sym, base: u.base, ...r}); } catch {} $('bmSt').textContent = `Loading ${++n}/${top.length}…`; } };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    B.rows = out; B.t = Date.now(); await Cache.set('bmsb:v1', {t: B.t, rows: out}); $('bmSt').textContent = `Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})} · ${out.length} coins`;
+    bmRender(); posStats();
+  } catch(e){ $('bmSt').textContent = 'Could not load: ' + e.message; }
+  finally { B.loading = false; $('bmLoad').disabled = false; }
+}
+function bmRender(){
+  if ($('viewPos').hidden) return;
+  const B = PS.bm, r = B.rows, c = k => r.filter(x => x.st === k).length, btc = r.find(x => x.sym === 'BTCUSDT'), {k, dir} = B.sort;
+  const lab = {above: 'Above', inside: 'Inside', below: 'Below'};
+  $('bmStats').innerHTML = r.length ? `<div class="stat"><div class="mu">Above the band</div><div class="v s up">${c('above')}</div><div class="mu" style="font-size:11.5px">${Math.round(100 * c('above') / r.length)}% of ${r.length}</div></div><div class="stat"><div class="mu">Inside</div><div class="v s">${c('inside')}</div></div><div class="stat"><div class="mu">Below</div><div class="v s dn">${c('below')}</div><div class="mu" style="font-size:11.5px">${Math.round(100 * c('below') / r.length)}%</div></div>${btc ? `<div class="stat"><div class="mu">BTC</div><div class="v s ${btc.st === 'above' ? 'up' : btc.st === 'below' ? 'dn' : ''}">${lab[btc.st]} ${btc.dist ? fmtPct(btc.dist) : ''}</div><div class="mu" style="font-size:11.5px">band ${fmtPrice(btc.lo)} – ${fmtPrice(btc.hi)}</div></div>` : ''}` : '';
+  $('bmBody').innerHTML = [...r].sort((a, b) => k === 'base' ? dir * a.base.localeCompare(b.base) : k === 'st' ? dir * (a.st.localeCompare(b.st)) : dir * (a[k] - b[k])).map(x => `<tr data-sym="${x.sym}"><td class="l"><b>${x.base}</b></td><td>${fmtPrice(x.price)}</td><td class="l ${x.st === 'above' ? 'up' : x.st === 'below' ? 'dn' : 'mu'}">${lab[x.st]}</td><td class="${cls(x.dist)}">${x.dist ? fmtPct(x.dist) : '0%'}</td><td class="mu">${fmtPrice(x.lo)}</td><td class="mu">${fmtPrice(x.hi)}</td></tr>`).join('');
+}
+function posEnter(){
+  posStats(); if (!PS.f.rows.length || Date.now() - PS.f.t > 60000) pfLoad(); else pfRender();
+  if (!PS.fg) fgLoad();
+  if (!PS.pp.t) ppLoad();
+  if (!PS.bm.rows.length || Date.now() - PS.bm.t > 36e5) bmLoad(false); else bmRender();
+  btStart(); psTrRender();
+}
+$('pfLoad').onclick = pfLoad; $('bmLoad').onclick = () => bmLoad(true); $('ppLoad').onclick = ppLoad;
+$('pfQ').oninput = pfRender; $('pfV').onchange = pfRender;
+$('pfF').onclick = e => { const b = e.target.closest('button'); if (!b) return; PS.f.filt = b.dataset.v; [...$('pfF').children].forEach(x => x.classList.toggle('on', x === b)); pfRender(); };
+$('ppTf').onclick = e => { const b = e.target.closest('button'); if (!b) return; PS.pp.tf = b.dataset.v; [...$('ppTf').children].forEach(x => x.classList.toggle('on', x === b)); ppLoad(); };
+$('ppSym').onkeydown = e => { if (e.key === 'Enter') ppLoad(); };
+$('btMin').onchange = () => { PS.bt.min = +$('btMin').value; PS.bt.rows = PS.bt.rows.filter(x => x.usd >= PS.bt.min); PS.bt.dirty = true; psTrRender(); };
+$('btKind').onclick = e => { const b = e.target.closest('button'); if (!b) return; PS.bt.kind = b.dataset.v; [...$('btKind').children].forEach(x => x.classList.toggle('on', x === b)); PS.bt.dirty = true; psTrRender(); };
+$('viewPos').addEventListener('click', e => {
+  const th = e.target.closest('th[data-k]'); if (th){ const tb = th.closest('table').querySelector('tbody').id, o = tb === 'pfBody' ? PS.f : PS.bm, k = th.dataset.k; o.sort = {k, dir: o.sort.k === k ? -o.sort.dir : (k === 'base' || k === 'st' ? 1 : -1)}; tb === 'pfBody' ? pfRender() : bmRender(); return; }
+  const tr = e.target.closest('tbody tr[data-sym]'); if (tr) anaOpen(tr.dataset.sym);
+});
+$('pfCsv').onclick = () => csvDownload('onslaught-funding.csv', ['coin', 'mark_price', 'change_24h_pct', 'volume_24h_usd', 'funding_per_8h_pct', 'funding_own_interval_pct', 'interval_h', 'next_payment_utc', 'annualised_pct'],
+  pfShown().map(x => [x.base, x.price, x.chg.toFixed(2), Math.round(x.qv), x.r8.toFixed(4), x.rate.toFixed(4), x.ih, new Date(x.nf).toISOString(), x.apr.toFixed(1)]));
 
 /* ---------- Sector Flow ---------- */
 const SEC = {coins: null, rows: [], open: new Set(), sort: {k: 'shareD', dir: -1}, loading: false, t: null};
@@ -5084,7 +5312,7 @@ function anaMtfStrip(L){
 function anaRender(){
   const body = $('anaBody'), sym = ANA.sym, info = ANA.info, L = ANA.L, row = ANA.row;
   const empty = t => body.innerHTML = `<div class="panel mu" style="margin-top:12px">${t}</div>`;
-  $('anaTv').hidden = $('anaPlan').hidden = $('anaLink').hidden = $('anaClose').hidden = !sym;
+  $('anaTv').hidden = $('anaPlan').hidden = $('anaPos').hidden = $('anaLink').hidden = $('anaClose').hidden = !sym;
   if (sym){ $('anaTv').href = `https://www.tradingview.com/chart/?symbol=BINANCE:${sym}.P`; }
   const tags = info ? tagsOf(info.base).slice(0, 3).map(t => `<span class="tag">${esc(t)}</span>`).join('') : '';
   const lp = sym && LIVE.q.get(sym), price = lp ? lp[0] : info ? info.price : null, chg = lp && lp[1] != null ? lp[1] : info ? info.chg : null;
@@ -5226,6 +5454,7 @@ $('anaIn').onkeydown = e => {
 };
 $('anaSug').onmousedown = e => { const li = e.target.closest('[data-sym]'); if (li){ e.preventDefault(); anaPickSym(li.dataset.sym); } };
 document.addEventListener('click', e => { if (!e.target.closest('.anapick')) $('anaSug').hidden = true; });
+$('anaPos').onclick = () => { if (!ANA.sym) return; $('ppSym').value = baseOf(ANA.sym); PS.pp.t = 0; setView('pos'); ppLoad(); };
 $('anaPlan').onclick = () => { if (!ANA.sym || !ANA.info) return; DIV.uni.set(ANA.sym, ANA.info); openDrawer(ANA.sym, {tf: ANA.tf}); };
 $('anaLink').onclick = async () => { const u = `${location.origin}${location.pathname}#t=ta&c=${ANA.sym}&tf=${ANA.tf}`; try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch { toast('Copy failed'); } };
 { let rt = 0; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.view === 'ta' && ANA.L) anaRender(); }, 150); }); }
@@ -6176,7 +6405,7 @@ $('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.
   if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Crypto Scanner scan that includes this coin to open its trade plan.'); return; }
   const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
 $('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
-try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'macro' || v === 'div' || v === 'ta') setView(v); } catch {}
+try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'pos' || v === 'macro' || v === 'div' || v === 'ta') setView(v); } catch {}
 $('alertBtn').onclick = toggleAlerts; paintAlertBtn();
 for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
 for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
@@ -6413,7 +6642,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !$('kbHelp').hidden){ kbShut(); return; }
   if (typing || !$('palette').hidden || !$('kbHelp').hidden) return;
   const k = e.key;
-  if (/^[1-8]$/.test(k)){ const vis = [...$('tabs').children].filter(b => !b.hidden && b.dataset.view); const b = vis[+k - 1]; if (b){ e.preventDefault(); setView(b.dataset.view); } return; }
+  if (/^[1-9]$/.test(k)){ const vis = [...$('tabs').children].filter(b => !b.hidden && b.dataset.view); const b = vis[+k - 1]; if (b){ e.preventDefault(); setView(b.dataset.view); } return; }
   if (k === '/'){ e.preventDefault(); const el = S.view === 'ta' ? $('anaIn') : S.view === 'trend' ? $('search') : null; if (el) el.focus(); else openPalette(); return; }
   if (k === '?'){ e.preventDefault(); kbOpen(); return; }
   if (k === 's' || k === 'S'){ if (S.view === 'trend'){ setMode(UI.mode === 'simple' ? 'full' : 'simple'); } return; }
@@ -6460,7 +6689,7 @@ async function applyHash(){
   const h = new URLSearchParams(location.hash.replace(/^#/, '')); if (!h.has('t') && !h.has('c')) return;
   history.replaceState(null, '', location.pathname + location.search);
   const t = h.get('t'), tf = h.get('tf'), c = (h.get('c') || '').toUpperCase(), d = +h.get('d') < 0 ? -1 : 1;
-  if (['trend', 'map', 'sectors', 'macro', 'div', 'ta', 'liq', 'journal'].includes(t) && !(t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c))) setView(t);
+  if (['trend', 'map', 'sectors', 'macro', 'div', 'ta', 'liq', 'pos', 'journal'].includes(t) && !(t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c))) setView(t);
   if (t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c)){ anaOpen(c, tf); return; }
   if (TFS.includes(tf) && tf !== S.tf) $('tfSeg').querySelector(`[data-v="${tf}"]`)?.click();
   if (/^[A-Z0-9]{3,20}USDT$/.test(c)){
