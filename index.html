@@ -5307,7 +5307,7 @@ function brkMoments(tr, vari){
   return {n: m.size, avg: avgs.length ? avgs.reduce((x, y) => x + y, 0) / avgs.length : 0};
 }
 function brkRender(){
-  if (!jLab()) return;
+  if (!jLab() || !jFoldOpen('brkOut')) return;
   queueMicrotask(rxRender);
   const out = $('brkOut'); if (!out) return;
   if (!BRK.ev.length){ out.innerHTML = '<div class="mu" style="margin-top:8px">No study run yet. Pick timeframes and press Run study.</div>'; return; }
@@ -5429,7 +5429,7 @@ function rxStat(list){
     an: A1.length, aw: A1.length ? 100 * A1.filter(v => v > 0).length / A1.length : null, a1: avg(A1), a2: avg(A2), am: mo, bn: B1.length, bw: B1.length ? 100 * B1.filter(v => v > 0).length / B1.length : null, b1: avg(B1), b2: avg(B2)};
 }
 function rxRender(){
-  if (!jLab()) return;
+  if (!jLab() || !jFoldOpen('rxOut')) return;
   const out = $('rxOut'); if (!out) return;
   const withRx = BRK.ev.filter(e => e.rx).length;
   if (!BRK.ev.length){ out.innerHTML = ''; return; }
@@ -5581,7 +5581,7 @@ function suCompare(VARS, f2, cls){
   return h + `<div class="mu" style="font-size:12px;margin:6px 0">${v}</div>`;
 }
 function suRender(){
-  if (!jLab()) return;
+  if (!jLab() || !jFoldOpen('suOut')) return;
   const out = $('suOut'); if (!out) return;
   const K = SU_KINDS[SU.kind], VARS = suVars(SU.kind), raw = SU.ev[SU.kind] || [];
   if (!VARS[SU.vari]) SU.vari = VARS['a15|2'] ? 'a15|2' : Object.keys(VARS)[1];
@@ -5735,6 +5735,8 @@ alLoad();
 const LAZY = {loaded: false};
 const jPane = () => S.view === 'journal' ? ([...document.querySelectorAll('.jpane')].find(p => !p.hidden)?.id.slice(2) || '') : '';
 const jLab = () => jPane() === 'Lab', jScore = () => jPane() === 'Score';
+const jFoldOpen = id => { const d = $(id) && $(id).closest('details'); return !d || d.open; };
+document.addEventListener('toggle', e => { const d = e.target; if (d && d.matches && d.matches('details.jfold') && d.open) jFlush(); }, true);
 function jLazyLoad(){ if (LAZY.loaded) return; LAZY.loaded = true; brkLoad(); suLoad(); rbLoad(); btLoadAll(); }
 /* Leaving the Journal for a while frees the study stores (hundreds of thousands of events): a big heap makes every garbage collection, and so every scan, stall. */
 function jUnload(){
@@ -5793,7 +5795,11 @@ function sbVerdict(h){
   if (h.z <= -2) return ['Worse than chance', 'dn'];
   return ['No edge', 'mu'];
 }
-function sbRowsData(){
+let SBM = {key: '', rows: null, html: ''};
+function sbKey(){ const done = J.entries.reduce((a, e) => a + (e.out && e.out.res ? 1 : 0), 0);
+  return [$('sbStop').value, $('sbTgt').value, Object.keys(SU.ev).map(k => k + SU.ev[k].length).join(','), BRK.ev.length, !!RB.m, J.entries.length, done, (AL.rows || []).length, !!(typeof BU !== 'undefined' && BU.fn), JSON.stringify(SU.meta), JSON.stringify(BRK.meta), RB.meta ? JSON.stringify(RB.meta) : ''].join('|'); }
+function sbRowsData(){ const k = sbKey(); if (SBM.key === k && SBM.rows) return SBM.rows; const r = sbRowsCompute(); SBM.key = k; SBM.rows = r; SBM.html = ''; return r; }
+function sbRowsCompute(){
   const stop = $('sbStop').value, tgt = +$('sbTgt').value, ri = SU_CFG_STOPS.indexOf(stop) * 3 + SETUP_TARGETS.indexOf(tgt), stopTxt = $('sbStop').selectedOptions[0].textContent, rows = [];
   const add = (name, side, src, rule, tr, bk) => rows.push({name, side, src, rule, per: sbPer(tr), bk: bk && RB.m ? {key: bk + '|' + tgt, dir: side === 'Long' ? 1 : -1} : null});
   const cfg = SU.ev.cfg || [], flip = SU.meta.cfg && SU.meta.cfg.flip;
@@ -5823,6 +5829,7 @@ function sbRowsData(){
 }
 function sbRender(){
   const out = $('sbOut'); if (!out || !jScore()) return;
+  { const k = sbKey(); if (SBM.key === k && SBM.html){ out.innerHTML = SBM.html; return; } }
   const rows = sbRowsData(), f2 = x => x == null ? '–' : (x >= 0 ? '+' : '') + x.toFixed(2), cls = x => x == null ? '' : x > 0.02 ? 'up' : x < -0.02 ? 'dn' : '';
   if (!rows.length){ out.innerHTML = '<div class="mu" style="padding:8px 0">Nothing to show yet. Press <b>Run all tests</b> below to build the history tests, or use the Journal and Runner tabs.</div>'; return; }
   let h = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Strategy</th><th class="l">Side</th><th class="l">Source</th><th class="l">Trade rule</th><th>Moments</th><th>Avg R per moment</th><th title="What random entries earn with the same stop, target, side and period">Chance</th><th>vs chance</th><th>Noise ±</th><th>1H</th><th>4H</th><th>1D</th><th>1st half</th><th>2nd half</th><th class="l">Verdict</th></tr></thead><tbody>';
@@ -5838,7 +5845,7 @@ function sbRender(){
   if (BRK.ev.length){ const parts = []; for (const tf of ['1h', '4h', '1d']){ const ts = BRK.ev.filter(e => e.tf === tf).map(e => e.t); if (!ts.length) continue; const d = (amax(ts) - amin(ts)) / 864e5; parts.push(`${tf.toUpperCase()} ${Math.round(d)} d${d < SB_MIN_DAYS ? ' ⚠' : ''}`); } cov.push(`Breaker: ${parts.join(', ')}`); }
   h += `<div class="mu" style="font-size:12px;margin:8px 0"><b>How to read:</b> "Chance" is what random entries earn with the same stop, target, side, timeframe and period (the Random entries rows; * = no baseline yet, the fixed -0.04R is used). "vs chance" is the average minus that. "Noise ±" is about two standard errors: a result only counts if it is bigger than that. <b>Promising</b> = well above chance (2.5 noise units) and above it in both halves of the period; <b>Unproven</b> = above chance but not convincingly or the halves disagree; <b>No edge</b> = within the noise; <b>Worse than chance</b> = clearly negative; <b>Too few</b> = under 30 moments. Timeframe cells show that timeframe alone (hover for moments and days; dimmed under 10). History = replays on old candles; Live journal = signals this browser logged (1.5 ATR, 1.5R); Runner = trades your server followed (load them in Runner results). Different sources use different trade rules, so compare within a source first. With this many rows, one or two will look good by luck alone: trust a Promising row only if it also holds in a different coin set, a later period, or your live results.</div>`;
   if (cov.length) h += `<div class="mu" style="font-size:12px;margin:4px 0">History covered (days between the first and last signal): ${cov.join(' · ')}.${cov.some(c => c.includes('⚠')) ? ' <b>⚠ = under a year</b>: that test was run with an older, shorter history. Press Run all tests below to refresh it with a full year.' : ''}</div>`;
-  out.innerHTML = h;
+  out.innerHTML = h; SBM.html = h;
 }
 for (const id of ['sbStop', 'sbTgt']) $(id).onchange = sbRender;
 let sbBusy = false;
@@ -5955,7 +5962,7 @@ function btAnalyse(cd, tf, fee, fund){
   return {rows, from: cd[S][0], to: cd[cd.length - 1][0], candles: cd.length - S};
 }
 function btRender(){
-  if (!jLab()) return;
+  if (!jLab() || !jFoldOpen('btOut')) return;
   const out = $('btOut'); if (!out) return; const R = BT.res; if (!R || !R.length){ out.innerHTML = ''; return; }
   const p1 = x => x == null ? '–' : (x >= 0 ? '+' : '') + (x * 100).toFixed(0) + '%', p0 = x => (x * 100).toFixed(0) + '%', cl = x => x > 0.005 ? 'up' : x < -0.005 ? 'dn' : '', yrs = [...new Set(R.flatMap(b => b.rows.flatMap(r => Object.keys(r.years))))].sort();
   let h = '<div class="tablewrap" style="border:0"><table class="jedge"><thead><tr><th class="l">Rule</th><th class="l">Position</th><th class="l">TF</th><th>Total return</th><th>Per year</th><th>Worst drop</th><th>Sharpe</th><th>Return / drop</th><th>In market</th><th>Trades</th><th title="Share of 200 shuffles of the same trades (same time in the market) that the rule beats on Sharpe">Beats random timing</th>' + yrs.map(y => `<th>${y}</th>`).join('') + '</tr></thead><tbody>';
@@ -6005,7 +6012,7 @@ function btRobust(cd, tf, fee, fund){
   return {tf, bh: {all: sl(bh.all), h1: sl(bh.h1), h2: sl(bh.h2)}, rows, from: cd[S][0], mid: cd[M][0], to: cd[n - 1][0]};
 }
 function btRobRender(){
-  if (!jLab()) return;
+  if (!jLab() || !jFoldOpen('btOut')) return;
   const out = $('btRob'); if (!out) return; const R = BT.rob; if (!R || !R.length){ out.innerHTML = ''; return; }
   const p1 = x => (x >= 0 ? '+' : '') + (x * 100).toFixed(0) + '%', cl = x => x > 0.005 ? 'up' : x < -0.005 ? 'dn' : '', d = t => new Date(t).toISOString().slice(0, 10);
   let h = '<div style="margin:14px 0 4px;font-weight:600">Robustness check (long or flat)</div>';
