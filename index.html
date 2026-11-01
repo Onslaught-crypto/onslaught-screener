@@ -932,7 +932,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <div class="panel">
       <div class="row">
         <b>Large trades and liquidations</b>
-        <label class="mu">Min size <select id="btMin"><option value="25000">$25k</option><option value="50000">$50k</option><option value="100000" selected>$100k</option><option value="250000">$250k</option><option value="1000000">$1M</option></select></label>
+        <label class="mu">Min size <select id="btMin"><option value="5000">$5k</option><option value="10000">$10k</option><option value="25000" selected>$25k</option><option value="50000">$50k</option><option value="100000">$100k</option><option value="250000">$250k</option><option value="1000000">$1M</option></select></label>
         <div class="seg" id="btKind"><button data-v="all" class="on">Both</button><button data-v="liq">Liquidations</button><button data-v="trade">Trades</button></div>
         <span class="mu" id="btSt"></span>
       </div>
@@ -3052,7 +3052,7 @@ function setView(v){
 }
 
 /* ---------- Positioning: funding, long/short, large trades, Bull Market Support Band, Fear & Greed ---------- */
-const PS = {f: {rows: [], t: 0, sort: {k: 'r8', dir: -1}, filt: 'all', loading: false}, pp: {tf: '1h', sym: null, t: 0, loading: false}, bt: {ws: {}, rows: [], kind: 'all', min: 100000, dirty: false, want: false, seen: {liq: 0, trade: 0}, big: {liq: 0, trade: 0}, open: {}}, bm: {rows: [], t: 0, loading: false, filt: '', sort: {k: 'dist', dir: -1}}, fg: null};
+const PS = {f: {rows: [], t: 0, sort: {k: 'r8', dir: -1}, filt: 'all', loading: false}, pp: {tf: '1h', sym: null, t: 0, loading: false}, bt: {ws: {}, rows: [], kind: 'all', min: 25000, dirty: false, want: false, seen: {liq: 0, trade: 0}, big: {liq: 0, trade: 0}, open: {}}, bm: {rows: [], t: 0, loading: false, filt: '', sort: {k: 'dist', dir: -1}}, fg: null};
 const posM = v => !Number.isFinite(v) ? '—' : v >= 1e9 ? (v / 1e9).toFixed(2) + 'B' : v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v.toFixed(0);
 function csvDownload(name, head, rows){
   const q = v => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
@@ -3165,14 +3165,14 @@ function btPush(r){
 }
 function btStart(){
   PS.bt.want = true;
-  btOpen('liq', 'wss://fstream.binance.com/ws/!forceOrder@arr', m => { const o = m.o; if (!o) return; const px = +o.ap || +o.p, usd = px * +o.z; btPush({t: o.T, base: baseOf(o.s), type: 'Liquidation', side: o.S === 'SELL' ? 'Long liquidated' : 'Short liquidated', dir: o.S === 'SELL' ? -1 : 1, px, usd}); });
+  btOpen('liq', 'wss://fstream.binance.com/market/ws/!forceOrder@arr', m => { const o = m.o; if (!o) return; const px = +o.ap || +o.p, usd = px * +o.z; btPush({t: o.T, base: baseOf(o.s), type: 'Liquidation', side: o.S === 'SELL' ? 'Long liquidated' : 'Short liquidated', dir: o.S === 'SELL' ? -1 : 1, px, usd}); });
   btRestartTrades();
 }
 function btRestartTrades(){
   if (!PS.bt.want) return; const sym = PS.pp.sym || 'BTCUSDT';
   if (PS.bt.ws.trade && PS.bt.tradeSym !== sym){ const w = PS.bt.ws.trade; delete PS.bt.ws.trade; try { w.close(); } catch {} }
   PS.bt.tradeSym = sym;
-  btOpen('trade', `wss://fstream.binance.com/ws/${sym.toLowerCase()}@aggTrade`, m => { const px = +m.p, usd = px * +m.q; btPush({t: m.T, base: baseOf(m.s), type: 'Trade', side: m.m ? 'Market sell' : 'Market buy', dir: m.m ? -1 : 1, px, usd}); });
+  btOpen('trade', `wss://fstream.binance.com/market/ws/${sym.toLowerCase()}@aggTrade`, m => { const px = +m.p, usd = px * +m.q; btPush({t: m.T, base: baseOf(m.s), type: 'Trade', side: m.m ? 'Market sell' : 'Market buy', dir: m.m ? -1 : 1, px, usd}); });
 }
 function btStop(){ PS.bt.want = false; for (const k of Object.keys(PS.bt.ws)){ const w = PS.bt.ws[k]; delete PS.bt.ws[k]; try { w.close(); } catch {} } }
 function psTrRender(){
