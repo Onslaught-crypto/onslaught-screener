@@ -943,6 +943,15 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div class="tablewrap" style="max-height:360px;overflow:auto"><table class="pftbl"><thead><tr><th class="l" data-k="base">Coin</th><th data-k="price">Price</th><th class="l" data-k="st">Position</th><th data-k="dist" title="Distance from the nearest edge of the band, positive when above">From band</th><th data-k="lo">Band low</th><th data-k="hi">Band high</th></tr></thead><tbody id="bmBody"></tbody></table></div>
       <div class="dnote">Above the band is read as healthy trend, inside as indecision, below as weak. Trend context, not a signal.</div>
     </div>
+    <div class="panel"><details data-help="pos"><summary>How to read the Positioning tab</summary><ul>
+      <li><b>Funding</b> is what one side of a perpetual pays the other every few hours. Positive: longs pay shorts, so longs are the crowded side. Negative: shorts pay. The table converts every coin to a per-8-hours rate so 1h, 4h and 8h coins compare. Around +0.01% is normal; beyond ±0.03% (⚠) one side is crowded and a squeeze against it becomes more likely. <b>Annualised</b> is what holding the position would cost or earn over a year if the rate never changed.</li>
+      <li><b>Long ÷ short ratio, all accounts</b> counts traders: above 1 means more accounts are long. It describes the crowd, mostly small traders. <b>Top traders, positions</b> weighs by size and describes the largest accounts. When the crowd is long and the large traders are short (or the reverse), the note above the charts flags it: that is the crowded side to be careful with.</li>
+      <li><b>Taker buy ÷ sell</b> compares market buys with market sells: above 1, buyers are the ones crossing the spread. <b>Open interest</b> with price tells who is acting: price up and open interest up means new longs, price up and open interest down means short covering, price down and open interest up means new shorts, price down and open interest down means longs closing.</li>
+      <li><b>Large trades and liquidations</b> is a live feed. A long liquidation is a forced sell, a short liquidation a forced buy. Clusters of large liquidations often mark the end of a fast move, not the start of the next. The feed starts when you open the tab and stops when you leave, and trades follow the coin chosen in Positioning.</li>
+      <li><b>Bull Market Support Band</b> is the 20-week average and the 21-week EMA of the weekly close. Above the band is read as a healthy trend, inside as indecision, below as weak. The counts show how many of the top 100 coins are in each state. Click a count to filter the table.</li>
+      <li><b>Fear &amp; Greed</b> (alternative.me) blends volatility, momentum, social and other readings into 0 to 100. Low is fear, high is greed.</li>
+      <li><b>What this tab is not:</b> context. None of these readings has been tested as an entry rule, and the Journal is where that test happens.</li>
+    </ul></details></div>
   </div>
   <div id="viewJournal" hidden>
     <div class="seg jtabs" id="jTabs" style="margin:0 0 10px"><button data-v="Score" class="on">Scoreboard</button><button data-v="Live">Live log</button><button data-v="Lab">Study lab</button><button data-v="Runner">Runner results</button></div>
@@ -7347,6 +7356,15 @@ journal: ['Como funciona o journal', `<ul>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
 
 <li><b>Sinais contra um controlo aleatório</b>: por cada novo sinal o diário segue também uma moeda aleatória na mesma vela e lado sem sinal, com o mesmo stop e alvo. O cartão compara os dois por momento e diz se a diferença está dentro do ruído; avalia depois de cerca de 150 momentos emparelhados. O diário guarda agora até 12 000 entradas.</li>
+</ul>`],
+pos: ['Como ler o separador Positioning', `<ul>
+<li><b>Funding</b> é o que um lado de um perpétuo paga ao outro de poucas em poucas horas. Positivo: os longs pagam aos shorts, por isso os longs são o lado sobrelotado. Negativo: pagam os shorts. A tabela converte todas as moedas para uma taxa por 8 horas, para que moedas de 1h, 4h e 8h sejam comparáveis. Cerca de +0,01% é normal; além de ±0,03% (⚠) um lado está sobrelotado e um squeeze contra ele torna-se mais provável. <b>Annualised</b> é o que custaria ou renderia manter a posição durante um ano se a taxa nunca mudasse.</li>
+<li><b>Rácio long ÷ short, todas as contas</b> conta traders: acima de 1 há mais contas long. Descreve a multidão, sobretudo pequenos traders. <b>Top traders, positions</b> pesa pelo tamanho e descreve as maiores contas. Quando a multidão está long e os grandes traders estão short (ou o contrário), a nota acima dos gráficos assinala-o: é o lado sobrelotado a que convém ter cuidado.</li>
+<li><b>Taker buy ÷ sell</b> compara compras a mercado com vendas a mercado: acima de 1, são os compradores que cruzam o spread. O <b>open interest</b> com o preço mostra quem está a agir: preço a subir com OI a subir são novos longs, preço a subir com OI a descer é cobertura de shorts, preço a descer com OI a subir são novos shorts, preço a descer com OI a descer são longs a fechar.</li>
+<li><b>Large trades and liquidations</b> é um feed ao vivo. Uma liquidação de long é uma venda forçada, uma liquidação de short é uma compra forçada. Grupos de liquidações grandes marcam muitas vezes o fim de um movimento rápido, não o início do seguinte. O feed arranca quando abres o separador e pára quando sais, e os trades seguem a moeda escolhida em Positioning.</li>
+<li><b>Bull Market Support Band</b> é a média de 20 semanas e a EMA de 21 semanas do fecho semanal. Acima da banda lê-se como tendência saudável, dentro como indecisão, abaixo como fraqueza. As contagens mostram quantas das 100 principais moedas estão em cada estado. Clica numa contagem para filtrar a tabela.</li>
+<li><b>Fear &amp; Greed</b> (alternative.me) combina volatilidade, momentum, redes sociais e outras leituras numa escala de 0 a 100. Baixo é medo, alto é ganância.</li>
+<li><b>O que este separador não é:</b> contexto. Nenhuma destas leituras foi testada como regra de entrada, e o Journal é onde esse teste acontece.</li>
 </ul>`]
 };
 function helpApply(lang){
