@@ -552,7 +552,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <button data-v="all" class="on">All</button><button data-v="bull">Bullish momentum</button><button data-v="bear">Bearish momentum</button>
       </div>
       <span class="sep"></span>
-      <label title="Setup grade filter. A = high quality (timeframes, regime and positioning agree, not stretched); C = weak or risky">Grade <select id="gradeF"><option value="">Any</option><option value="A">A only</option><option value="AB">A–B</option></select></label>
+      <label hidden title="Setup grade filter. A = high quality (timeframes, regime and positioning agree, not stretched); C = weak or risky">Grade <select id="gradeF"><option value="">Any</option><option value="A">A only</option><option value="AB">A–B</option></select></label>
       <label title="Filter by trigger direction: Bull = at least one bullish trigger, Bear = at least one bearish, None = no fresh trigger">Trigger <select id="trigF"><option value="">Any</option><option value="b">Bull</option><option value="s">Bear</option><option value="none">None</option></select></label>
       <label title="How recent a trigger must be to count, in candles of the selected timeframe. Also sets what counts as a LONG/SHORT setup and the Triggered setups card.">within <select id="trigN"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option></select> candles</label>
       <label title="Only pairs that became aligned on the latest candle"><input id="newOnly" type="checkbox"> New only</label>
@@ -624,7 +624,6 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <li><b>Telegram</b>: create a bot with @BotFather, paste its token and your chat ID in Settings, press Send test, then tick Send alerts to Telegram. Each alert lists the pairs with triggers, context and (optionally) entry, stop and targets. The token stays in this browser only. The drawer also has a Send to Telegram button for any plan.</li>
         <li><b>Alerts</b>: turn on with 🔔 (your browser asks permission). After each scan, new triggered setups (or new alignments too, in Settings) raise a desktop notification, an on-page toast and a sound; the tab title shows a count while you're away. Auto-refresh must be on and the tab must stay open; with alerts on, scans keep running in a background tab.</li>
         <li><b>RS 7D</b>: relative strength over the last 7 days in percentage points: ₿ = vs BTC, Ξ = vs ETH (hover for 24h). Green = leading by 2+ points, red = lagging by 2+. Leaders make the best longs in a risk-on market, laggards the best shorts. The regime bar also shows ETH vs BTC: ETH leading often comes before altcoins run. RS is shown, filtered and journaled but not yet part of the grade, so the Journal can show first whether it adds an edge.</li>
-        <li><b>Grade A / B / C</b> rates the aligned side: +1 score 5/5 · +2 all timeframes agree (+1 if only 1D, −2 if 1D is against) · +1 with the regime (−2 against) · +1 within 1.5 ATR of its average (−2 if stretched 3+) · +1 new positions on its side (−1 for short-covering rallies or long-liquidation drops) · +1 when the other side is crowded (−1 when its own side is) · +1 for 2+ triggers · +1 when a recent confirmed divergence (RSI + MACD, or Strong) supports the side (−1 when one opposes it). A = 5+, B = 2–4, C = below. New listings, extreme funding and thin liquidity cap it at C (shown as !). Hover any grade for its breakdown.</li>
         <li><b>LONG / SHORT badge</b> = a triggered setup: 4–5/5 aligned plus a trigger in the same direction. These rank first and have their own stat card.</li>
         <li><b>Positioning</b> compares price and OI change over the same N candles: <b>New longs</b> (price ↑ OI ↑), <b>New shorts</b> (price ↓ OI ↑), <b>Short covering</b> (price ↑ OI ↓, a squeeze that often fades once covering ends), <b>Long liquidation</b> (price ↓ OI ↓). Moves under 0.5% count as flat.</li>
         <li><b>Funding</b>: the last funding rate. 🔥 marks extremes: at or above the hot threshold longs are crowded, at or below the cold threshold shorts are crowded. Crowded sides are fuel for squeezes against them.</li>
@@ -650,12 +649,12 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <label>OBV EMA <input id="obvLen" type="number" min="2" value="50"></label>
         <label>Funding hot ≥ <input id="fundHot" type="number" step="0.005" value="0.05">%</label>
         <label>Funding cold ≤ <input id="fundCold" type="number" step="0.005" value="-0.03">%</label>
-        <label title="Grade: pairs with less 24h volume than this are capped at C">Min liquidity $<input id="minLiq" type="number" min="0" step="1" value="5">M</label>
-        <label title="Grade: funding at or beyond ± this % caps the grade at C (a sign of a stressed market for that coin)">Extreme funding ±<input id="extremeFund" type="number" min="0" step="0.1" value="0.5">%</label>
+        <label hidden title="Grade: pairs with less 24h volume than this are capped at C">Min liquidity $<input id="minLiq" type="number" min="0" step="1" value="5">M</label>
+        <label hidden title="Grade: funding at or beyond ± this % caps the grade at C (a sign of a stressed market for that coin)">Extreme funding ±<input id="extremeFund" type="number" min="0" step="0.1" value="0.5">%</label>
       </div>
       <div class="row">
         <label>Alert on <select id="alertWhat"><option value="setup">Triggered setups</option><option value="aligned">Setups + new alignments</option></select></label>
-        <label title="Only alert on setups of at least this grade">Min grade <select id="alertGrade"><option value="">Any</option><option value="B">B or better</option><option value="A">A only</option></select></label>
+        <label hidden title="Only alert on setups of at least this grade">Min grade <select id="alertGrade"><option value="">Any</option><option value="B">B or better</option><option value="A">A only</option></select></label>
         <label title="When many setups fire on the same side in one scan (a market-wide move), they are really one bet repeated. Only the best few by grade are sent, with a note.">Wave guard <select id="alertCap"><option value="3">Best 3 per side</option><option value="5" selected>Best 5 per side</option><option value="10">Best 10 per side</option><option value="0">Off (send all)</option></select></label>
         <label title="Only alert on pairs whose market cap is inside this range. Pairs with no market cap data are skipped while a range is set.">Market cap <select id="alertMcapMin"><option value="0">Any</option><option value="1e7">$10M</option><option value="5e7">$50M</option><option value="1e8">$100M</option><option value="5e8">$500M</option><option value="1e9">$1B</option><option value="5e9">$5B</option><option value="1e10">$10B</option></select> to <select id="alertMcapMax"><option value="0">Any</option><option value="5e7">$50M</option><option value="1e8">$100M</option><option value="5e8">$500M</option><option value="1e9">$1B</option><option value="5e9">$5B</option><option value="1e10">$10B</option></select></label>
         <label><input id="alertStar" type="checkbox"> Starred pairs only</label>
@@ -695,7 +694,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <span class="mu">Scale</span><div class="seg" id="mapScale"><button data-v="spread" class="on" title="Square-root scale: spreads out the crowded centre and keeps outliers on the chart">Spread</button><button data-v="linear" title="Plain linear scale; extremes are pinned to the edge">Linear</button></div>
         <label><input id="mapLabels" type="checkbox" checked> Labels</label>
         <button id="mapReset" hidden>Reset zoom</button>
-        <span class="maplegend"><i class="lg A"></i>A <i class="lg B"></i>B <i class="lg C"></i>C <i class="lg N"></i>no grade · <i class="lg ring b"></i>long setup <i class="lg ring s"></i>short setup · size = 24h volume</span>
+        <span class="maplegend"><i class="lg ring b"></i>long setup <i class="lg ring s"></i>short setup · size = 24h volume</span>
       </div>
     </div>
     <div class="panel mapwrap"><div id="mapBox"></div><div class="maptip" id="mapTip" hidden></div></div>
@@ -705,7 +704,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li><b>Up and down</b>: relative strength over the last 24 hours, the recent momentum of that strength.</li>
       <li><b>Leading</b> (top right): strong and still gaining. <b>Weakening</b> (bottom right): strong but fading, often taking profit. <b>Lagging</b> (bottom left): weak and still losing. <b>Improving</b> (top left): weak but turning up, where early rotations show first.</li>
       <li>Coins tend to rotate clockwise: Improving → Leading → Weakening → Lagging. Improving coins with an A or B long setup are early candidates; Weakening coins with a short setup are early fade candidates.</li>
-      <li>Click any dot or name to open its trade plan. Drag a box on the chart to zoom in; double-click or <b>Reset zoom</b> to go back.</li><li><b>Spread</b> scale uses a square root so the crowded middle opens up; <b>Linear</b> shows true distances. Values off the chart are pinned to the edge with a dashed outline and their value in the label.</li><li>A soft glow marks A-grade triggered setups.</li>
+      <li>Click any dot or name to open its trade plan. Drag a box on the chart to zoom in; double-click or <b>Reset zoom</b> to go back.</li><li><b>Spread</b> scale uses a square root so the crowded middle opens up; <b>Linear</b> shows true distances. Values off the chart are pinned to the edge with a dashed outline and their value in the label.</li><li></li>
     </ul></details></div>
   </div><!-- /viewMap -->
 
@@ -776,7 +775,6 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li><b>TOTAL3ES</b>: value of all alts excluding BTC, ETH and stablecoins. Rising = real money flowing into alts.</li>
       <li><b>OTHERS.D</b>: share of everything outside the top 10. Rising = small-cap speculation; a 15%+ jump in 30 days is flagged as froth.</li>
       <li>Each index gets a direction from its 7-day change plus its 20/50-day average structure. The four directions map to one regime (table above).</li>
-      <li>The regime adds or removes grade points: for example −2 for alt longs in Risk-off, +1 in Alt season. The points appear in each grade's tooltip and in the trade plan.</li>
       <li>Numbers are rebuilt from CoinGecko (today's market caps and the BTC, ETH, USDT and USDC history) and Binance daily prices (everything else, assuming supply stays constant over the window). They run a few tenths off TradingView's indices because the coin universe differs; the direction is what counts. The TradingView chart shows the official ones.</li>
     </ul></details></div>
     <details class="panel" id="macTimeP">
@@ -1586,7 +1584,7 @@ function renderToday(market, c){
   const all = (market || []).filter(r => r.setup), by = d => all.filter(r => r.setup === d).sort((a, b) => (b.qv || 0) - (a.qv || 0)), L = by(1), Sh = by(-1);
   const dall = (DIV.rows || []).filter(x => x.conf || x.early).sort((a, b) => b.score - a.score), dvB = dall.filter(x => x.side > 0).slice(0, 5), dvS = dall.filter(x => x.side < 0).slice(0, 5);
   const m = v => v >= 1e9 ? (v / 1e9).toFixed(1) + 'B' : v >= 1e6 ? (v / 1e6).toFixed(0) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : '';
-  const chip = r => `<button class="chg ${r.setup > 0 ? 'b' : 's'}" data-open="${r.sym}" title="Open ${r.sym.replace('USDT', '')}: grade ${r.G ? r.G.grade : '–'}, 24h volume $${m(r.qv || 0)}">${r.sym.replace('USDT', '')} <span class="mu">$${m(r.qv || 0)}</span></button>`;
+  const chip = r => `<button class="chg ${r.setup > 0 ? 'b' : 's'}" data-open="${r.sym}" title="Open ${r.sym.replace('USDT', '')}: 24h volume $${m(r.qv || 0)}">${r.sym.replace('USDT', '')} <span class="mu">$${m(r.qv || 0)}</span></button>`;
   const dchip = x => `<button class="chg ${x.side > 0 ? 'b' : 's'}" data-dv="${x.sym}|${x.tf}" title="Open the chart for ${x.sym.replace('USDT', '')} ${x.tf}">${x.sym.replace('USDT', '')} ${x.tf.toUpperCase()} ${x.side > 0 ? '▲' : '▼'} ${x.score}</button>`;
   const none = (market || []).length ? 'None right now.' : 'Press Scan.';
   el.innerHTML = `<div class="todaygrid">
@@ -2662,7 +2660,7 @@ function saveSettings(){
 function loadSettings(){
   const o = store.get();
   if (o.tf && TFS.includes(o.tf)) S.tf = o.tf;
-  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold','minLiq','extremeFund','gradeF','alertGrade','alertCap','alertMcapMin','alertMcapMax','rsF','bmF']) if (o[k] != null) $(k).value = o[k];
+  for (const k of ['trigN','pageSize','auto','universe','mcap','oiThr','oiN','rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen','fundHot','fundCold','minLiq','extremeFund','alertCap','alertMcapMin','alertMcapMax','rsF','bmF']) if (o[k] != null) $(k).value = o[k];
   if (o.closed != null) $('closed').checked = o.closed;
   if (o.mtfOn != null) $('mtfOn').checked = o.mtfOn;
   for (const k of ['pinStar','alertStar','alertSound']) if (o[k] != null) $(k).checked = o[k];
@@ -2691,7 +2689,7 @@ function derive(r, c){
   const G = d && gdir ? gradeSetup({dir: gdir, s: core, d, mtf: r.mtf, regime: S.regimeDir || 0, fund: r.fund, qv: r.qv, macro: S.macro && S.macroOn !== false ? macroBias(S.macro.reg, r.sym, gdir) : null, dv: r.dv}, {minLiq: c.minLiq, extremeFund: c.extremeFund}) : null;
   const rs = relStrength(r.chg, r.ret7, S.ref);
   return {...r, d, rs, ext: d ? d.ext : null, pD, pos, fFlag, against, oiD, oiUp, bull, bear, isNew, trig, tB, tS, setup, mtfNet, mtfAll, G, inc: !d || r.oi == null,
-    score: Math.max(bull, bear) + (bull >= 4 || bear >= 4 ? 10 : 0) + (setup ? 5 : 0) + (G ? {A: 4, B: 2, C: 0}[G.grade] : 0)};
+    score: Math.max(bull, bear) + (bull >= 4 || bear >= 4 ? 10 : 0) + (setup ? 5 : 0)};
 }
 
 const gradeTip = G => [`Grade ${G.grade} (${G.pts > 0 ? '+' : ''}${G.pts} points)`, ...G.reasons.map(x => `${x.v > 0 ? '+' : ''}${x.v}  ${x.t}`), ...G.flags.map(f => `capped at C: ${f}`), ...(() => { try { const l = gradeEvLine(G.grade); return l ? ['', l] : []; } catch { return []; } })()].join('&#10;');
@@ -2726,7 +2724,7 @@ const COL_HELP = {"bm": "Bull Market Support Band: where the price sits against 
 const COLS_BASE = [
   {k:'star', t:'★', c:'c'}, {k:'sym', t:'Pair', c:'l'}, {k:'sector', t:'Sector', c:'l'}, {k:'price', t:'Price'}, {k:'chg', t:'24h'}, {k:'spark', t:'Trend', c:'c'}, {k:'qv', t:'Vol 24h'}, {k:'mcap', t:'MCap'},
   {k:'dmi', t:'DMI', c:'c'}, {k:'rsiEma', t:'RSI>EMA', c:'c'}, {k:'rsi50', t:'RSI>50', c:'c'}, {k:'obv', t:'OBV>EMA', c:'c'},
-  {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'rs', t:'RS 7D', c:'c'}, {k:'bm', t:'Band', c:'c'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'grade', t:'Grade', c:'c'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
+  {k:'oiUp', t:'OI ↑', c:'c'}, {k:'oiD', t:'OI Δ'}, {k:'pos', t:'Position', c:'l'}, {k:'fund', t:'Funding'}, {k:'ext', t:'Ext (ATR)'}, {k:'rs', t:'RS 7D', c:'c'}, {k:'bm', t:'Band', c:'c'}, {k:'bull', t:'Bull'}, {k:'bear', t:'Bear'}, {k:'mtfNet', t:'MTF', c:'c'}, {k:'trig', t:'Triggers', c:'l'}
 ];
 const COLS = COLS_BASE.slice(), COLORD_KEY = 'onslaught-colorder', COL_FIXED = new Set(['star', 'sym']);
 function applyColOrder(){
@@ -2785,9 +2783,6 @@ function filtered(core){
     if (tf2 === 'b' && !r.tB) return false;
     if (tf2 === 's' && !r.tS) return false;
     if (tf2 === 'none' && r.trig.some(t => t.dir)) return false;
-    const gf = $('gradeF').value;
-    if (gf === 'A' && !(r.G && r.G.grade === 'A')) return false;
-    if (gf === 'AB' && !(r.G && r.G.grade !== 'C')) return false;
     const bf = $('bmF').value; if (bf){ const b = bmFor(r.sym); if (!b || b.st !== bf) return false; }
     const rf = $('rsF').value, x = r.rs;
     if (rf === 'lb' && !(x && x.b7 > 0)) return false;
@@ -2871,7 +2866,7 @@ function renderPager(total, size, pages, start, n){
   el.innerHTML = h;
 }
 function anyFilter(){
-  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked || $('gradeF').value || $('rsF').value || $('bmF').value || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
+  return S.show !== 'all' || $('newOnly').checked || S.incOnly || S.setupOnly || $('starOnly').checked ||  $('rsF').value || $('bmF').value || $('trigF').value || $('mtfF').value || Object.values(S.mf).some(v => v !== '') || $('sector').value || $('search').value.trim();
 }
 function syncCards(){
   const st = {all: !anyFilter(), bull: S.show === 'bull', bear: S.show === 'bear', new: $('newOnly').checked, oi: S.mf.oi === '1', inc: S.incOnly, setup: S.setupOnly, star: $('starOnly').checked};
@@ -2890,7 +2885,7 @@ function render(){
   setNum('sOi', sub('oi', r => r.oiUp).length); $('sOiS').textContent = `≥ ${c.oiThr}% over ${c.oiN} candles`;
   setNum('sInc', sub('inc', r => r.inc).length);
   { const ws = sub('star', r => WATCH.has(r.sym)); setNum('sStar', ws.length); $('sStarS').textContent = `${ws.filter(r => r.bull >= 4 || r.bear >= 4).length} aligned · ${ws.filter(r => r.setup).length} triggered`; }
-  { const su = sub('setup', r => r.setup); setNum('sSetup', su.length); $('sSetupS').textContent = `aligned + trigger in last ${c.trigN} · ${su.filter(r => r.G && r.G.grade === 'A').length} A-grade`; }
+  { const su = sub('setup', r => r.setup); setNum('sSetup', su.length); $('sSetupS').textContent = `aligned + trigger in last ${c.trigN}`; }
   renderRegime(market, c);   // regime reads the whole market, not the scope
   try { renderToday(market, c); } catch {}
 
@@ -2942,7 +2937,7 @@ function render(){
       mtfNet: `<td class="c">${mtfCell(r)}</td>`,
       trig: `<td class="l trigs">${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}" title="Aligned and triggered on ${S.tf.toUpperCase()}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}${trigCell(r)}</td>`,
     };
-    return `<tr data-sym="${r.sym}" class="${r.inc && !d ? 'inc' : ''} ${D.sym === r.sym ? 'sel' : ''} ${ent ? 'entered' : ''} ${r.G ? 't' + r.G.grade : ''} ${UI.prev && !UI.prev.has(r.sym) ? 'fadein' : ''}" title="Click for trade plan">
+    return `<tr data-sym="${r.sym}" class="${r.inc && !d ? 'inc' : ''} ${D.sym === r.sym ? 'sel' : ''} ${ent ? 'entered' : ''}  ${UI.prev && !UI.prev.has(r.sym) ? 'fadein' : ''}" title="Click for trade plan">
       ${COLS.map(c => (cells[c.k] || '<td></td>').replace('<td', '<td data-c="' + c.k + '"')).join('')}
     </tr>`;
   }).join('');
@@ -3679,7 +3674,7 @@ async function tgAlertParts(items, notes = []){
   const head = lines.slice(), blocks = [];
   for (const e of items.slice(0, 6)){
     const lines = [], base = S.rows.find(r => r.sym === e.sym), x = base ? derive(base, c) : null;
-    lines.push(`<b>${esc(e.sym.replace('USDT', ''))} ${e.dir > 0 ? 'LONG 🟢' : 'SHORT 🔴'}</b> · ${x ? (e.dir > 0 ? x.bull : x.bear) + '/5' : ''}${x && x.G ? ' · <b>Grade ' + x.G.grade + '</b>' : ''} · ${e.kind === 'setup' ? 'triggered' : 'aligned'}`);
+    lines.push(`<b>${esc(e.sym.replace('USDT', ''))} ${e.dir > 0 ? 'LONG 🟢' : 'SHORT 🔴'}</b> · ${x ? (e.dir > 0 ? x.bull : x.bear) + '/5' : ''} · ${e.kind === 'setup' ? 'triggered' : 'aligned'}`);
     if (base && base.mcap > 0) lines.push(`Mkt cap $${fmtBig(base.mcap)}${base.rank ? ' · rank #' + base.rank : ''}`);
     if (x && x.rs && x.rs.b7 != null) lines.push(`RS 7d: vs BTC ${ppf(x.rs.b7)} pp · vs ETH ${ppf(x.rs.e7)} pp`);
     if (x && x.G && x.G.flags.length) lines.push('⚠️ ' + esc(x.G.flags.join(', ')));
@@ -3777,15 +3772,13 @@ function alertPass(e){
   if ($('alertStar').checked && !WATCH.has(e.sym)) return false;
   const b = S.rows.find(r => r.sym === e.sym), mcLo = +$('alertMcapMin').value || 0, mcHi = +$('alertMcapMax').value || Infinity;
   if (mcLo || mcHi < Infinity){ const m = b && b.mcap; if (!(m >= mcLo && m <= mcHi)) return false; }
-  const minG = GRADE_RANK[$('alertGrade').value] || 0;
-  if (minG){ const x = b && derive(b, cfg()); if (!(x && x.G && GRADE_RANK[x.G.grade] >= minG)) return false; }
   return true;
 }
 /* Wave guard: many same-side setups at once are one bet, keep the best few per side. Returns {items, notes}. */
 function waveGuard(items){
   const cap = +$('alertCap').value || 0, notes = [];
   if (!cap) return {items, notes};
-  const c = cfg(), q = e => { const b = S.rows.find(r => r.sym === e.sym), x = b && derive(b, c); return x && x.G ? (GRADE_RANK[x.G.grade] || 0) * 1000 + (x.G.pts || 0) * 10 + (e.dir > 0 ? x.bull : x.bear) : 0; }, keep = new Set();
+  const c = cfg(), q = e => { const b = S.rows.find(r => r.sym === e.sym), x = b && derive(b, c); return b ? (b.qv || 0) : 0; }, keep = new Set();
   for (const dir of [1, -1]){ const l = items.filter(e => e.dir === dir);
     if (l.length <= cap){ l.forEach(e => keep.add(e)); continue; }
     l.sort((a, b) => q(b) - q(a)).slice(0, cap).forEach(e => keep.add(e));
@@ -3876,7 +3869,6 @@ function renderChips(){
     `OI Δ <b class="${cls(r.oiD)}">${fmtPct(r.oiD)}</b>`,
     S.regime ? `Regime <b>${S.regimeDir > 0 ? 'Risk-on' : S.regimeDir < 0 ? 'Risk-off' : 'Mixed'}</b>` : null,
     r.rs && r.rs.b7 != null ? `RS 7d <b class="${cls(r.rs.b7)}">₿ ${ppf(r.rs.b7)}</b> <b class="${cls(r.rs.e7)}">Ξ ${ppf(r.rs.e7)}</b> pp` : null,
-    r.G ? `<span title="${gradeTip(r.G)}">Grade <b class="${r.G.grade === 'A' ? 'up' : r.G.grade === 'C' ? 'dn' : ''}">${r.G.grade}</b> (${r.G.pts > 0 ? '+' : ''}${r.G.pts})</span>` : null,
     r.mtf ? `MTF ${MTF_TFS.map(t => `<b class="${r.mtf[t] > 0 ? 'up' : r.mtf[t] < 0 ? 'dn' : 'mu'}">${MTF_LBL[t]}${r.mtf[t] > 0 ? '▲' : r.mtf[t] < 0 ? '▼' : '◆'}</b>`).join(' ')}` : null,
     ...r.trig.map(t => `<b class="${t.dir > 0 ? 'up' : t.dir < 0 ? 'dn' : 'mu'}">${t.name}</b>${t.t === 'coil' ? '' : ' · ' + (t.ago ? t.ago + ' ago' : 'last candle')}`)
   ].filter(Boolean);
@@ -3914,7 +3906,7 @@ function renderWarnings(P, z){
   if (r.rs && r.rs.b7 != null){ const v = r.rs.b7 * P.dir;
     if (v <= -5) w.push(['', `${long ? 'Lagging' : 'Outperforming'} BTC by ${Math.abs(r.rs.b7).toFixed(1)} pp over 7 days. ${long ? 'Leaders' : 'Laggards'} usually make better ${long ? 'longs' : 'shorts'}.`]);
     else if (v >= 5) w.push(['ok', `${long ? 'Leading' : 'Lagging'} BTC by ${Math.abs(r.rs.b7).toFixed(1)} pp over 7 days: relative strength is on your side.`]); }
-  if (r.G && r.G.flags.length) w.push(['bad', `Risk: ${r.G.flags.join(', ')}. Grade capped at C.`]);
+  if (r.G && r.G.flags.length) w.push(['bad', `Risk: ${r.G.flags.join(', ')}.`]);
   if (S.regimeDir && S.regimeDir !== P.dir) w.push(['', `Against the market regime (${S.regimeDir > 0 ? 'risk-on' : 'risk-off'}). Consider smaller size.`]);
   if (r.ext != null && r.ext * P.dir >= 3) w.push(['', `Stretched ${Math.abs(r.ext).toFixed(1)} ATR from EMA20. A pullback entry near ${fp(P.ema20, decFor(P.entry))} offers better R:R.`]);
   if (r.fFlag === P.dir) w.push(['', `Funding is ${long ? 'hot: longs' : 'deeply negative: shorts'} are crowded on your side.`]);
@@ -4023,7 +4015,7 @@ function renderMap(){
     const R = rad(r), px = Math.max(m.l + R + 2, Math.min(W - m.r - R - 2, X(x))), py = Math.max(m.t + R + 2, Math.min(H - m.b - R - 2, Y(y)));
     return {r, x, y, px, py, R, clip: x < dom.x[0] || x > dom.x[1] || y < dom.y[0] || y > dom.y[1]}; });
   if (MAP.zoom) for (let i = P.length - 1; i >= 0; i--) if (P[i].clip) P.splice(i, 1);   // zoomed: only what is inside the box
-  const prio = p => (p.r.setup && p.r.G && p.r.G.grade !== 'C' ? 1e13 : 0) + (p.clip && !MAP.zoom ? 5e12 : 0) + (p.r.G && p.r.G.grade === 'A' ? 1e12 : 0) + (p.r.qv || 0);
+  const prio = p => (p.r.setup ? 1e13 : 0) + (p.clip && !MAP.zoom ? 5e12 : 0) + (p.r.qv || 0);
   const placed = [[m.l + 10, m.t + 10], [W - m.r - 140, m.t + 10], [m.l + 10, H - m.b - 30], [W - m.r - 140, H - m.b - 30]].map(([x, y]) => ({x, y, w: 130, h: 20})), labels = new Map(), maxLab = MAP.zoom ? 60 : Math.round(W / 45);
   if ($('mapLabels').checked) for (const p of P.slice().sort((a, b) => prio(b) - prio(a))){
     if (labels.size >= maxLab) break;
@@ -4039,7 +4031,7 @@ function renderMap(){
     }
   }
   const dots = P.slice().sort((a, b) => b.R - a.R).map(p => {
-    const {r, px, py, R, clip} = p, g = r.G ? r.G.grade : 'N', L = labels.get(r.sym);
+    const {r, px, py, R, clip} = p, g = 'N', L = labels.get(r.sym);
     const glow = r.setup && g === 'A' ? `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${(R + 7).toFixed(1)}" class="glow ${r.setup > 0 ? 'b' : 's'}"/>` : '';
     const ring = r.setup ? `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${(R + 2.6).toFixed(1)}" fill="none" class="ring ${r.setup > 0 ? 'b' : 's'}"/>` : '';
     return `<g class="dot g${g}" data-sym="${r.sym}" style="--d:${Math.min(600, Math.round((Math.abs(px - x0) + Math.abs(py - y0)) * .6))}ms">${glow}${ring}<circle class="core${clip ? ' clip' : ''}" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${R.toFixed(1)}" fill="${r.G ? fill[g] : '#454752'}"/>${L ? `<text x="${L.x.toFixed(1)}" y="${L.y.toFixed(1)}" text-anchor="${L.a}" class="mlab${r.setup ? ' set' : ''}">${L.txt}</text>` : ''}</g>`;
@@ -4089,7 +4081,7 @@ function drawQuads(){
   $('mapQuads').innerHTML = ['imp', 'lead', 'lag', 'weak'].map(k => { const g = groups[k], ns = g.filter(r => r.setup).length;
     return `<div class="quad ${k}"><div class="qh"><b>${names[k][0]}</b> <span class="qcount">${g.length}</span> <span class="mu">${names[k][1]}${ns ? ` · ${ns} setup${ns > 1 ? 's' : ''}` : ''}</span>
       ${g.length > QPAGE ? `<span class="qnav"><button data-qp="${k}" data-d="-1" aria-label="Previous pairs" ${QPG[k] <= 0 ? 'disabled' : ''}>‹</button><span class="mu">${QPG[k] + 1}/${Math.ceil(g.length / QPAGE)}</span><button data-qp="${k}" data-d="1" aria-label="Next pairs" ${(QPG[k] + 1) * QPAGE >= g.length ? 'disabled' : ''}>›</button></span>` : ''}<div class="qbar"><i style="width:${(100 * g.length / tot).toFixed(1)}%"></i></div></div>
-    ${g.sort((a, b) => (!!b.setup - !!a.setup) || ((b.G ? 'CBA'.indexOf(b.G.grade) : -1) - (a.G ? 'CBA'.indexOf(a.G.grade) : -1)) || (b.qv - a.qv)).slice((QPG[k] = Math.min(QPG[k], Math.max(0, Math.ceil(g.length / QPAGE) - 1))) * QPAGE, QPG[k] * QPAGE + QPAGE).map(r => `<button class="qchip" data-open="${r.sym}">${r.sym.replace('USDT', '')}${r.G ? ` <span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'L' : 'S'}</span>` : ''}</button>`).join('') || '<span class="mu">none</span>'}</div>`; }).join('');
+    ${g.sort((a, b) => (!!b.setup - !!a.setup) || (b.qv - a.qv)).slice((QPG[k] = Math.min(QPG[k], Math.max(0, Math.ceil(g.length / QPAGE) - 1))) * QPAGE, QPG[k] * QPAGE + QPAGE).map(r => `<button class="qchip" data-open="${r.sym}">${r.sym.replace('USDT', '')}${r.G ? ` <span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'L' : 'S'}</span>` : ''}</button>`).join('') || '<span class="mu">none</span>'}</div>`; }).join('');
 }
 function mapTip(e){
   const g = e.target.closest('.dot'), tip = $('mapTip'), guide = document.getElementById('mapGuide');
@@ -4100,7 +4092,7 @@ function mapTip(e){
     guide.innerHTML = `<line x1="${px}" x2="${px}" y1="${py}" y2="${MAP.H - m.b}" class="guide"/><line x1="${m.l}" x2="${px}" y1="${py}" y2="${py}" class="guide"/>
       <rect x="${px - 24}" y="${MAP.H - m.b - 17}" width="48" height="15" rx="4" class="gpill"/><text x="${px}" y="${MAP.H - m.b - 6}" text-anchor="middle" class="gtxt">${ppf(x)}</text>
       <rect x="${m.l + 2}" y="${py - 8}" width="44" height="15" rx="4" class="gpill"/><text x="${m.l + 24}" y="${py + 3}" text-anchor="middle" class="gtxt">${ppf(y)}</text>`; }
-  tip.innerHTML = `<div class="tth"><b>${r.sym.replace('USDT', '')}</b>${r.G ? ` <span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? ` <span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}<span class="mu" style="margin-left:auto">${fmtPrice(r.price)} <span class="${cls(r.chg)}">${fmtPct(r.chg)}</span></span></div>
+  tip.innerHTML = `<div class="tth"><b>${r.sym.replace('USDT', '')}</b>${r.setup ? ` <span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}<span class="mu" style="margin-left:auto">${fmtPrice(r.price)} <span class="${cls(r.chg)}">${fmtPct(r.chg)}</span></span></div>
     <div class="ttg"><span class="mu">RS 7d ${vs === 'b' ? '₿' : 'Ξ'}</span><b class="${cls(x)}">${ppf(x)} pp</b><span class="mu">24h</span><b class="${cls(y)}">${ppf(y)} pp</b>
     <span class="mu">Checks</span><b>${r.bull}▲ ${r.bear}▼</b><span class="mu">Vol</span><b>${fmtBig(r.qv)}</b></div><div class="mu" style="margin-top:4px">Click for the trade plan</div>`;
   const wrap = $('mapBox').getBoundingClientRect(); tip.hidden = false;
@@ -4617,12 +4609,12 @@ function afterRender(pageRows){
     UI.cells.set(sym, {px: tr.querySelector('td.px'), pc: tr.querySelector('td.pc')});
     [...tr.children].forEach((td, i) => { if (COLS[i]) td.dataset.label = COLS[i].t; });
   }
-  const a = S.rows.length ? $('sSetup') && +($('sSetupS').textContent.match(/(\d+) A-grade/) || [0, 0])[1] : null;
+  const a = S.rows.length ? +($('sSetup').textContent) || 0 : null;
   if (a != null && UI.lastA != null && a > UI.lastA && !RM()){ const card = document.querySelector('.stat.trigcard'); card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse'); }
   UI.lastA = a;
 }
 /* Columns, density, presets */
-const COLS_KEY = 'onslaught-cols', PRESET_KEY = 'onslaught-presets', MODE_KEY = 'onslaught-mode', SIMPLE_COLS = new Set(['star', 'sym', 'price', 'chg', 'spark', 'bull', 'bear', 'grade', 'mtfNet', 'trig']);
+const COLS_KEY = 'onslaught-cols', PRESET_KEY = 'onslaught-presets', MODE_KEY = 'onslaught-mode', SIMPLE_COLS = new Set(['star', 'sym', 'price', 'chg', 'spark', 'bull', 'bear', 'mtfNet', 'trig']);
 function applyCols(){
   document.body.classList.toggle('simple', UI.mode === 'simple');
   let css = '';
@@ -4641,11 +4633,11 @@ function loadView(){
   applyCols(); renderPresets();
 }
 function saveView(){ try { localStorage.setItem(COLS_KEY, JSON.stringify({hidden: [...UI.hidden], dens: UI.dens})); } catch {} }
-const PRESET_FIELDS = ['newOnly','starOnly','gradeF','rsF','bmF','trigF','mtfF','sector'];
+const PRESET_FIELDS = ['newOnly','starOnly','rsF','bmF','trigF','mtfF','sector'];
 const BUILTIN = [
-  {name: 'A-grade setups', v: {setupOnly: true, gradeF: 'A'}},
-  {name: 'Leaders · long side', v: {show: 'bull', rsF: 'lbe', gradeF: 'AB'}},
-  {name: 'Laggards · short side', v: {show: 'bear', rsF: 'gb', gradeF: 'AB'}},
+  {name: 'Triggered setups', v: {setupOnly: true}},
+  {name: 'Leaders · long side', v: {show: 'bull', rsF: 'lbe'}},
+  {name: 'Laggards · short side', v: {show: 'bear', rsF: 'gb'}},
   {name: 'All timeframes bullish', v: {show: 'bull', mtfF: 'b'}},
   {name: 'All timeframes bearish', v: {show: 'bear', mtfF: 's'}},
   {name: 'Fresh alignments', v: {newOnly: true}},
@@ -4678,7 +4670,7 @@ function renderPalette(){
   UI.pal = list.map(r => r.sym); UI.palI = 0;
   $('palList').innerHTML = list.length ? list.map((r, i) => `<li data-ps="${r.sym}" class="${i === 0 ? 'on' : ''}"><b>${r.sym.replace('USDT', '')}</b>
     <span class="mu">${fmtPrice(r.price)} <span class="${cls(r.chg)}">${fmtPct(r.chg)}</span></span>
-    ${r.G ? `<span class="gr g${r.G.grade}">${r.G.grade}</span>` : ''}${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}</li>`).join('')
+    ${r.setup ? `<span class="setup ${r.setup > 0 ? 'b' : 's'}">${r.setup > 0 ? 'LONG' : 'SHORT'}</span>` : ''}</li>`).join('')
     : '<li class="mu">No scanned pair matches.</li>';
 }
 /* Live prices: Binance futures mini-ticker stream for all symbols, about once a second */
@@ -5115,8 +5107,8 @@ async function anaFacts(sym, base, tok){
 function anaQuick(){
   const chip = (s, t) => `<button class="anachip${s === ANA.sym ? ' on' : ''}" data-sym="${s}">${t || s.replace('USDT', '')}</button>`, g = (l, a) => a.length ? `<span class="mu anagl">${l}</span>${a.join('')}` : '';
   const c = cfg(), star = [...WATCH].slice(0, 8).map(s => chip(s)), rec = ANA.recent.map(s => `<button class="anachip${s === ANA.sym ? ' on' : ''}" data-sym="${s}">${s.replace('USDT', '')}<span class="anax" data-rm="${s}" title="Remove from Recent">×</span></button>`);
-  const gA = S.rows.map(r => derive(r, c)).filter(r => r.setup && r.G && r.G.grade === 'A').sort((a, b) => b.score - a.score).slice(0, 6).map(r => chip(r.sym, r.sym.replace('USDT', '') + (r.setup > 0 ? ' ▲' : ' ▼')));
-  $('anaQuick').innerHTML = ANA.sym ? g('Recent', rec) : g('★ Watchlist', star) + g('Recent', rec) + g('Scanner A-grade setups (▲ long, ▼ short)', gA);   // shortcuts to pick a first coin; once one is open only Recent stays
+  const gA = S.rows.map(r => derive(r, c)).filter(r => r.setup).sort((a, b) => b.qv - a.qv).slice(0, 6).map(r => chip(r.sym, r.sym.replace('USDT', '') + (r.setup > 0 ? ' ▲' : ' ▼')));
+  $('anaQuick').innerHTML = ANA.sym ? g('Recent', rec) : g('★ Watchlist', star) + g('Recent', rec) + g('Scanner setups (▲ long, ▼ short)', gA);   // shortcuts to pick a first coin; once one is open only Recent stays
 }
 function anaSuggest(){
   const q = $('anaIn').value.trim().toUpperCase().replace(/USDT$/, ''), box = $('anaSug');
@@ -5251,7 +5243,7 @@ function anaSummary(L, row, tf){
     const tpv = dv && dv.tp; if (tpv != null && dv.ls){ const g = dv.ls.ratio; if (g >= 1.2 && tpv <= 0.95) bits.push(`largest traders lean short (${tpv.toFixed(2)}) against the crowd`); else if (g <= 0.85 && tpv >= 1.05) bits.push(`largest traders lean long (${tpv.toFixed(2)}) against the crowd`); }
     if (row.rs && row.rs.b7 != null) bits.push(`${ppf(row.rs.b7)} pp vs BTC over 7 days`);
     if (bits.length) s += `Derivatives and strength: ${bits.join(', ')}. `;
-    if (row.G) s += `Screener grade <b>${row.G.grade}</b>${row.setup ? `, <b class="${row.setup > 0 ? 'up' : 'dn'}">${row.setup > 0 ? 'LONG' : 'SHORT'}</b> setup` : ''}. `;
+    if (row.setup) s += `Screener setup: <b class="${row.setup > 0 ? 'up' : 'dn'}">${row.setup > 0 ? 'LONG' : 'SHORT'}</b>. `;
   }
   return s;
 }
@@ -5347,7 +5339,7 @@ function anaRender(){
   const tags = info ? tagsOf(info.base).slice(0, 3).map(t => `<span class="tag">${esc(t)}</span>`).join('') : '';
   const lp = sym && LIVE.q.get(sym), price = lp ? lp[0] : info ? info.price : null, chg = lp && lp[1] != null ? lp[1] : info ? info.chg : null;
   $('anaTitle').innerHTML = sym ? `<b class="anasym">${sym.replace('USDT', '')}</b><span class="mu"> /USDT perp</span> <span class="anapx">${fmtPrice(price)}</span> <span class="${cls(chg)}">${fmtPct(chg)}</span>
-    ${row && row.G ? `<span class="anapill ${row.G.grade === 'A' ? 'g' : ''}">Grade ${row.G.grade}${row.setup ? ' · ' + (row.setup > 0 ? 'LONG' : 'SHORT') + ' setup' : ''}</span>` : ''}${tags}` : '';
+    ${row && row.setup ? `<span class="anapill">${row.setup > 0 ? 'LONG' : 'SHORT'} setup</span>` : ''}${tags}` : '';
   if (!sym){ empty('Pick a coin above, or press <b>⌖</b> next to any pair in the Crypto Scanner, to see its structure, key levels and a short summary.'); return; }
   if (ANA.err){ empty(esc(ANA.err)); return; }
   if (!L){ empty('Loading candles…'); return; }
@@ -5520,7 +5512,6 @@ function renderFChips(){
   const L = [], el = (id, ev) => () => { const e = $(id); if (e.type === 'checkbox') e.checked = false; else e.value = ''; e.dispatchEvent(new Event(ev || 'change', {bubbles: true})); };
   const selTxt = e => e.options[e.selectedIndex].text;
   if (S.show !== 'all') L.push([S.show === 'bull' ? 'Bullish momentum' : 'Bearish momentum', () => { setShow('all'); render(); }]);
-  if ($('gradeF').value) L.push(['Grade: ' + selTxt($('gradeF')), el('gradeF')]);
   if ($('trigF').value) L.push(['Trigger: ' + selTxt($('trigF')) + ' within ' + $('trigN').value, el('trigF')]);
   if ($('newOnly').checked) L.push(['New only', el('newOnly')]);
   if ($('starOnly').checked) L.push(['★ only', el('starOnly')]);
@@ -7283,7 +7274,6 @@ scan: ['Como ler isto', `<ul>
 <li><b>Telegram</b>: cria um bot com o @BotFather, cola o token e o teu chat ID em Settings, carrega em Send test e depois marca Send alerts to Telegram. Cada alerta lista os pares com triggers, contexto e (opcionalmente) entrada, stop e alvos. O token fica apenas neste browser. O painel lateral tem também um botão Send to Telegram para qualquer plano.</li>
 <li><b>Alerts</b>: ativa com 🔔 (o browser pede permissão). Após cada scan, os novos setups com trigger (ou também os novos alinhamentos, em Settings) geram uma notificação no ambiente de trabalho, um aviso na página e um som; o título do separador mostra uma contagem enquanto estiveres ausente. O auto-refresh tem de estar ligado e o separador aberto; com os alertas ativos, os scans continuam a correr num separador em segundo plano.</li>
 <li><b>RS 7D</b>: força relativa nos últimos 7 dias em pontos percentuais: ₿ = vs BTC, Ξ = vs ETH (passa o cursor para ver as 24h). Verde = a liderar por 2+ pontos, vermelho = a ficar para trás por 2+. Os líderes dão as melhores longs num mercado risk-on, os retardatários as melhores shorts. A barra de regime mostra também ETH vs BTC: o ETH a liderar costuma anteceder a subida das altcoins. A RS é mostrada, filtrada e registada no Journal, mas ainda não faz parte do grade, para que o Journal mostre primeiro se acrescenta vantagem.</li>
-<li><b>Grade A / B / C</b> avalia o lado alinhado: +1 pontuação 5/5 · +2 todos os timeframes concordam (+1 se só o 1D, −2 se o 1D estiver contra) · +1 a favor do regime (−2 contra) · +1 a menos de 1,5 ATR da sua média (−2 se esticado 3+) · +1 novas posições do seu lado (−1 em subidas por short covering ou quedas por liquidação de longs) · +1 quando o outro lado está crowded (−1 quando é o próprio lado) · +1 por 2+ triggers · +1 quando uma divergência confirmada recente (RSI + MACD, ou Strong) apoia o lado (−1 quando se opõe). A = 5+, B = 2–4, C = abaixo. Novas listagens, funding extremo e liquidez fraca limitam-no a C (mostrado com !). Passa o cursor sobre qualquer grade para ver o detalhe.</li>
 <li><b>Selo LONG / SHORT</b> = um setup com trigger: 4–5/5 alinhado mais um trigger na mesma direção. Ficam em primeiro lugar e têm o seu próprio cartão de estatísticas.</li>
 <li><b>Positioning</b> compara a variação do preço e do OI nas mesmas N velas: <b>New longs</b> (preço ↑ OI ↑), <b>New shorts</b> (preço ↓ OI ↑), <b>Short covering</b> (preço ↑ OI ↓, um squeeze que costuma desvanecer quando o fecho de posições acaba), <b>Long liquidation</b> (preço ↓ OI ↓). Movimentos abaixo de 0,5% contam como planos.</li>
 <li><b>Funding</b>: a última taxa de funding. 🔥 marca extremos: igual ou acima do limite hot os longs estão crowded, igual ou abaixo do limite cold os shorts estão crowded. Os lados crowded são combustível para squeezes contra eles.</li>
@@ -7300,7 +7290,7 @@ map: ['Como ler o Market Map', `<ul>
 <li><b>Vertical</b>: força relativa nas últimas 24 horas, o momentum recente dessa força.</li>
 <li><b>Leading</b> (topo direito): forte e ainda a ganhar. <b>Weakening</b> (baixo direito): forte mas a perder fôlego, muitas vezes com realização de lucros. <b>Lagging</b> (baixo esquerdo): fraca e ainda a perder. <b>Improving</b> (topo esquerdo): fraca mas a virar para cima, onde as rotações iniciais aparecem primeiro.</li>
 <li>As moedas tendem a rodar no sentido dos ponteiros do relógio: Improving → Leading → Weakening → Lagging. Moedas Improving com um setup long A ou B são candidatas precoces; moedas Weakening com um setup short são candidatas precoces a fade.</li>
-<li>Clica em qualquer ponto ou nome para abrir o plano de trade. Arrasta uma caixa no gráfico para ampliar; duplo clique ou <b>Reset zoom</b> para voltar.</li><li>A escala <b>Spread</b> usa raiz quadrada para abrir o meio congestionado; <b>Linear</b> mostra as distâncias reais. Os valores fora do gráfico ficam presos à borda, com contorno tracejado e o valor na etiqueta.</li><li>Um brilho suave assinala setups com trigger de grade A.</li>
+<li>Clica em qualquer ponto ou nome para abrir o plano de trade. Arrasta uma caixa no gráfico para ampliar; duplo clique ou <b>Reset zoom</b> para voltar.</li><li>A escala <b>Spread</b> usa raiz quadrada para abrir o meio congestionado; <b>Linear</b> mostra as distâncias reais. Os valores fora do gráfico ficam presos à borda, com contorno tracejado e o valor na etiqueta.</li><li></li>
 </ul>`],
 sector: ['Como ler isto', `<ul>
 <li><b>vs Week / vs Month</b>: o volume de 24h de hoje a dividir pelo dia médio do setor nos últimos 7 / 30 dias fechados. 1,0 é normal, 2,0 é o dobro. Ambos altos = um movimento real com combustível. Mês alto mas semana normal = está quente há uma semana, podes chegar tarde. Semana alta mas mês normal = algo acabou de começar.</li>
@@ -7316,7 +7306,6 @@ macro: ['Como funciona a leitura macro', `<ul>
 <li><b>TOTAL3ES</b>: valor de todas as alts excluindo BTC, ETH e stablecoins. A subir = dinheiro real a entrar nas alts.</li>
 <li><b>OTHERS.D</b>: quota de tudo o que está fora do top 10. A subir = especulação em small caps; um salto de 15%+ em 30 dias é sinalizado como froth (euforia).</li>
 <li>Cada índice recebe uma direção a partir da variação a 7 dias mais a estrutura das médias de 20/50 dias. As quatro direções correspondem a um regime (tabela acima).</li>
-<li>O regime soma ou retira pontos ao grade: por exemplo −2 para alt longs em Risk-off, +1 em Alt season. Os pontos aparecem no tooltip de cada grade e no plano de trade.</li>
 <li>Os números são reconstruídos a partir do CoinGecko (capitalizações atuais e histórico de BTC, ETH, USDT e USDC) e dos preços diários da Binance (tudo o resto, assumindo oferta constante na janela). Ficam algumas décimas afastados dos índices do TradingView porque o universo de moedas difere; o que conta é a direção. O gráfico do TradingView mostra os oficiais.</li>
 </ul>`],
 div: ['Como ler as divergências', `<ul>
