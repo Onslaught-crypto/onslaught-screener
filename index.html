@@ -408,6 +408,8 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
 .stat .v.s{font-size:17px}
 label[hidden]{display:none!important}
 .pftbl{min-width:0;font-size:12.5px}
+.pftbl td.pxh{color:#fff}
+.pftbl td.pxo{font-weight:700}
 .pftbl td,.pftbl th{padding:6px 9px;text-align:right;white-space:nowrap}
 .pftbl th.l,.pftbl td.l{text-align:left}
 .pftbl tbody tr{cursor:pointer}.pftbl tbody tr:hover{background:var(--panel2)}
@@ -500,10 +502,11 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <button role="tab" data-view="map">Market Map</button>
     <button role="tab" data-view="sectors">Sector Flow</button>
     <button role="tab" data-view="macro">Macro</button>
-    <button role="tab" data-view="div">Divergences<span class="newb" id="divNew" hidden>NEW</span></button>
+    <button role="tab" data-view="div">Divergences</button>
     <button role="tab" data-view="ta">Technical Analysis</button>
     <button role="tab" data-view="liq">Liquidations</button>
     <button role="tab" data-view="pos">Positioning</button>
+    <button role="tab" data-view="ma">Moving Averages</button>
     <button role="tab" data-view="journal">Journal</button>
   </nav>
 
@@ -511,7 +514,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="kbhelp" id="kbHelp" hidden role="dialog" aria-label="Keyboard shortcuts"><div class="box"><b>Keyboard shortcuts</b>
-    <div class="r"><span>Switch tab</span><span><kbd>1</kbd>–<kbd>9</kbd></span></div>
+    <div class="r"><span>Switch tab</span><span><kbd>1</kbd>–<kbd>9</kbd> (first nine tabs)</span></div>
     <div class="r"><span>Search pairs</span><span><kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd></span></div>
     <div class="r"><span>Simple / Full table</span><span><kbd>S</kbd></span></div>
     <div class="r"><span>Light / dark theme</span><span><kbd>T</kbd></span></div>
@@ -545,7 +548,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
             <div class="seg" id="densSeg"><button data-v="comfortable">Comfortable</button><button data-v="compact">Compact</button></div>
             <div class="pophead" style="margin-top:10px">Columns <button id="colReset" style="float:right;padding:1px 8px;font-size:11px" title="Put the columns back in the default order">Reset order</button></div><div id="colList" class="collist"></div>
           </div></div>
-        <button id="csvBtn">Export CSV</button>
+        <button id="csvBtn">Export CSV</button><button id="tvBtn" title="Copy the coins shown as a list TradingView can import">Copy as TradingView list</button>
       </div>
     </div>
     <div class="row">
@@ -910,7 +913,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <input id="pfQ" placeholder="Search coin…" style="width:130px">
         <div class="seg" id="pfF"><button data-v="all" class="on">All</button><button data-v="long" title="Funding at or above +0.03% per 8 hours: longs are paying a lot, so the long side is crowded">Crowded long</button><button data-v="short" title="Funding at or below −0.03% per 8 hours: shorts are paying a lot, so the short side is crowded">Crowded short</button><button data-v="neg">Negative</button></div>
         <label class="mu">Min 24h volume <select id="pfV"><option value="0">any</option><option value="1000000">$1M</option><option value="10000000" selected>$10M</option><option value="50000000">$50M</option></select></label>
-        <button id="pfLoad">Refresh</button><button id="pfCsv" title="Download the rows shown as a CSV file">CSV</button>
+        <button id="pfLoad">Refresh</button><button id="pfCsv" title="Download the rows shown as a CSV file">CSV</button><button id="pfTv" title="Copy the coins shown as a list TradingView can import">Copy as TradingView list</button>
         <span class="mu" id="pfSt"></span>
       </div>
       <div class="tablewrap" style="max-height:440px;overflow:auto;margin-top:10px"><table class="pftbl"><thead><tr>
@@ -927,6 +930,15 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <div id="ppRead" class="lqnote" hidden style="margin-top:10px"></div>
       <div class="ppgrid" id="ppOut"></div>
       <div class="dnote">Account ratios count traders; the top-trader position ratio weighs by size. When they disagree, the large accounts and the crowd are on opposite sides. Context, not a signal: none of these has been tested as an entry rule.</div>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <b>Positioning extremes</b><span class="mu">where each reading sits against the last 30 days · top 20 coins by volume</span>
+        <div class="seg" id="peF"><button data-v="" class="on">All</button><button data-v="ext">Extremes only</button></div>
+        <button id="peLoad">Refresh</button><button id="peTv" title="Copy the coins shown as a list TradingView can import">Copy as TradingView list</button><span class="mu" id="peSt"></span>
+      </div>
+      <div class="tablewrap" style="max-height:420px;overflow:auto;margin-top:10px"><table class="pftbl"><thead><tr><th class="l">Coin</th><th title="Latest funding payment against the last 30 days of payments">Funding</th><th title="Long ÷ short, all accounts (the crowd)">All accounts</th><th title="Long ÷ short, top-trader accounts">Top accounts</th><th title="Long ÷ short, top-trader positions (weighted by size)">Top positions</th><th title="Open interest value">Open interest</th><th class="l">Read</th></tr></thead><tbody id="peBody"></tbody></table></div>
+      <div class="dnote">Each cell is a percentile: 100 means the highest reading of the last 30 days, 0 the lowest (hover for the value and the range). Shaded at 90 or above and 10 or below. The Read column flags a coin when at least two of the three long/short ratios are at the same extreme. Only 30 days of history are available from Binance, and an extreme can last for weeks: this is a description of positioning, not a signal.</div>
     </div>
     <div class="panel">
       <div class="row">
@@ -948,12 +960,54 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li><b>Funding</b> is what one side of a perpetual pays the other every few hours. Positive: longs pay shorts, so longs are the crowded side. Negative: shorts pay. The table converts every coin to a per-8-hours rate so 1h, 4h and 8h coins compare. Around +0.01% is normal; beyond ±0.03% (⚠) one side is crowded and a squeeze against it becomes more likely. <b>Annualised</b> is what holding the position would cost or earn over a year if the rate never changed.</li>
       <li><b>Long ÷ short ratio, all accounts</b> counts traders: above 1 means more accounts are long. It describes the crowd, mostly small traders. <b>Top traders, positions</b> weighs by size and describes the largest accounts. When the crowd is long and the large traders are short (or the reverse), the note above the charts flags it: that is the crowded side to be careful with.</li>
       <li><b>Taker buy ÷ sell</b> compares market buys with market sells: above 1, buyers are the ones crossing the spread. <b>Open interest</b> with price tells who is acting: price up and open interest up means new longs, price up and open interest down means short covering, price down and open interest up means new shorts, price down and open interest down means longs closing.</li>
+      <li><b>Positioning extremes</b> ranks each reading (funding, the three long/short ratios, open interest) against the same coin's last 30 days: 100 is the highest reading of the month, 0 the lowest. A coin is flagged when at least two of the three ratios are at the same extreme. Extremes can last for weeks and price can keep going against the crowd, so read it as a description, not a signal. Click a row to load that coin in Positioning above.</li>
       <li><b>Large trades and liquidations</b> is a live feed. A long liquidation is a forced sell, a short liquidation a forced buy. Clusters of large liquidations often mark the end of a fast move, not the start of the next. The feed starts when you open the tab and stops when you leave, and trades follow the coin chosen in Positioning.</li>
       <li><b>Bull Market Support Band</b> is the 20-week average and the 21-week EMA of the weekly close. Above the band is read as a healthy trend, inside as indecision, below as weak. The counts show how many of the top 100 coins are in each state. Click a count to filter the table.</li>
       <li><b>Fear &amp; Greed</b> (alternative.me) blends volatility, momentum, social and other readings into 0 to 100. Low is fear, high is greed.</li>
       <li><b>What this tab is not:</b> context. None of these readings has been tested as an entry rule, and the Journal is where that test happens.</li>
     </ul></details></div>
   </div>
+  <div id="viewMa" hidden>
+    <div class="panel">
+      <div class="row">
+        <b>Moving average stack</b>
+        <label class="mu">Top <select id="maN"><option value="50">50</option><option value="100">100</option><option value="150" selected>150</option></select> by volume</label>
+        <label class="mu">Compare <select id="maCmp"><option value="live">live price</option><option value="close">last closed candle</option></select></label>
+        <label class="mu">Max distance <select id="maDist"><option value="0">any</option><option value="2">2%</option><option value="5">5%</option><option value="10">10%</option></select></label>
+        <label class="mu">Sector <select id="maSec"><option value="">All sectors</option></select></label>
+        <label class="mu">Market cap <select id="maMc"><option value="0">Any</option><option value="1e8">≥ $100M</option><option value="5e8">≥ $500M</option><option value="1e9">≥ $1B</option></select></label>
+        <input id="maQ" placeholder="Search coin…" style="width:120px">
+        <button id="maLoad">Refresh</button><button id="maTv" title="Copy the coins shown as a list TradingView can import">Copy as TradingView list</button><button id="maCsv">CSV</button>
+        <span class="mu" id="maSt"></span>
+      </div>
+      <div class="row" id="maPre" style="margin-top:10px;gap:6px;flex-wrap:wrap"></div>
+      <div class="tablewrap" style="margin-top:10px"><table class="pftbl" id="maGrid"></table></div>
+      <div class="dnote">Click a cell to cycle: any → price above → price below. Every condition must hold. EMA and SMA values come from closed candles (about 1000 per timeframe).</div>
+      <div class="row" style="margin-top:8px">
+        <label class="mu">E12 / E25 (4H) <select class="maX" id="maX1"><option value="">any</option><option value="1">E12 above E25</option><option value="-1">E12 below E25</option></select></label>
+        <label class="mu">E50 / E200 (1D) <select class="maX" id="maX2"><option value="">any</option><option value="1">E50 above E200</option><option value="-1">E50 below E200</option></select></label>
+        <label class="mu">S50 / S200 (1D) <select class="maX" id="maX3"><option value="">any</option><option value="1">S50 above S200</option><option value="-1">S50 below S200</option></select></label>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row"><b id="maCount">Results</b><span class="mu">Click a row for the distance to every average.</span></div>
+      <div class="tablewrap" style="max-height:560px;overflow:auto;margin-top:10px"><table class="pftbl"><thead><tr>
+        <th class="l" data-k="base">Coin</th><th data-k="price">Price</th><th data-k="chg">24h</th><th data-k="qv">24h volume</th>
+        <th data-k="n1h" title="Averages price is above, out of 9">1H</th><th data-k="n4h">4H</th><th data-k="n1d">1D</th><th data-k="n1w">1W</th>
+        <th title="EMA 12 vs EMA 25 on 4H">E12/25 4H</th><th title="EMA 50 vs EMA 200 on 1D">E50/200 1D</th><th title="SMA 50 vs SMA 200 on 1D">S50/200 1D</th></tr></thead>
+        <tbody id="maBody"></tbody></table></div>
+    </div>
+    <div class="panel"><details data-help="ma"><summary>How to read the Moving Averages tab</summary><ul>
+      <li>For the top coins by volume the tab computes nine averages (EMA 12, 25, 50, 100, 200 and SMA 12, 25, 50, 200) on 1H, 4H, 1D and 1W, from closed candles. The grid lets you require that price is above or below any of them, on any timeframe, at the same time.</li>
+      <li>The number in each timeframe column is how many of the nine averages price is above. 9/9 is a full bullish stack on that timeframe, 0/9 a full bearish one.</li>
+      <li><b>Max distance</b> keeps only coins whose price is within that percentage of every average you selected, which finds pullbacks to an average instead of coins that are far above it.</li>
+      <li><b>Live price</b> compares the current price, so a result can change within the candle. <b>Last closed candle</b> only changes when a candle closes.</li>
+      <li>The cross columns show whether the faster average is above the slower one (▲) or below (▼). A cross lags price by construction.</li>
+      <li><b>Copy as TradingView list</b> copies the coins shown as BINANCE:XXXUSDT.P entries. In TradingView open a watchlist, choose Import list and paste them into a text file, or add them with Ctrl+V in the add symbol box.</li>
+      <li><b>What this is not:</b> a description of trend. No averages rule has been tested here as an entry, and the Journal found no entry rule that beats random after fees. Use it to narrow a list, then judge the chart.</li>
+    </ul></details></div>
+  </div><!-- /viewMa -->
+
   <div id="viewJournal" hidden>
     <div class="seg jtabs" id="jTabs" style="margin:0 0 10px"><button data-v="Score" class="on">Scoreboard</button><button data-v="Live">Live log</button><button data-v="Lab">Study lab</button><button data-v="Runner">Runner results</button></div>
     <div class="jpane" id="jtScore">
@@ -3035,13 +3089,11 @@ function exportCSV(){
 }
 
 /* ---------- Views ---------- */
-try { if (!localStorage.getItem('onslaught-newseen')) $('divNew').hidden = false; } catch { $('divNew').hidden = false; }
 function setView(v){
   S.view = v;
-  if (v === 'div'){ try { localStorage.setItem('onslaught-newseen', '1'); } catch {} $('divNew').hidden = true; }
-  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div'; $('viewTa').hidden = v !== 'ta'; $('viewPos').hidden = v !== 'pos';
+  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div'; $('viewTa').hidden = v !== 'ta'; $('viewPos').hidden = v !== 'pos'; $('viewMa').hidden = v !== 'ma';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Technical Analysis', liq: 'Liquidation Map', pos: 'Positioning', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
+  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Technical Analysis', liq: 'Liquidation Map', pos: 'Positioning', ma: 'Moving Averages', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   clearTimeout(LAZY.t); if (v !== 'journal' && LAZY.loaded) LAZY.t = setTimeout(jUnload, 45000);
@@ -3051,6 +3103,7 @@ function setView(v){
   if (v === 'div'){ dvSync(); renderDiv(); if (!DIV.t || Date.now() - DIV.t > 3e5) divScan(); }
   if (v === 'liq') liqEnter();
   if (v !== 'pos') btStop(); else posEnter();
+  if (v === 'ma') maEnter();
   if (v === 'sectors' && !SEC.rows.length && !SEC.loading) loadSectors();
   if (v === 'ta' && !ANA.sym && ANA.recent && ANA.recent[0]) anaOpen(ANA.recent[0]);
   if (v === 'ta') anaEnter();
@@ -3220,11 +3273,52 @@ function bmRender(){
   [...$('bmFs').children].forEach(x => x.classList.toggle('on', x.dataset.v === B.filt)); const bq = $('bmQ').value.trim().toUpperCase(), shown = r.filter(x => (!B.filt || x.st === B.filt) && (!bq || x.base.includes(bq)));
   $('bmBody').innerHTML = !shown.length ? '<tr><td colspan="6" class="mu" style="text-align:center;padding:14px">No coins match.</td></tr>' : [...shown].sort((a, b) => k === 'base' ? dir * a.base.localeCompare(b.base) : k === 'st' ? dir * (a.st.localeCompare(b.st)) : dir * (a[k] - b[k])).map(x => `<tr data-sym="${x.sym}"><td class="l"><b>${x.base}</b></td><td>${fmtPrice(x.price)}</td><td class="l ${x.st === 'above' ? 'up' : x.st === 'below' ? 'dn' : 'mu'}">${lab[x.st]}</td><td class="${cls(x.dist)}">${x.dist ? fmtPct(x.dist) : '0%'}</td><td class="mu">${fmtPrice(x.lo)}</td><td class="mu">${fmtPrice(x.hi)}</td></tr>`).join('');
 }
+/* --- Positioning extremes: each reading against its own last 30 days --- */
+const PE = {rows: [], t: 0, loading: false, filt: ''};
+const peRank = (a, v) => a.length < 30 ? null : 100 * a.filter(x => x <= v).length / a.length;
+async function peOne(u){
+  const g = ep => getJSON(`${FAPI}/futures/data/${ep}?symbol=${u.sym}&period=4h&limit=180`, OILIM, 1).catch(() => []);
+  const [gl, ta, tp, oi, fr] = await Promise.all([g('globalLongShortAccountRatio'), g('topLongShortAccountRatio'), g('topLongShortPositionRatio'), g('openInterestHist'), getJSON(`${FAPI}/fapi/v1/fundingRate?symbol=${u.sym}&limit=90`, FRLIM, 1).catch(() => [])]);
+  const S1 = (a, f) => (Array.isArray(a) ? a : []).map(f).filter(Number.isFinite), m = {
+    fund: S1(fr, x => +x.fundingRate * 100), gl: S1(gl, x => +x.longShortRatio), ta: S1(ta, x => +x.longShortRatio), tp: S1(tp, x => +x.longShortRatio), oi: S1(oi, x => +x.sumOpenInterestValue)};
+  const out = {sym: u.sym, base: u.base, qv: u.qv};
+  for (const k of Object.keys(m)){ const a = m[k], v = a.at(-1); out[k] = v == null ? null : {v, p: peRank(a, v), lo: Math.min(...a), hi: Math.max(...a), n: a.length}; }
+  const rs = [out.gl, out.ta, out.tp].filter(x => x && x.p != null), hiN = rs.filter(x => x.p >= 90).length, loN = rs.filter(x => x.p <= 10).length;
+  out.read = hiN >= 2 ? 'long' : loN >= 2 ? 'short' : '';
+  out.score = rs.length ? Math.max(...rs.map(x => Math.abs(x.p - 50))) : 0;
+  return out;
+}
+async function peLoad(force){
+  if (PE.loading) return;
+  try { const ck = await Cache.get('psx:v1'); if (!force && ck && Date.now() - ck.t < 9e5){ PE.rows = ck.rows; PE.t = ck.t; $('peSt').textContent = 'Cached · refreshes every 15 min'; peRender(); return; } } catch {}
+  PE.loading = true; $('peLoad').disabled = true;
+  try {
+    const top = (await getUniverse()).slice(0, 20), out = []; let i = 0, n = 0;
+    const worker = async () => { while (i < top.length){ const u = top[i++]; try { out.push(await peOne(u)); } catch {} $('peSt').textContent = `Loading ${++n}/${top.length}…`; } };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    PE.rows = out; PE.t = Date.now(); await Cache.set('psx:v1', {t: PE.t, rows: out});
+    $('peSt').textContent = `Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})} · ${out.length} coins`; peRender();
+  } catch(e){ $('peSt').textContent = 'Could not load: ' + e.message; }
+  finally { PE.loading = false; $('peLoad').disabled = false; }
+}
+function peRender(){
+  if ($('viewPos').hidden) return;
+  const cell = (x, fmt) => { if (!x || x.p == null) return '<td class="mu">—</td>'; const hi = x.p >= 90, lo = x.p <= 10;
+    return `<td class="${hi || lo ? 'pxo' : ''}" style="${hi ? 'background:var(--bull-bg);color:var(--bull)' : lo ? 'background:var(--bear-bg);color:var(--bear)' : ''}" title="Now ${fmt(x.v)} · 30-day range ${fmt(x.lo)} to ${fmt(x.hi)} · ${x.n} readings">${Math.round(x.p)}</td>`; };
+  const r2 = v => v.toFixed(2), pct = v => v.toFixed(4) + '%', usd = v => '$' + posM(v);
+  [...$('peF').children].forEach(b => b.classList.toggle('on', b.dataset.v === PE.filt));
+  const rows = [...PE.rows].filter(x => !PE.filt || x.read || [x.fund, x.gl, x.ta, x.tp, x.oi].some(c => c && c.p != null && (c.p >= 90 || c.p <= 10))).sort((a, b) => (!!b.read - !!a.read) || b.score - a.score);
+  $('peBody').innerHTML = rows.map(x => `<tr data-sym="${x.sym}"><td class="l"><b>${x.base}</b></td>${cell(x.fund, pct)}${cell(x.gl, r2)}${cell(x.ta, r2)}${cell(x.tp, r2)}${cell(x.oi, usd)}<td class="l ${x.read === 'long' ? 'up' : x.read === 'short' ? 'dn' : 'mu'}">${x.read === 'long' ? 'Long side at an extreme' : x.read === 'short' ? 'Short side at an extreme' : '—'}</td></tr>`).join('') || '<tr><td colspan="7" class="mu" style="text-align:center;padding:14px">No extremes right now.</td></tr>';
+}
+$('peLoad').onclick = () => peLoad(true);
+$('peF').onclick = e => { const b = e.target.closest('button'); if (!b) return; PE.filt = b.dataset.v; peRender(); };
+$('peBody').onclick = e => { const tr = e.target.closest('tr[data-sym]'); if (!tr) return; $('ppSym').value = baseOf(tr.dataset.sym); PS.pp.t = 0; ppLoad(); $('ppSym').scrollIntoView({block: 'center'}); };
 function posEnter(){
   posStats(); if (!PS.f.rows.length || Date.now() - PS.f.t > 60000) pfLoad(); else pfRender();
   if (!PS.fg) fgLoad();
   if (!PS.pp.t) ppLoad();
   if (!PS.bm.rows.length || Date.now() - PS.bm.t > 36e5) bmLoad(false); else bmRender();
+  if (!PE.rows.length || Date.now() - PE.t > 9e5) peLoad(false); else peRender();
   btStart(); psTrRender();
 }
 $('pfLoad').onclick = pfLoad; $('bmLoad').onclick = () => bmLoad(true); $('ppLoad').onclick = ppLoad;
@@ -3238,10 +3332,135 @@ $('btMin').onchange = () => { PS.bt.min = +$('btMin').value; PS.bt.big = {liq: 0
 $('btKind').onclick = e => { const b = e.target.closest('button'); if (!b) return; PS.bt.kind = b.dataset.v; [...$('btKind').children].forEach(x => x.classList.toggle('on', x === b)); PS.bt.dirty = true; psTrRender(); };
 $('viewPos').addEventListener('click', e => {
   const th = e.target.closest('th[data-k]'); if (th){ const tb = th.closest('table').querySelector('tbody').id, o = tb === 'pfBody' ? PS.f : PS.bm, k = th.dataset.k; o.sort = {k, dir: o.sort.k === k ? -o.sort.dir : (k === 'base' || k === 'st' ? 1 : -1)}; tb === 'pfBody' ? pfRender() : bmRender(); return; }
-  const tr = e.target.closest('tbody tr[data-sym]'); if (tr) anaOpen(tr.dataset.sym);
+  const tr = e.target.closest('tbody tr[data-sym]'); if (tr && tr.parentNode.id !== 'peBody') anaOpen(tr.dataset.sym);
 });
 $('pfCsv').onclick = () => csvDownload('onslaught-funding.csv', ['coin', 'mark_price', 'change_24h_pct', 'volume_24h_usd', 'funding_per_8h_pct', 'funding_own_interval_pct', 'interval_h', 'next_payment_utc', 'annualised_pct'],
   pfShown().map(x => [x.base, x.price, x.chg.toFixed(2), Math.round(x.qv), x.r8.toFixed(4), x.rate.toFixed(4), x.ih, new Date(x.nf).toISOString(), x.apr.toFixed(1)]));
+
+/* ---------- Moving Averages: EMA / SMA stack screener ---------- */
+const MA_TFS = ['1h', '4h', '1d', '1w'], MA_TFL = {'1h': '1H', '4h': '4H', '1d': '1D', '1w': '1W'};
+const MA_LIST = [['E12','EMA 12'],['E25','EMA 25'],['E50','EMA 50'],['E100','EMA 100'],['E200','EMA 200'],['S12','SMA 12'],['S25','SMA 25'],['S50','SMA 50'],['S200','SMA 200']];
+const MAS = {rows: [], data: {}, cond: {}, loading: false, t: 0, sort: {k: 'qv', dir: -1}, open: new Set(), gen: 0};
+const maClear = () => { MAS.cond = {}; MA_TFS.forEach(t => { MAS.cond[t] = {}; }); };
+maClear();
+const MA_PRESETS = [
+  ['1D > EMA 50', c => { c['1d'].E50 = 1; }],
+  ['1D > EMA 50 · 4H > EMA 50 & 200', c => { c['1d'].E50 = 1; c['4h'].E50 = 1; c['4h'].E200 = 1; }],
+  ['Full bull stack (4H–1W)', c => { ['4h','1d','1w'].forEach(t => MA_LIST.forEach(([m]) => { c[t][m] = 1; })); }],
+  ['EMA 12 > 25 momentum (1H & 4H)', c => { ['1h','4h'].forEach(t => { c[t].E12 = 1; c[t].E25 = 1; }); }],
+  ['Pullback in uptrend', c => { c['1d'].E50 = 1; c['1d'].E200 = 1; c['1h'].E50 = -1; }],
+  ['4H reclaim, 1D still below', c => { c['4h'].E50 = 1; c['1d'].E50 = -1; }],
+  ['1D > SMA 50 & 200', c => { c['1d'].S50 = 1; c['1d'].S200 = 1; }],
+  ['Full bear stack', c => { ['4h','1d','1w'].forEach(t => MA_LIST.forEach(([m]) => { c[t][m] = -1; })); }]
+];
+function maCalc(cl){
+  if (!cl.length) return null;
+  const last = cl[cl.length - 1], m = {};
+  for (const p of [12, 25, 50, 100, 200]) m['E' + p] = cl.length >= p ? emaSeries(cl, p).pop() : null;
+  for (const p of [12, 25, 50, 200]) m['S' + p] = cl.length >= p ? cl.slice(-p).reduce((a, b) => a + b, 0) / p : null;
+  return {c: last, m};
+}
+async function maLoad(force){
+  if (MAS.loading) return; MAS.loading = true; const gen = ++MAS.gen; $('maLoad').disabled = true; $('maSt').textContent = 'Loading…';
+  try {
+    const uni = await getUniverse();
+    const n = +$('maN').value, list = uni.slice().sort((a, b) => b.qv - a.qv).slice(0, n);
+    getMcaps().then(mc => { list.forEach(u => { u.mcap = mc[u.base]; }); maRender(); }).catch(() => {});   // market caps arrive later and never hold the screen up
+    MAS.rows = list; const jobs = []; list.forEach(u => MA_TFS.forEach(t => jobs.push([u, t])));
+    let done = 0, i = 0, data = MAS.data;
+    const tick = () => { $('maSt').textContent = `Loading ${done}/${jobs.length} series…`; if (done % 40 === 0) maRender(); };
+    const worker = async () => { while (i < jobs.length){ const [u, t] = jobs[i++];
+      try { const k = await getKlines(u.sym, t, true, KDEEP); (data[u.sym] = data[u.sym] || {})[t] = maCalc(k.map(x => x[4])); } catch(e){ /* skip series */ }
+      done++; tick(); } };
+    await Promise.all(Array.from({length: CONCURRENCY}, worker));
+    MAS.t = Date.now(); $('maSt').textContent = `Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})} · ${list.length} coins`;
+    maRender();
+  } catch(e){ $('maSt').textContent = 'Could not load: ' + e.message; }
+  finally { MAS.loading = false; $('maLoad').disabled = false; }
+}
+function maRowInfo(u){
+  const d = MAS.data[u.sym]; if (!d) return null;
+  const live = $('maCmp').value === 'live', info = {n: {}, dist: {}};
+  for (const t of MA_TFS){
+    const x = d[t]; if (!x){ info.n[t] = null; continue; }
+    const p = live ? u.price : x.c; let n = 0, tot = 0; info.dist[t] = {};
+    for (const [m] of MA_LIST){ const v = x.m[m]; if (v == null){ info.dist[t][m] = null; continue; } tot++; const dp = (p / v - 1) * 100; info.dist[t][m] = dp; if (dp > 0) n++; }
+    info.n[t] = tot ? n : null; info.tot = info.tot || {}; info.tot[t] = tot;
+  }
+  const cr = (t, a, b) => { const x = d[t]; return x && x.m[a] != null && x.m[b] != null ? (x.m[a] > x.m[b] ? 1 : -1) : null; };
+  info.x = [cr('4h','E12','E25'), cr('1d','E50','E200'), cr('1d','S50','S200')];
+  return info;
+}
+function maShown(){
+  const q = $('maQ').value.trim().toUpperCase(), sec = $('maSec').value, mc = +$('maMc').value, md = +$('maDist').value;
+  const xs = ['maX1','maX2','maX3'].map(id => $(id).value === '' ? 0 : +$(id).value);
+  const conds = []; MA_TFS.forEach(t => Object.entries(MAS.cond[t]).forEach(([m, st]) => { if (st) conds.push([t, m, st]); }));
+  const out = [];
+  for (const u of MAS.rows){
+    if (q && !u.base.includes(q)) continue;
+    if (!inScope(u, mc, sec)) continue;
+    const info = maRowInfo(u); if (!info){ continue; }
+    let ok = true;
+    for (const [t, m, st] of conds){ const dp = info.dist[t] && info.dist[t][m]; if (dp == null || (st > 0 ? dp <= 0 : dp >= 0) || (md && Math.abs(dp) > md)){ ok = false; break; } }
+    if (ok) for (let i = 0; i < 3; i++) if (xs[i] && info.x[i] !== xs[i]){ ok = false; break; }
+    if (ok) out.push(Object.assign({}, u, {info}));
+  }
+  const {k, dir} = MAS.sort;
+  out.sort((a, b) => k === 'base' ? dir * a.base.localeCompare(b.base) : dir * (((k[0] === 'n' ? a.info.n[k.slice(1)] : a[k]) ?? -1) - ((k[0] === 'n' ? b.info.n[k.slice(1)] : b[k]) ?? -1)));
+  return out;
+}
+function maRender(){
+  if ($('viewMa').hidden) return;
+  $('maGrid').innerHTML = '<thead><tr><th class="l"></th>' + MA_LIST.map(([m, l]) => `<th>${l}</th>`).join('') + '</tr></thead><tbody>' +
+    MA_TFS.map(t => `<tr><td class="l"><b>${MA_TFL[t]}</b></td>` + MA_LIST.map(([m, l]) => { const st = MAS.cond[t][m] || 0;
+      return `<td data-t="${t}" data-m="${m}" style="cursor:pointer;text-align:center;${st > 0 ? 'background:var(--bull-bg);color:var(--bull)' : st < 0 ? 'background:var(--bear-bg);color:var(--bear)' : ''}">${st > 0 ? '▲ above' : st < 0 ? '▼ below' : '·'}</td>`; }).join('') + '</tr>').join('') + '</tbody>';
+  const rows = maShown();
+  $('maCount').textContent = `${rows.length} of ${MAS.rows.length} coins match`;
+  const nc = (n, tot) => n == null ? '<td class="mu">—</td>' : `<td style="${n === tot ? 'background:var(--bull-bg);color:var(--bull)' : n === 0 ? 'background:var(--bear-bg);color:var(--bear)' : ''}">${n}/${tot}</td>`;
+  const xc = v => v == null ? '<td class="mu">—</td>' : `<td class="${v > 0 ? 'up' : 'dn'}">${v > 0 ? '▲' : '▼'}</td>`;
+  $('maBody').innerHTML = rows.map(r => { const i = r.info;
+    let h = `<tr data-sym="${r.sym}" style="cursor:pointer"><td class="l"><b>${esc(r.base)}</b></td><td>${fmtPrice(r.price)}</td><td class="${r.chg >= 0 ? 'up' : 'dn'}">${fmtPct(r.chg)}</td><td>$${posM(r.qv)}</td>` +
+      MA_TFS.map(t => nc(i.n[t], i.tot && i.tot[t])).join('') + i.x.map(xc).join('') + '</tr>';
+    if (MAS.open.has(r.sym)) h += `<tr><td colspan="11" style="padding:6px 10px"><table class="pftbl" style="width:auto"><thead><tr><th></th>${MA_LIST.map(([m, l]) => `<th>${l}</th>`).join('')}</tr></thead><tbody>` +
+      MA_TFS.map(t => `<tr><td class="l"><b>${MA_TFL[t]}</b></td>` + MA_LIST.map(([m]) => { const v = i.dist[t] && i.dist[t][m]; return v == null ? '<td class="mu">—</td>' : `<td class="${v >= 0 ? 'up' : 'dn'}">${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}%</td>`; }).join('') + '</tr>').join('') + '</tbody></table></td></tr>';
+    return h; }).join('') || '<tr><td colspan="11" class="mu" style="padding:16px">' + (MAS.loading ? 'Loading…' : 'No coin matches these conditions.') + '</td></tr>';
+  document.querySelectorAll('#viewMa th[data-k]').forEach(th => th.classList.toggle('srt', th.dataset.k === MAS.sort.k));
+}
+function maEnter(){
+  const sel = $('maSec'); if (sel.options.length < 2) [...$('sector').options].slice(1).forEach(o => sel.add(new Option(o.text, o.value)));
+  if (!$('maPre').children.length){
+    $('maPre').innerHTML = MA_PRESETS.map((p, i) => `<button data-i="${i}">${esc(p[0])}</button>`).join('') + '<button data-i="clear">Clear all</button>';
+  }
+  maRender();
+  if (!MAS.rows.length || Date.now() - MAS.t > 5 * 60000) maLoad(false);
+}
+$('maPre').onclick = e => { const b = e.target.closest('button'); if (!b) return; maClear();
+  if (b.dataset.i !== 'clear') MA_PRESETS[+b.dataset.i][1](MAS.cond);
+  ['maX1','maX2','maX3'].forEach(id => $(id).value = ''); maRender(); };
+$('maGrid').onclick = e => { const td = e.target.closest('td[data-t]'); if (!td) return; const c = MAS.cond[td.dataset.t], m = td.dataset.m, cur = c[m] || 0;
+  c[m] = cur === 0 ? 1 : cur === 1 ? -1 : 0; maRender(); };
+$('maBody').onclick = e => { const tr = e.target.closest('tr[data-sym]'); if (!tr) return; const s = tr.dataset.sym; MAS.open.has(s) ? MAS.open.delete(s) : MAS.open.add(s); maRender(); };
+$('viewMa').querySelector('thead').onclick = e => { const th = e.target.closest('th[data-k]'); if (!th) return; const k = th.dataset.k; MAS.sort = {k, dir: MAS.sort.k === k ? -MAS.sort.dir : (k === 'base' ? 1 : -1)}; maRender(); };
+['maCmp','maDist','maSec','maMc','maX1','maX2','maX3'].forEach(id => $(id).onchange = maRender);
+$('maQ').oninput = maRender;
+$('maN').onchange = () => maLoad(false);
+$('maLoad').onclick = () => maLoad(true);
+$('maCsv').onclick = () => { const rows = maShown();
+  csvDownload('onslaught-moving-averages.csv', ['pair','price','chg24h','vol24h',...MA_TFS.flatMap(t => MA_LIST.map(([m]) => `${MA_TFL[t]}_${m}_dist_pct`))],
+    rows.map(r => [r.sym, r.price, r.chg, r.qv, ...MA_TFS.flatMap(t => MA_LIST.map(([m]) => { const v = r.info.dist[t] && r.info.dist[t][m]; return v == null ? '' : v.toFixed(2); }))])); };
+
+/* --- Copy as TradingView list --- */
+async function tvCopy(syms){
+  if (!syms.length){ toast('Nothing to copy: the table is empty.'); return; }
+  const txt = syms.map(s => `BINANCE:${s}.P`).join(',');
+  try { await navigator.clipboard.writeText(txt); }
+  catch { const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch {} ta.remove(); }
+  toast(`Copied ${syms.length} symbols for TradingView`, 'In TradingView: watchlist menu → Import list, or paste into the add symbol box.');
+}
+$('maTv').onclick = () => tvCopy(maShown().map(r => r.sym));
+$('tvBtn').onclick = () => tvCopy(filtered().map(r => r.sym));
+$('pfTv').onclick = () => tvCopy(pfShown().map(r => r.sym));
+$('peTv').onclick = () => tvCopy([...$('peBody').querySelectorAll('tr[data-sym]')].map(tr => tr.dataset.sym));
 
 /* ---------- Sector Flow ---------- */
 const SEC = {coins: null, rows: [], open: new Set(), sort: {k: 'shareD', dir: -1}, loading: false, t: null};
@@ -6437,7 +6656,7 @@ $('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.
   if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Crypto Scanner scan that includes this coin to open its trade plan.'); return; }
   const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
 $('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
-try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'pos' || v === 'macro' || v === 'div' || v === 'ta') setView(v); } catch {}
+try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'pos' || v === 'ma' || v === 'macro' || v === 'div' || v === 'ta') setView(v); } catch {}
 $('alertBtn').onclick = toggleAlerts; paintAlertBtn();
 for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
 for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
@@ -6721,7 +6940,7 @@ async function applyHash(){
   const h = new URLSearchParams(location.hash.replace(/^#/, '')); if (!h.has('t') && !h.has('c')) return;
   history.replaceState(null, '', location.pathname + location.search);
   const t = h.get('t'), tf = h.get('tf'), c = (h.get('c') || '').toUpperCase(), d = +h.get('d') < 0 ? -1 : 1;
-  if (['trend', 'map', 'sectors', 'macro', 'div', 'ta', 'liq', 'pos', 'journal'].includes(t) && !(t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c))) setView(t);
+  if (['trend', 'map', 'sectors', 'macro', 'div', 'ta', 'liq', 'pos', 'ma', 'journal'].includes(t) && !(t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c))) setView(t);
   if (t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c)){ anaOpen(c, tf); return; }
   if (TFS.includes(tf) && tf !== S.tf) $('tfSeg').querySelector(`[data-v="${tf}"]`)?.click();
   if (/^[A-Z0-9]{3,20}USDT$/.test(c)){
@@ -7358,10 +7577,20 @@ journal: ['Como funciona o journal', `<ul>
 
 <li><b>Sinais contra um controlo aleatório</b>: por cada novo sinal o diário segue também uma moeda aleatória na mesma vela e lado sem sinal, com o mesmo stop e alvo. O cartão compara os dois por momento e diz se a diferença está dentro do ruído; avalia depois de cerca de 150 momentos emparelhados. O diário guarda agora até 12 000 entradas.</li>
 </ul>`],
+ma: ['Como ler o separador Moving Averages', `<ul>
+<li>Para as principais moedas por volume, o separador calcula nove médias (EMA 12, 25, 50, 100, 200 e SMA 12, 25, 50, 200) em 1H, 4H, 1D e 1W, a partir de velas fechadas. A grelha permite exigir que o preço esteja acima ou abaixo de qualquer uma delas, em qualquer timeframe, em simultâneo.</li>
+<li>O número em cada coluna de timeframe é quantas das nove médias o preço está acima. 9/9 é um stack totalmente bullish nesse timeframe, 0/9 totalmente bearish.</li>
+<li><b>Max distance</b> mantém só as moedas cujo preço está dentro dessa percentagem de todas as médias selecionadas, o que encontra pullbacks a uma média em vez de moedas muito acima dela.</li>
+<li><b>Live price</b> compara o preço atual, por isso um resultado pode mudar dentro da vela. <b>Last closed candle</b> só muda quando uma vela fecha.</li>
+<li>As colunas de cruzamento mostram se a média rápida está acima (▲) ou abaixo (▼) da lenta. Um cruzamento atrasa-se em relação ao preço por construção.</li>
+<li><b>Copy as TradingView list</b> copia as moedas mostradas como BINANCE:XXXUSDT.P. No TradingView use Import list numa watchlist, ou cole na caixa de adicionar símbolo.</li>
+<li><b>O que isto não é:</b> uma descrição da tendência. Nenhuma regra de médias foi testada aqui como entrada, e o Journal não encontrou nenhuma regra de entrada que bata o aleatório depois de comissões. Use-o para reduzir uma lista e depois avalie o gráfico.</li>
+</ul>`],
 pos: ['Como ler o separador Positioning', `<ul>
 <li><b>Funding</b> é o que um lado de um perpétuo paga ao outro de poucas em poucas horas. Positivo: os longs pagam aos shorts, por isso os longs são o lado sobrelotado. Negativo: pagam os shorts. A tabela converte todas as moedas para uma taxa por 8 horas, para que moedas de 1h, 4h e 8h sejam comparáveis. Cerca de +0,01% é normal; além de ±0,03% (⚠) um lado está sobrelotado e um squeeze contra ele torna-se mais provável. <b>Annualised</b> é o que custaria ou renderia manter a posição durante um ano se a taxa nunca mudasse.</li>
 <li><b>Rácio long ÷ short, todas as contas</b> conta traders: acima de 1 há mais contas long. Descreve a multidão, sobretudo pequenos traders. <b>Top traders, positions</b> pesa pelo tamanho e descreve as maiores contas. Quando a multidão está long e os grandes traders estão short (ou o contrário), a nota acima dos gráficos assinala-o: é o lado sobrelotado a que convém ter cuidado.</li>
 <li><b>Taker buy ÷ sell</b> compara compras a mercado com vendas a mercado: acima de 1, são os compradores que cruzam o spread. O <b>open interest</b> com o preço mostra quem está a agir: preço a subir com OI a subir são novos longs, preço a subir com OI a descer é cobertura de shorts, preço a descer com OI a subir são novos shorts, preço a descer com OI a descer são longs a fechar.</li>
+<li><b>Positioning extremes</b> compara cada leitura (funding, os três rácios long/short, open interest) com os últimos 30 dias da mesma moeda: 100 é a leitura mais alta do mês, 0 a mais baixa. Uma moeda é assinalada quando pelo menos dois dos três rácios estão no mesmo extremo. Os extremos podem durar semanas e o preço pode continuar contra a multidão, por isso lê-o como descrição, não como sinal. Clica numa linha para carregar essa moeda em Positioning, acima.</li>
 <li><b>Large trades and liquidations</b> é um feed ao vivo. Uma liquidação de long é uma venda forçada, uma liquidação de short é uma compra forçada. Grupos de liquidações grandes marcam muitas vezes o fim de um movimento rápido, não o início do seguinte. O feed arranca quando abres o separador e pára quando sais, e os trades seguem a moeda escolhida em Positioning.</li>
 <li><b>Bull Market Support Band</b> é a média de 20 semanas e a EMA de 21 semanas do fecho semanal. Acima da banda lê-se como tendência saudável, dentro como indecisão, abaixo como fraqueza. As contagens mostram quantas das 100 principais moedas estão em cada estado. Clica numa contagem para filtrar a tabela.</li>
 <li><b>Fear &amp; Greed</b> (alternative.me) combina volatilidade, momentum, redes sociais e outras leituras numa escala de 0 a 100. Baixo é medo, alto é ganância.</li>
