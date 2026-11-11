@@ -408,6 +408,9 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
 .stat .v.s{font-size:17px}
 label[hidden]{display:none!important}
 .pftbl{min-width:0;font-size:12.5px}
+.pftbl.magrid{width:100%;table-layout:fixed}.pftbl.magrid th,.pftbl.magrid td{text-align:center;padding:6px 4px}.pftbl.magrid th.l,.pftbl.magrid td.l{text-align:left;width:54px}.pftbl.magrid td[data-t]{user-select:none}
+.mafun{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center;font-size:12px}.mafun .fc{background:var(--panel2);border-radius:5px;padding:3px 8px;cursor:pointer;color:var(--muted)}.mafun .fc b{font-family:var(--mono);color:var(--text)}.mafun .fc.zero{background:var(--bear-bg);color:var(--bear)}.mafun .fc.zero b{color:var(--bear)}
+#maPre button.on{background:var(--accent);color:#fff}
 .pftbl td.pxh{color:#fff}
 .pftbl td.pxo{font-weight:700}
 .pftbl td,.pftbl th{padding:6px 9px;text-align:right;white-space:nowrap}
@@ -514,7 +517,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="kbhelp" id="kbHelp" hidden role="dialog" aria-label="Keyboard shortcuts"><div class="box"><b>Keyboard shortcuts</b>
-    <div class="r"><span>Switch tab</span><span><kbd>1</kbd>–<kbd>9</kbd> (first nine tabs)</span></div>
+    <div class="r"><span>Switch tab</span><span><kbd>1</kbd>–<kbd>9</kbd>, <kbd>0</kbd> for the tenth</span></div>
     <div class="r"><span>Search pairs</span><span><kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd></span></div>
     <div class="r"><span>Simple / Full table</span><span><kbd>S</kbd></span></div>
     <div class="r"><span>Light / dark theme</span><span><kbd>T</kbd></span></div>
@@ -581,7 +584,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         </label>
       </div></div>
       <div class="fgrp"><h4>Strength</h4><div class="row">
-        <label title="Relative strength filter over 7 days">RS <select id="rsF"><option value="">Any</option><option value="lb">Leaders vs BTC</option><option value="lbe">Leaders vs BTC + ETH</option><option value="gb">Laggards vs BTC</option></select></label>
+        <label title="Relative strength filter over 7 days">RS <select id="rsF"><option value="">Any</option><option value="lb">Leaders vs BTC</option><option value="lbe" title="Stronger than both BTC and ETH over 7 days. Same as the BTC filter when ETH is weaker than BTC">Leaders vs BTC and ETH</option><option value="gb">Laggards vs BTC</option></select></label>
         <label title="Bull Market Support Band: price against the 20-week average and 21-week EMA of the weekly close. Loaded for the 100 most-traded coins">Band <select id="bmF"><option value="">Any</option><option value="above">Above</option><option value="inside">Inside</option><option value="below">Below</option></select></label>
         <label title="Multi-timeframe filter: All bull / All bear = 1D, 4H and 1H all agree">MTF <select id="mtfF"><option value="">Any</option><option value="b">All bull</option><option value="s">All bear</option></select></label>
       </div></div>
@@ -973,7 +976,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <b>Moving average stack</b>
         <label class="mu">Top <select id="maN"><option value="50">50</option><option value="100">100</option><option value="150" selected>150</option></select> by volume</label>
         <label class="mu">Compare <select id="maCmp"><option value="live">live price</option><option value="close">last closed candle</option></select></label>
-        <label class="mu">Max distance <select id="maDist"><option value="0">any</option><option value="2">2%</option><option value="5">5%</option><option value="10">10%</option></select></label>
+        <label class="mu" title="Price must be within this distance of every average selected in the grid">Max distance <select id="maDist"><option value="0">any</option><option value="2">2%</option><option value="5">5%</option><option value="10">10%</option></select></label>
         <label class="mu">Sector <select id="maSec"><option value="">All sectors</option></select></label>
         <label class="mu">Market cap <select id="maMc"><option value="0">Any</option><option value="1e8">≥ $100M</option><option value="5e8">≥ $500M</option><option value="1e9">≥ $1B</option></select></label>
         <input id="maQ" placeholder="Search coin…" style="width:120px">
@@ -981,8 +984,10 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <span class="mu" id="maSt"></span>
       </div>
       <div class="row" id="maPre" style="margin-top:10px;gap:6px;flex-wrap:wrap"></div>
-      <div class="tablewrap" style="margin-top:10px"><table class="pftbl" id="maGrid"></table></div>
-      <div class="dnote">Click a cell to cycle: any → price above → price below. Every condition must hold. EMA and SMA values come from closed candles (about 1000 per timeframe).</div>
+      <div class="row" style="margin-top:6px;gap:6px"><input id="maPn" placeholder="Name your preset…" maxlength="40" style="width:170px"><button id="maPs" title="Save the grid, cross filters, distance and compare mode as a preset">Save current as preset</button><span class="mu" id="maPm"></span></div>
+      <div class="tablewrap" style="margin-top:10px"><table class="pftbl magrid" id="maGrid"></table></div>
+      <div class="mafun" id="maFun"></div>
+      <div class="dnote">Click a cell to cycle: any → price above → price below. Every condition must hold. The chips above show how many coins pass each condition on its own; click a chip to remove that condition. EMA and SMA values come from closed candles (about 1000 per timeframe).</div>
       <div class="row" style="margin-top:8px">
         <label class="mu">E12 / E25 (4H) <select class="maX" id="maX1"><option value="">any</option><option value="1">E12 above E25</option><option value="-1">E12 below E25</option></select></label>
         <label class="mu">E50 / E200 (1D) <select class="maX" id="maX2"><option value="">any</option><option value="1">E50 above E200</option><option value="-1">E50 below E200</option></select></label>
@@ -990,7 +995,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       </div>
     </div>
     <div class="panel">
-      <div class="row"><b id="maCount">Results</b><span class="mu">Click a row for the distance to every average.</span></div>
+      <div class="row"><b id="maCount">Results</b><span class="mu" id="maNote"></span><span class="mu">Click a row for the distance to every average.</span></div>
       <div class="tablewrap" style="max-height:560px;overflow:auto;margin-top:10px"><table class="pftbl"><thead><tr>
         <th class="l" data-k="base">Coin</th><th data-k="price">Price</th><th data-k="chg">24h</th><th data-k="qv">24h volume</th>
         <th data-k="n1h" title="Averages price is above, out of 9">1H</th><th data-k="n4h">4H</th><th data-k="n1d">1D</th><th data-k="n1w">1W</th>
@@ -3361,29 +3366,31 @@ function maCalc(cl){
   return {c: last, m};
 }
 async function maLoad(force){
-  if (MAS.loading) return; MAS.loading = true; const gen = ++MAS.gen; $('maLoad').disabled = true; $('maSt').textContent = 'Loading…';
+  if (MAS.loading){ MAS.again = true; return; } MAS.loading = true; const gen = ++MAS.gen; const before = MAS.t ? new Set(maShown().map(r => r.sym)) : null; $('maLoad').disabled = true; $('maSt').textContent = 'Loading…';
   try {
     const uni = await getUniverse();
     const n = +$('maN').value, list = uni.slice().sort((a, b) => b.qv - a.qv).slice(0, n);
-    getMcaps().then(mc => { list.forEach(u => { u.mcap = mc[u.base]; }); maRender(); }).catch(() => {});   // market caps arrive later and never hold the screen up
+    MAS.mcOk = false; getMcaps().then(mc => { list.forEach(u => { u.mcap = mc[u.base]; }); MAS.mcOk = true; maRender(); }).catch(() => { MAS.mcOk = true; maRender(); });   // market caps arrive later and never hold the screen up
     MAS.rows = list; const jobs = []; list.forEach(u => MA_TFS.forEach(t => jobs.push([u, t])));
     let done = 0, i = 0, data = MAS.data;
-    const tick = () => { $('maSt').textContent = `Loading ${done}/${jobs.length} series…`; if (done % 40 === 0) maRender(); };
+    const tick = () => { $('maSt').textContent = `Loading ${done}/${jobs.length} series…`; $('prog').style.width = (2 + 98 * done / jobs.length) + '%'; if (done % 40 === 0) maRender(); };
     const worker = async () => { while (i < jobs.length){ const [u, t] = jobs[i++];
       try { const k = await getKlines(u.sym, t, true, KDEEP); (data[u.sym] = data[u.sym] || {})[t] = maCalc(k.map(x => x[4])); } catch(e){ /* skip series */ }
       done++; tick(); } };
     await Promise.all(Array.from({length: CONCURRENCY}, worker));
     MAS.t = Date.now(); $('maSt').textContent = `Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'})} · ${list.length} coins`;
     maRender();
+    if (before && Object.values(MAS.cond).some(c => Object.values(c).some(Boolean))){ const nw = maShown().filter(r => !before.has(r.sym)); if (nw.length) toast(`Moving Averages: ${nw.length} new match${nw.length > 1 ? 'es' : ''}`, esc(nw.slice(0, 12).map(r => r.base).join(', '))); }
   } catch(e){ $('maSt').textContent = 'Could not load: ' + e.message; }
-  finally { MAS.loading = false; $('maLoad').disabled = false; }
+  finally { MAS.loading = false; $('maLoad').disabled = false; if (!S.scanning) $('prog').style.width = '0'; if (MAS.again){ MAS.again = false; maLoad(false); } }
 }
+function maPx(u){ const r = MAS.idx && MAS.idx.get(u.sym); return r && r.price > 0 ? r.price : u.price; }   // the live feed keeps the scanner rows' prices current
 function maRowInfo(u){
   const d = MAS.data[u.sym]; if (!d) return null;
   const live = $('maCmp').value === 'live', info = {n: {}, dist: {}};
   for (const t of MA_TFS){
     const x = d[t]; if (!x){ info.n[t] = null; continue; }
-    const p = live ? u.price : x.c; let n = 0, tot = 0; info.dist[t] = {};
+    const p = live ? maPx(u) : x.c; let n = 0, tot = 0; info.dist[t] = {};
     for (const [m] of MA_LIST){ const v = x.m[m]; if (v == null){ info.dist[t][m] = null; continue; } tot++; const dp = (p / v - 1) * 100; info.dist[t][m] = dp; if (dp > 0) n++; }
     info.n[t] = tot ? n : null; info.tot = info.tot || {}; info.tot[t] = tot;
   }
@@ -3395,16 +3402,20 @@ function maShown(){
   const q = $('maQ').value.trim().toUpperCase(), sec = $('maSec').value, mc = +$('maMc').value, md = +$('maDist').value;
   const xs = ['maX1','maX2','maX3'].map(id => $(id).value === '' ? 0 : +$(id).value);
   const conds = []; MA_TFS.forEach(t => Object.entries(MAS.cond[t]).forEach(([m, st]) => { if (st) conds.push([t, m, st]); }));
-  const out = [];
+  MAS.idx = new Map(S.rows.map(r => [r.sym, r]));
+  const ok1 = (info, [t, m, st]) => { const dp = info.dist[t] && info.dist[t][m]; return dp != null && (st > 0 ? dp > 0 : dp < 0) && !(md && Math.abs(dp) > md); };
+  const out = [], stat = conds.map(c => ({t: c[0], m: c[1], st: c[2], n: 0})); let scope = 0, noMc = 0, xN = [0, 0, 0];
   for (const u of MAS.rows){
     if (q && !u.base.includes(q)) continue;
-    if (!inScope(u, mc, sec)) continue;
-    const info = maRowInfo(u); if (!info){ continue; }
-    let ok = true;
-    for (const [t, m, st] of conds){ const dp = info.dist[t] && info.dist[t][m]; if (dp == null || (st > 0 ? dp <= 0 : dp >= 0) || (md && Math.abs(dp) > md)){ ok = false; break; } }
-    if (ok) for (let i = 0; i < 3; i++) if (xs[i] && info.x[i] !== xs[i]){ ok = false; break; }
-    if (ok) out.push(Object.assign({}, u, {info}));
+    if (sec && !tagsOf(u.base).includes(sec)) continue;
+    if (mc && !(u.mcap >= mc)){ if (u.mcap == null) noMc++; continue; }
+    const info = maRowInfo(u); if (!info) continue;
+    scope++; let ok = true;
+    conds.forEach((c, i) => { if (ok1(info, c)) stat[i].n++; else ok = false; });
+    for (let i = 0; i < 3; i++) if (xs[i] && info.x[i] !== xs[i]) ok = false;
+    if (ok) out.push(Object.assign({}, u, {info, px: maPx(u)}));
   }
+  MAS.stat = {conds: stat, scope, noMc, mcWait: !!mc && !MAS.mcOk};
   const {k, dir} = MAS.sort;
   out.sort((a, b) => k === 'base' ? dir * a.base.localeCompare(b.base) : dir * (((k[0] === 'n' ? a.info.n[k.slice(1)] : a[k]) ?? -1) - ((k[0] === 'n' ? b.info.n[k.slice(1)] : b[k]) ?? -1)));
   return out;
@@ -3415,35 +3426,56 @@ function maRender(){
     MA_TFS.map(t => `<tr><td class="l"><b>${MA_TFL[t]}</b></td>` + MA_LIST.map(([m, l]) => { const st = MAS.cond[t][m] || 0;
       return `<td data-t="${t}" data-m="${m}" style="cursor:pointer;text-align:center;${st > 0 ? 'background:var(--bull-bg);color:var(--bull)' : st < 0 ? 'background:var(--bear-bg);color:var(--bear)' : ''}">${st > 0 ? '▲ above' : st < 0 ? '▼ below' : '·'}</td>`; }).join('') + '</tr>').join('') + '</tbody>';
   const rows = maShown();
-  $('maCount').textContent = `${rows.length} of ${MAS.rows.length} coins match`;
+  const st = MAS.stat; $('maCount').textContent = `${rows.length} of ${st.scope} coins match`;
+  $('maNote').textContent = st.mcWait ? 'Market caps are still loading, so the market-cap filter may hide coins for now.' : st.noMc ? `${st.noMc} coin${st.noMc > 1 ? 's' : ''} without market-cap data hidden by the market-cap filter.` : '';
+  $('maFun').innerHTML = st.conds.length ? '<span class="mu">Coins passing each condition alone:</span>' + st.conds.map(c => `<span class="fc${c.n === 0 ? ' zero' : ''}" data-t="${c.t}" data-m="${c.m}" title="Click to remove this condition">${MA_TFL[c.t]} ${c.m.replace('E', 'EMA ').replace('S', 'SMA ')} ${c.st > 0 ? 'above' : 'below'} → <b>${c.n}</b> ✕</span>`).join('') : '';
+  $('maPre').querySelectorAll('button[data-i]').forEach(b => { const c = maPresetCond(b.dataset.i); b.classList.toggle('on', c != null && JSON.stringify(c) === JSON.stringify(maCondKey())); });
   const nc = (n, tot) => n == null ? '<td class="mu">—</td>' : `<td style="${n === tot ? 'background:var(--bull-bg);color:var(--bull)' : n === 0 ? 'background:var(--bear-bg);color:var(--bear)' : ''}">${n}/${tot}</td>`;
   const xc = v => v == null ? '<td class="mu">—</td>' : `<td class="${v > 0 ? 'up' : 'dn'}">${v > 0 ? '▲' : '▼'}</td>`;
   $('maBody').innerHTML = rows.map(r => { const i = r.info;
-    let h = `<tr data-sym="${r.sym}" style="cursor:pointer"><td class="l"><b>${esc(r.base)}</b></td><td>${fmtPrice(r.price)}</td><td class="${r.chg >= 0 ? 'up' : 'dn'}">${fmtPct(r.chg)}</td><td>$${posM(r.qv)}</td>` +
+    let h = `<tr data-sym="${r.sym}" style="cursor:pointer"><td class="l"><b>${esc(r.base)}</b></td><td>${fmtPrice(r.px)}</td><td class="${r.chg >= 0 ? 'up' : 'dn'}">${fmtPct((MAS.idx.get(r.sym) || r).chg)}</td><td>$${posM(r.qv)}</td>` +
       MA_TFS.map(t => nc(i.n[t], i.tot && i.tot[t])).join('') + i.x.map(xc).join('') + '</tr>';
     if (MAS.open.has(r.sym)) h += `<tr><td colspan="11" style="padding:6px 10px"><table class="pftbl" style="width:auto"><thead><tr><th></th>${MA_LIST.map(([m, l]) => `<th>${l}</th>`).join('')}</tr></thead><tbody>` +
       MA_TFS.map(t => `<tr><td class="l"><b>${MA_TFL[t]}</b></td>` + MA_LIST.map(([m]) => { const v = i.dist[t] && i.dist[t][m]; return v == null ? '<td class="mu">—</td>' : `<td class="${v >= 0 ? 'up' : 'dn'}">${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}%</td>`; }).join('') + '</tr>').join('') + '</tbody></table></td></tr>';
     return h; }).join('') || '<tr><td colspan="11" class="mu" style="padding:16px">' + (MAS.loading ? 'Loading…' : 'No coin matches these conditions.') + '</td></tr>';
   document.querySelectorAll('#viewMa th[data-k]').forEach(th => th.classList.toggle('srt', th.dataset.k === MAS.sort.k));
 }
+const MA_KEY = 'onslaught-ma', MA_SEL = ['maN','maCmp','maDist','maSec','maMc','maX1','maX2','maX3'];
+const maCondKey = () => Object.fromEntries(MA_TFS.map(t => [t, Object.fromEntries(Object.entries(MAS.cond[t]).filter(([, v]) => v).sort())]));
+const maPresetCond = i => { if (i === 'clear') return null; if (+i >= 0 && MA_PRESETS[+i]){ const c = {}; MA_TFS.forEach(t => { c[t] = {}; }); MA_PRESETS[+i][1](c); return Object.fromEntries(MA_TFS.map(t => [t, Object.fromEntries(Object.entries(c[t]).filter(([, v]) => v).sort())])); } const u = MAS.user[-1 - +i]; return u ? u.cond : null; };
+MAS.user = []; try { MAS.user = JSON.parse(localStorage.getItem(MA_KEY + '-presets') || '[]'); } catch {}
+function maSave(){ try { localStorage.setItem(MA_KEY, JSON.stringify({cond: MAS.cond, sel: Object.fromEntries(MA_SEL.map(id => [id, $(id).value]))})); } catch {} }
+function maRestore(){ try { const o = JSON.parse(localStorage.getItem(MA_KEY) || 'null'); if (!o) return; MA_TFS.forEach(t => { MAS.cond[t] = (o.cond && o.cond[t]) || {}; }); MA_SEL.forEach(id => { if (o.sel && o.sel[id] != null && [...$(id).options].some(x => x.value === o.sel[id])) $(id).value = o.sel[id]; }); } catch {} }
+function maPresetBar(){
+  $('maPre').innerHTML = MA_PRESETS.map((p, i) => `<button data-i="${i}">${esc(p[0])}</button>`).join('') +
+    MAS.user.map((u, i) => `<span style="display:inline-flex"><button data-i="${-1 - i}" title="Your preset">★ ${esc(u.name)}</button><button data-del="${i}" title="Delete this preset" style="padding:0 6px">✕</button></span>`).join('') + '<button data-i="clear">Clear all</button>';
+}
 function maEnter(){
-  const sel = $('maSec'); if (sel.options.length < 2) [...$('sector').options].slice(1).forEach(o => sel.add(new Option(o.text, o.value)));
-  if (!$('maPre').children.length){
-    $('maPre').innerHTML = MA_PRESETS.map((p, i) => `<button data-i="${i}">${esc(p[0])}</button>`).join('') + '<button data-i="clear">Clear all</button>';
-  }
+  const sel = $('maSec'); if (sel.options.length < 2){ [...$('sector').options].slice(1).forEach(o => sel.add(new Option(o.text, o.value))); maRestore(); }
+  if (!$('maPre').children.length) maPresetBar();
   maRender();
   if (!MAS.rows.length || Date.now() - MAS.t > 5 * 60000) maLoad(false);
 }
-$('maPre').onclick = e => { const b = e.target.closest('button'); if (!b) return; maClear();
-  if (b.dataset.i !== 'clear') MA_PRESETS[+b.dataset.i][1](MAS.cond);
-  ['maX1','maX2','maX3'].forEach(id => $(id).value = ''); maRender(); };
+setInterval(() => { if (S.view !== 'ma' || document.hidden) return; maRender(); if (!MAS.loading && Date.now() - MAS.t > 5 * 60000) maLoad(false); }, 5000);   // live prices move the matches; candles are topped up every 5 minutes
+$('maPre').onclick = e => {
+  const d = e.target.closest('button[data-del]'); if (d){ MAS.user.splice(+d.dataset.del, 1); try { localStorage.setItem(MA_KEY + '-presets', JSON.stringify(MAS.user)); } catch {} maPresetBar(); maRender(); return; }
+  const b = e.target.closest('button[data-i]'); if (!b) return; maClear();
+  if (b.dataset.i === 'clear'){ ['maX1','maX2','maX3'].forEach(id => $(id).value = ''); }
+  else if (+b.dataset.i >= 0) MA_PRESETS[+b.dataset.i][1](MAS.cond);
+  else { const u = MAS.user[-1 - +b.dataset.i]; if (u){ MA_TFS.forEach(t => { MAS.cond[t] = Object.assign({}, u.cond[t]); }); ['maX1','maX2','maX3'].forEach((id, k) => $(id).value = u.x[k] || ''); $('maDist').value = u.dist || '0'; $('maCmp').value = u.cmp || 'live'; } }
+  maSave(); maRender(); };
+$('maPs').onclick = () => { const name = $('maPn').value.trim(); if (!name){ $('maPm').textContent = 'Type a name first.'; return; }
+  const p = {name, cond: maCondKey(), x: ['maX1','maX2','maX3'].map(id => $(id).value), dist: $('maDist').value, cmp: $('maCmp').value};
+  const i = MAS.user.findIndex(u => u.name === name); if (i >= 0) MAS.user[i] = p; else MAS.user.push(p);
+  try { localStorage.setItem(MA_KEY + '-presets', JSON.stringify(MAS.user)); } catch {} $('maPn').value = ''; $('maPm').textContent = `Saved “${name}”.`; maPresetBar(); maRender(); };
+$('maFun').onclick = e => { const c = e.target.closest('.fc'); if (!c) return; delete MAS.cond[c.dataset.t][c.dataset.m]; maSave(); maRender(); };
 $('maGrid').onclick = e => { const td = e.target.closest('td[data-t]'); if (!td) return; const c = MAS.cond[td.dataset.t], m = td.dataset.m, cur = c[m] || 0;
-  c[m] = cur === 0 ? 1 : cur === 1 ? -1 : 0; maRender(); };
+  c[m] = cur === 0 ? 1 : cur === 1 ? -1 : 0; maSave(); maRender(); };
 $('maBody').onclick = e => { const tr = e.target.closest('tr[data-sym]'); if (!tr) return; const s = tr.dataset.sym; MAS.open.has(s) ? MAS.open.delete(s) : MAS.open.add(s); maRender(); };
 $('viewMa').querySelector('thead').onclick = e => { const th = e.target.closest('th[data-k]'); if (!th) return; const k = th.dataset.k; MAS.sort = {k, dir: MAS.sort.k === k ? -MAS.sort.dir : (k === 'base' ? 1 : -1)}; maRender(); };
-['maCmp','maDist','maSec','maMc','maX1','maX2','maX3'].forEach(id => $(id).onchange = maRender);
+['maCmp','maDist','maSec','maMc','maX1','maX2','maX3'].forEach(id => $(id).onchange = () => { maSave(); maRender(); });
 $('maQ').oninput = maRender;
-$('maN').onchange = () => maLoad(false);
+$('maN').onchange = () => { maSave(); maLoad(false); };
 $('maLoad').onclick = () => maLoad(true);
 $('maCsv').onclick = () => { const rows = maShown();
   csvDownload('onslaught-moving-averages.csv', ['pair','price','chg24h','vol24h',...MA_TFS.flatMap(t => MA_LIST.map(([m]) => `${MA_TFL[t]}_${m}_dist_pct`))],
@@ -5280,7 +5312,7 @@ function dvBanner(x){
 /* ---------- Analysis tab: one coin, its structure and key levels, a rule-based summary, token facts ---------- */
 const ANA_KEY = 'onslaught-ana', ANA_TFS = ['15m', '1h', '4h', '1d', '1w'];
 const ANA = {sym: null, tf: '4h', cd: null, L: null, row: null, info: null, facts: null, err: '', busy: false, tok: 0, uni: null, vis: null,
-  show: {sr: true, srp: false, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], deriv: null, mtf: null, btc: null, sel: null, anchorT: null, avm: 'auto', avInfo: '', view: {N: null, off: 0}, chartH: 430};
+  show: {ma: false, sr: true, srp: false, fvg: true, ob: true, pd: true, liq: true, vp: false, vw: false, rel: false}, recent: [], deriv: null, mtf: null, btc: null, sel: null, anchorT: null, avm: 'auto', avInfo: '', view: {N: null, off: 0}, chartH: 430};
 (function(){ try { const o = JSON.parse(localStorage.getItem(ANA_KEY) || '{}'); if (o.show) Object.assign(ANA.show, o.show); if (Array.isArray(o.recent)) ANA.recent = o.recent.slice(0, 6); if (ANA_TFS.includes(o.tf)) ANA.tf = o.tf; if (['auto', 'major', 'latest'].includes(o.av3)) ANA.avm = o.av3; } catch {} })();
 const anaSave = () => { try { localStorage.setItem(ANA_KEY, JSON.stringify({show: ANA.show, recent: ANA.recent, tf: ANA.tf, av3: ANA.avm})); } catch {} };
 const ANA_NAMES = {EQH: 'Equal highs', EQL: 'Equal lows', PDH: 'Prev day high', PDL: 'Prev day low', PWH: 'Prev week high', PWL: 'Prev week low'};
@@ -5378,6 +5410,12 @@ function anaChart(L, cd, w, h){
   if (show.bm && ANA.bm){
     const b = ANA.bm, y1 = Y(b.hi), y2 = Y(b.lo);
     o.push(`<rect x="${pad.l}" y="${y1.toFixed(1)}" width="${pw}" height="${Math.max(y2 - y1, 2).toFixed(1)}" fill="${acc}" opacity=".10"/><line x1="${pad.l}" x2="${w - pad.r}" y1="${y1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="${acc}" stroke-dasharray="6 3" opacity=".7"/><line x1="${pad.l}" x2="${w - pad.r}" y1="${y2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${acc}" stroke-dasharray="6 3" opacity=".7"/>${txt(pad.l + 6, Math.min(y1, y2) - 4, 'Bull Market Support Band (weekly)', acc)}`);
+  }
+  if (show.ma){
+    const cl = cd.map(k => k[4]), mcol = [warn, acc, info, bull, bear];
+    [12, 25, 50, 100, 200].forEach((p, j) => { if (cl.length < p) return; const e = emaSeries(cl, p); let d = '';
+      for (let i = Math.max(s0, p - 1); i < e1; i++) d += (d ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(e[i]).toFixed(1);
+      if (d) o.push(`<path d="${d}" fill="none" stroke="${mcol[j]}" stroke-width="1.2" opacity=".85"/>${txt(w - pad.r - 4, Y(e[e1 - 1]) - 3, 'EMA ' + p, mcol[j], 'end')}`); });
   }
   const zone = (it, x0, col, label, op, dash) => { const y1 = Y(it.hi), y2 = Y(it.lo), hh = Math.max(y2 - y1, 3);
     o.push(`<rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="${col}" opacity="${op}"/><rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(w - pad.r - x0).toFixed(1)}" height="${hh.toFixed(1)}" fill="none" stroke="${col}" stroke-opacity=".75"${dash ? ' stroke-dasharray="4 3"' : ''}/>${txt(x0 + 4, y1 + 11, label, col)}`); };
@@ -5599,7 +5637,7 @@ function anaRender(){
   ${anaMtfStrip(L)}
   <div class="anagrid">
     <div class="panel"><div class="row anatog" id="anaTog">
-      ${[['sr', 'S/R'], ['srp', 'S/R prices'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity'], ['vp', 'Volume profile'], ['vw', 'AVWAP'], ['bm', 'Support band'], ...(sym === 'BTCUSDT' ? [] : [['rel', 'vs BTC']])].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
+      ${[['sr', 'S/R'], ['srp', 'S/R prices'], ['fvg', 'FVG'], ['ob', 'Order blocks'], ['pd', 'Premium / Discount'], ['liq', 'Liquidity'], ['vp', 'Volume profile'], ['vw', 'AVWAP'], ['bm', 'Support band'], ['ma', 'EMA lines'], ...(sym === 'BTCUSDT' ? [] : [['rel', 'vs BTC']])].map(([k, t]) => `<button class="tachip ${ANA.show[k] ? 'on' : ''}" data-k="${k}" aria-pressed="${ANA.show[k]}">${t}</button>`).join('')}
       ${ANA.show.vw ? `<button class="tachip" data-av="mode" title="Which swings the two AVWAP lines start from. Auto uses the major swings on 1D and 1W, where the latest ones are only a few candles old, and the latest swings on shorter timeframes.">AVWAP anchor: ${ANA.avm === 'latest' ? 'latest swing' : ANA.avm === 'major' ? 'major swing' : 'auto (' + (ANA.tf === '1d' || ANA.tf === '1w' ? 'major' : 'latest') + ')'}</button>${ANA.anchorT != null ? '<button class="tachip" data-av="reset" title="Remove the picked-candle AVWAP">Clear picked</button>' : ''}` : ''}
       <span class="anazoom"><button class="tachip" data-z="out" title="Zoom out (mouse wheel)" aria-label="Zoom out">−</button><button class="tachip" data-z="in" title="Zoom in (mouse wheel)" aria-label="Zoom in">+</button><button class="tachip" data-z="reset" ${ANA.view && (ANA.view.N || ANA.view.off) ? '' : 'hidden'}>Reset zoom</button></span>
       <span class="mu anahov" id="anaHov"></span></div><div class="mu anaavi" id="anaAvInfo"></div><div id="anaChartBox"></div><div id="anaRelBox" class="anarel"></div></div>
@@ -5759,7 +5797,7 @@ function renderFChips(){
 }
 $('fChips').onclick = e => { const c = e.target.closest('.fchip'); if (c) FCHIPS[+c.dataset.i][1](); };
 
-$('universe').onchange = saveSettings; $('closed').onchange = saveSettings; $('mtfOn').onchange = saveSettings;
+$('universe').onchange = () => { saveSettings(); toast('Universe changed', 'Press Scan to apply it. The table shows the coins of the last scan.'); }; $('closed').onchange = saveSettings; $('mtfOn').onchange = saveSettings;
 for (const id of ['trigF','mtfF']) $(id).onchange = render;
 $('trigN').onchange = () => { saveSettings(); render(); };
 for (const id of ['rsiLen','rsiEmaLen','dmiLen','adxThr','obvLen']) $(id).onchange = saveSettings;
@@ -6893,7 +6931,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !$('kbHelp').hidden){ kbShut(); return; }
   if (typing || !$('palette').hidden || !$('kbHelp').hidden) return;
   const k = e.key;
-  if (/^[1-9]$/.test(k)){ const vis = [...$('tabs').children].filter(b => !b.hidden && b.dataset.view); const b = vis[+k - 1]; if (b){ e.preventDefault(); setView(b.dataset.view); } return; }
+  if (/^[0-9]$/.test(k)){ const vis = [...$('tabs').children].filter(b => !b.hidden && b.dataset.view); const b = vis[(+k + 9) % 10]; if (b){ e.preventDefault(); setView(b.dataset.view); } return; }
   if (k === '/'){ e.preventDefault(); const el = S.view === 'ta' ? $('anaIn') : S.view === 'trend' ? $('search') : null; if (el) el.focus(); else openPalette(); return; }
   if (k === '?'){ e.preventDefault(); kbOpen(); return; }
   if (k === 's' || k === 'S'){ if (S.view === 'trend'){ setMode(UI.mode === 'simple' ? 'full' : 'simple'); } return; }
