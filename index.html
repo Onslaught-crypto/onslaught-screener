@@ -750,7 +750,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <summary>How to read this</summary>
         <ul>
           <li><b>vs Week / vs Month</b>: today's 24h volume divided by the sector's average day over the last 7 / 30 closed days. 1.0 is normal, 2.0 is double. Both high = a real move with fuel. Month high but week flat = it has been hot all week, you may be late. Week high but month flat = something just started.</li>
-          <li><b>Share Δ</b>: the sector's slice of all volume shown today minus its average slice over the last 7 days, in percentage points. This is the rotation signal.</li>
+          <li><b>Share Δ</b>: the sector's slice of all volume shown today minus its average slice over the last 7 days, in percentage points. This is the rotation signal. Under an opened sector, each coin's Share Δ is its contribution: the coins add up to the sector's number. When one coin is 80% or more of a sector, the verdict names it (for example ZEC-driven) because the sector figure is then mostly that coin.</li>
           <li><b>Participation</b>: share of the sector's coins whose own volume is at least 1.5× their weekly normal. High volume with low participation means one coin is pumping, not the sector. This column kills most false alarms.</li>
           <li><b>Price (VW)</b>: the volume-weighted 24h price change. Volume alone never says who is buying; paired with price, heavy volume and price up = money in, heavy volume and price down = money out.</li>
           <li><b>Trend</b>: how many of the sector's coins are bull- or bear-aligned in your last Crypto Scanner scan (scan first to fill it).</li>
@@ -1539,6 +1539,7 @@ function sectorFlow(coins, o = {}){
     r.share = tv > 0 ? 100 * r.vol / tv : 0;
     r.share7 = t7 > 0 ? 100 * r.b7 / t7 : 0;
     r.shareD = r.share - r.share7;                       // percentage points
+    const lead = r.coins.reduce((a, c) => c.qv > a.qv ? c : a, r.coins[0]); r.lead = lead.base; r.leadPct = r.vol > 0 ? 100 * lead.qv / r.vol : 0;   // the biggest coin and how much of the sector's volume it is
     const heavy = r.vsWeek >= hot || r.vsMonth >= hot;
     r.timing = r.vsWeek >= hot && r.vsMonth >= hot ? 'fuel' : r.vsMonth >= hot && r.vsWeek < 1.2 ? 'late' : r.vsWeek >= hot && r.vsMonth < 1.2 ? 'early' : null;
     r.verdict = heavy && r.part < 40 ? 'narrow' : heavy && r.priceVW > 0.5 ? 'in' : heavy && r.priceVW < -0.5 ? 'out' : heavy ? 'churn' : r.vsWeek < 0.8 ? 'quiet' : 'normal';
@@ -3568,7 +3569,8 @@ function renderSectors(){
       <span class="rval ${cls(r.shareD)}">${(r.shareD > 0 ? '+' : '') + r.shareD.toFixed(2)} pp</span></div>`;
   }).join('');
   $('secBody').innerHTML = rows.map(r => {
-    const open = SEC.open.has(r.sector), [vt, vtip] = VERDICT[r.verdict], tm = r.timing ? TIMING[r.timing] : null;
+    const open = SEC.open.has(r.sector); let [vt, vtip] = VERDICT[r.verdict]; const tm = r.timing ? TIMING[r.timing] : null;
+    if (r.verdict === 'narrow' && r.leadPct >= 80){ vt = `${r.lead}-driven (${r.leadPct.toFixed(0)}%)`; vtip = `${r.lead} is ${r.leadPct.toFixed(0)}% of this sector's volume, so the sector number is mostly that one coin. Heavy volume but under 40% of coins are busy.`; }
     const trend = r.tScan ? `<span class="up">${r.tBull}▲</span> <span class="dn">${r.tBear}▼</span> <span class="mu">/ ${r.tScan}</span>` : '<span class="mu" title="Run a Crypto Scanner scan to fill this">—</span>';
     const main = `<tr class="secrow ${open ? 'open' : ''}" data-sec="${r.sector}">
       <td class="l"><span class="caret">${open ? '▾' : '▸'}</span> <b>${r.sector}</b></td>
@@ -3580,16 +3582,16 @@ function renderSectors(){
       <td class="c">${trend}</td>
       <td class="l"><span class="vd ${r.verdict}" title="${vtip}">${vt}</span>${tm ? ` <span class="tm ${r.timing}" title="${tm[1]}">${tm[0]}</span>` : ''}</td></tr>`;
     if (!open) return main;
-    // coins inside the sector follow the same column sort; share Δ = the coin's share of sector volume today vs its 7-day average share
-    const a7 = r.coins.reduce((a, x) => a + (x.avg7 || 0), 0);
-    for (const x of r.coins){ x.secShare = 100 * x.qv / r.vol; x.secShareD = a7 > 0 && x.avg7 != null ? x.secShare - 100 * x.avg7 / a7 : null; }
+    // coins inside the sector follow the same column sort; share Δ = the coin's contribution to the sector's change (its share of all altcoin volume today vs its 7-day average share)
+    const tvAll = r.share > 0 ? 100 * r.vol / r.share : 0, t7All = r.share7 > 0 ? 100 * r.b7 / r.share7 : 0;   // totals across all sectors, so the coins add up to the sector's own Share Δ
+    for (const x of r.coins){ x.secShare = 100 * x.qv / r.vol; x.secShareD = tvAll > 0 && t7All > 0 && x.avg7 != null ? 100 * x.qv / tvAll - 100 * x.avg7 / t7All : null; }
     const ck = {sector: 'base', n: 'days', vol: 'qv', vsWeek: 'vsWeek', vsMonth: 'vsMonth', share: 'secShare', shareD: 'secShareD', part: 'vsWeek', priceVW: 'chg', tNet: 'tr', verdict: 'vsWeek'}[k] || 'qv';
     const sorted = r.coins.slice().sort((a, b) => { const x = a[ck] ?? (ck === 'base' ? '' : -1e9), y = b[ck] ?? (ck === 'base' ? '' : -1e9); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
     const coins = sorted.slice(0, 25).map(x => `<tr class="coinrow" data-coin="${x.sym}">
       <td class="l">${WATCH.has(x.sym) ? '<span style="color:#f5c518">★</span> ' : ''}${x.base}${x.tr === 2 ? ' <span class="setup b">LONG</span>' : x.tr === -2 ? ' <span class="setup s">SHORT</span>' : ''}</td>
       <td class="mu">${x.days}d</td><td>${fmtBig(x.qv)}</td>
       <td class="${ratioCls(x.vsWeek)}">${ratio(x.vsWeek)}</td><td class="${ratioCls(x.vsMonth)}">${ratio(x.vsMonth)}</td>
-      <td class="mu">${x.secShare.toFixed(1)}% of sector</td><td class="${cls(x.secShareD)}" title="Share of this sector's volume today vs its 7-day average share: who inside the sector is pulling the money">${x.secShareD == null ? '—' : (x.secShareD > 0 ? '+' : '') + x.secShareD.toFixed(2) + ' pp'}</td><td>${x.vsWeek >= 1.5 ? '<span class="up">busy</span>' : '<span class="mu">—</span>'}</td>
+      <td class="mu">${x.secShare.toFixed(1)}% of sector</td><td class="${cls(x.secShareD)}" title="This coin's contribution to the sector's Share Δ: its share of all altcoin volume today vs its 7-day average. The coins add up to the sector's number.">${x.secShareD == null ? '—' : (x.secShareD > 0 ? '+' : '') + x.secShareD.toFixed(2) + ' pp'}</td><td>${x.vsWeek >= 1.5 ? '<span class="up">busy</span>' : '<span class="mu">—</span>'}</td>
       <td class="${cls(x.chg)}">${fmtPct(x.chg)}</td>
       <td class="c">${x.tr == null ? '<span class="mu">—</span>' : x.tr > 0 ? '<span class="up">▲</span>' : x.tr < 0 ? '<span class="dn">▼</span>' : '<span class="mu">·</span>'}</td>
       <td class="l"><a class="tvl" href="https://www.tradingview.com/chart/?symbol=BINANCE:${x.sym}.P" target="_blank" rel="noopener">chart ↗</a></td></tr>`).join('');
@@ -7561,7 +7563,7 @@ map: ['Como ler o Market Map', `<ul>
 </ul>`],
 sector: ['Como ler isto', `<ul>
 <li><b>vs Week / vs Month</b>: o volume de 24h de hoje a dividir pelo dia médio do setor nos últimos 7 / 30 dias fechados. 1,0 é normal, 2,0 é o dobro. Ambos altos = um movimento real com combustível. Mês alto mas semana normal = está quente há uma semana, podes chegar tarde. Semana alta mas mês normal = algo acabou de começar.</li>
-<li><b>Share Δ</b>: a fatia do setor no volume total mostrado hoje menos a sua fatia média nos últimos 7 dias, em pontos percentuais. É o sinal de rotação.</li>
+<li><b>Share Δ</b>: a fatia do setor no volume total mostrado hoje menos a sua fatia média nos últimos 7 dias, em pontos percentuais. É o sinal de rotação. Dentro de um setor aberto, o Share Δ de cada moeda é a sua contribuição: as moedas somam o valor do setor. Quando uma moeda é 80% ou mais de um setor, o veredicto nomeia-a (por exemplo ZEC-driven), porque o valor do setor é então sobretudo essa moeda.</li>
 <li><b>Participation</b>: percentagem das moedas do setor cujo próprio volume é pelo menos 1,5× o normal semanal. Volume alto com participação baixa significa que uma moeda está a disparar, não o setor. Esta coluna elimina a maioria dos falsos alarmes.</li>
 <li><b>Price (VW)</b>: a variação de preço de 24h ponderada pelo volume. O volume sozinho nunca diz quem está a comprar; com o preço, volume forte e preço a subir = dinheiro a entrar, volume forte e preço a descer = dinheiro a sair.</li>
 <li><b>Trend</b>: quantas moedas do setor estão alinhadas bullish ou bearish no teu último scan do Crypto Scanner (faz scan primeiro para preencher).</li>
