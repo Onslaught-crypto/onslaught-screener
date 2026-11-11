@@ -545,8 +545,8 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
         <div class="seg" id="modeSeg" title="Simple shows the 8 columns most people use; Full shows everything (S)"><button data-m="simple">Simple</button><button data-m="full">Full</button></div>
         <div class="popwrap"><button id="viewBtn" aria-haspopup="true" aria-expanded="false" title="Columns, row density and presets">View ▾</button>
           <div class="pop" id="viewPop" hidden>
-            <div class="pophead">Presets</div><div id="presetList" class="presetlist"></div>
-            <div class="row" style="margin:6px 0 10px"><input id="presetName" type="text" placeholder="Name this view…" style="flex:1;min-width:0"><button id="presetSave">Save</button></div>
+            <div class="pophead" title="A view keeps filters, columns, sort, timeframe and row density">Views and layouts</div><div id="presetList" class="presetlist"></div>
+            <div class="row" style="margin:6px 0 10px"><input id="presetName" type="text" placeholder="Name this layout…" style="flex:1;min-width:0"><button id="presetSave">Save</button></div>
             <div class="pophead">Rows</div>
             <div class="seg" id="densSeg"><button data-v="comfortable">Comfortable</button><button data-v="compact">Compact</button></div>
             <div class="pophead" style="margin-top:10px">Columns <button id="colReset" style="float:right;padding:1px 8px;font-size:11px" title="Put the columns back in the default order">Reset order</button></div><div id="colList" class="collist"></div>
@@ -4896,8 +4896,11 @@ function loadView(){
   applyCols(); renderPresets();
 }
 function saveView(){ try { localStorage.setItem(COLS_KEY, JSON.stringify({hidden: [...UI.hidden], dens: UI.dens})); } catch {} }
-const PRESET_FIELDS = ['newOnly','starOnly','rsF','bmF','trigF','mtfF','sector'];
+const PRESET_FIELDS = ['newOnly','starOnly','rsF','bmF','trigF','mtfF','sector','mcap'];
 const BUILTIN = [
+  {name: '⚡ Scalp · 15m triggers', v: {tf: '15m', setupOnly: true, mode: 'simple', sort: {k: 'score', dir: -1}}},
+  {name: '📈 Swing · 4H leaders', v: {tf: '4h', show: 'bull', rsF: 'lbe', mtfF: 'b', mode: 'full', sort: {k: 'score', dir: -1}}},
+  {name: '💰 Funding hunt', v: {tf: '4h', mode: 'full', sort: {k: 'fund', dir: -1}, mcap: '5e7'}},
   {name: 'Triggered setups', v: {setupOnly: true}},
   {name: 'Leaders · long side', v: {show: 'bull', rsF: 'lbe'}},
   {name: 'Laggards · short side', v: {show: 'bear', rsF: 'gb'}},
@@ -4906,13 +4909,20 @@ const BUILTIN = [
   {name: 'Fresh alignments', v: {newOnly: true}},
   {name: 'My watchlist', v: {starOnly: true}}
 ];
-function curPreset(){ const v = {show: S.show, setupOnly: S.setupOnly, mf: {...S.mf}}; for (const f of PRESET_FIELDS){ const el = $(f); v[f] = el.type === 'checkbox' ? el.checked : el.value; } return v; }
+function curPreset(layout){ const v = {show: S.show, setupOnly: S.setupOnly, mf: {...S.mf}};
+  if (layout){ v.tf = S.tf; v.sort = {...S.sort}; v.mode = UI.mode || 'full'; v.dens = UI.dens; v.hidden = [...UI.hidden]; } /* a layout also keeps timeframe, sort and columns */ for (const f of PRESET_FIELDS){ const el = $(f); v[f] = el.type === 'checkbox' ? el.checked : el.value; } return v; }
 function applyPreset(v){
   S.show = v.show || 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === S.show));
   S.setupOnly = !!v.setupOnly; S.incOnly = false;
   S.mf = {...(v.mf || {})}; document.querySelectorAll('.mf').forEach(sel => sel.value = S.mf[sel.dataset.k] || '');
-  for (const f of PRESET_FIELDS){ const el = $(f); if (el.type === 'checkbox') el.checked = !!v[f]; else el.value = v[f] || ''; }
+  for (const f of PRESET_FIELDS){ const el = $(f); if (!el) continue; if (el.type === 'checkbox') el.checked = !!v[f]; else if (f === 'mcap' && v.mcap == null && !v.tf){ /* old saved views keep the current market-cap filter */ } else el.value = v[f] || ''; }
+  if (v.sort) S.sort = {...v.sort};
+  if (v.mode) UI.mode = v.mode;
+  if (v.dens) UI.dens = v.dens;
+  if (Array.isArray(v.hidden)) UI.hidden = new Set(v.hidden);
+  if (v.mode || v.dens || v.hidden){ try { localStorage.setItem(MODE_KEY, UI.mode || 'full'); } catch {} saveView(); $('colList').querySelectorAll('input[data-col]').forEach(i => { i.checked = !UI.hidden.has(i.dataset.col); }); applyCols(); }
   saveSettings(); render();
+  if (v.tf && v.tf !== S.tf){ const b = $('tfSeg').querySelector(`[data-v="${v.tf}"]`); if (b) b.click(); }   // changing the timeframe starts a scan, as clicking it does
 }
 function customPresets(){ try { return JSON.parse(localStorage.getItem(PRESET_KEY) || '[]'); } catch { return []; } }
 function renderPresets(){
@@ -6073,7 +6083,7 @@ const suEv = () => { if (SU.kind !== 'cfg') return suEvBase();
   for (const e of suEvBase()) if (e.m & bit) out.push({...e, set: SU_CFGV[vi].name, al: e.a & bit ? 4 : 3, st: 'done', trig: [], sims: Object.fromEntries(SU_CFG_STOPS.flatMap((sk, si) => SETUP_TARGETS.map((q, ix) => [sk + '|' + q, {r: e.rs[si * 3 + ix], done: e.rs[si * 3 + ix] != null}])))});
   return out; };
 const suTrades = vari => suEv().filter(e => e.sims && e.sims[vari] && e.sims[vari].done).sort((a, b) => a.t - b.t);
-async function suLoad(){ for (const k of Object.keys(SU_KINDS)){ const v = await Cache.get('setupStudy:' + k); if (v && Array.isArray(v.ev)){ SU.ev[k] = v.ev; SU.meta[k] = v.meta || null; } } suRender(); }
+async function suLoad(){ for (const k of Object.keys(SU_KINDS)){ await new Promise(r => setTimeout(r, 30)); const v = await Cache.get('setupStudy:' + k); if (v && Array.isArray(v.ev)){ SU.ev[k] = v.ev; SU.meta[k] = v.meta || null; } } suRender(); }
 async function suRates(sym){
   const key = 'fr:' + sym, c = await Cache.get(key);
   if (c && c.at && Date.now() - c.at < 6 * 36e5 && Array.isArray(c.rates)) return c.rates;
@@ -6269,8 +6279,11 @@ function jLazyLoad(){
   if (!b){ b = document.createElement('div'); b.id = 'jLoading'; b.style.cssText = 'margin:8px 0;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--muted);font-size:12px'; const pane = $('jtScore'); pane.parentNode.insertBefore(b, pane); }
   b.hidden = false; b.textContent = 'Loading the study data (a few seconds the first time). The page may pause briefly…';
   const t0 = Date.now();
-  const jobs = [brkLoad(), suLoad(), rbLoad()]; try { btLoadAll(); } catch {}
-  Promise.allSettled(jobs).then(() => { b.textContent = 'Study data loaded in ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s.'; setTimeout(() => { b.hidden = true; }, 2500); });
+  const stages = [['breaker study', brkLoad], ['setup studies', suLoad], ['random baseline', rbLoad], ['backtests', btLoadAll]], nap = () => new Promise(r => setTimeout(r, 40));
+  (async () => {   // one study at a time, with a pause between them: the page can repaint and respond while the big stores are read
+    for (let k = 0; k < stages.length; k++){ b.textContent = `Loading the study data (${k + 1}/${stages.length}): ${stages[k][0]}… The page may pause briefly.`; await nap(); try { await stages[k][1](); } catch {} }
+    b.textContent = 'Study data loaded in ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s.'; setTimeout(() => { b.hidden = true; }, 2500);
+  })();
 }
 /* Leaving the Journal for a while frees the study stores (hundreds of thousands of events): a big heap makes every garbage collection, and so every scan, stall. */
 function jUnload(){
@@ -6664,8 +6677,9 @@ $('btWalkRun').onclick = async () => {
   BT.busy = false; for (const id of ['btRun', 'btRobRun', 'btComboRun', 'btWalkRun']) $(id).disabled = false;
 };
 function btLoadAll(){
-(async () => { try { const v = await Cache.get('btRob'); if (Array.isArray(v) && v.length){ BT.rob = v; btRobRender(); } } catch {} })();
-(async () => { try { const v = await Cache.get('btLab'); if (v && Array.isArray(v.res)){ BT.res = v.res; BT.meta = v.meta || null; btRender(); } } catch {} })();
+return Promise.allSettled([
+(async () => { try { const v = await Cache.get('btRob'); if (Array.isArray(v) && v.length){ BT.rob = v; btRobRender(); } } catch {} })(),
+(async () => { try { const v = await Cache.get('btLab'); if (v && Array.isArray(v.res)){ BT.res = v.res; BT.meta = v.meta || null; btRender(); } } catch {} })()]);
 }
 $('suKind').onchange = () => { SU.kind = $('suKind').value; $('suThrL').hidden = SU.kind !== 'fund'; suRender(); };
 $('suTop').onchange = () => { SU.top = +$('suTop').value; suRender(); };
@@ -6912,7 +6926,7 @@ $('presetList').onclick = e => {
   if (d){ const cp = customPresets(); cp.splice(+d.dataset.pd, 1); try { localStorage.setItem(PRESET_KEY, JSON.stringify(cp)); } catch {} renderPresets(); }
 };
 $('presetSave').onclick = () => { const n = $('presetName').value.trim(); if (!n){ $('presetName').focus(); return; }
-  const cp = customPresets().filter(p => p.name !== n); cp.push({name: n, v: curPreset()}); try { localStorage.setItem(PRESET_KEY, JSON.stringify(cp)); } catch {} $('presetName').value = ''; renderPresets(); };
+  const cp = customPresets().filter(p => p.name !== n); cp.push({name: n, v: curPreset(true)}); try { localStorage.setItem(PRESET_KEY, JSON.stringify(cp)); } catch {} $('presetName').value = ''; renderPresets(); };
 function setMode(m){ UI.mode = m; try { localStorage.setItem(MODE_KEY, m); } catch {} applyCols(); }
 document.addEventListener('click', e => { if (e.target.closest('#secLoad2')) $('secLoad').click(); });
 $('modeSeg').onclick = e => { const b = e.target.closest('button[data-m]'); if (b) setMode(b.dataset.m); };
