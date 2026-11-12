@@ -66,7 +66,7 @@ h1 small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .row+.row{margin-top:10px}
 label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
-select,input[type=number],input[type=search]{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px}
+select,input[type=number],input[type=search],#viewPort input:not([type]),#maPn{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px}
 input[type=number]{width:64px}
 button{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
 button:hover{border-color:var(--accent)}
@@ -325,6 +325,9 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
 .collist label{color:var(--text);font-size:12.5px}
 .presetlist{display:flex;flex-wrap:wrap;gap:5px}
 .preset{font-size:12px;padding:4px 9px;border-radius:999px}
+.preset.on,.preset.mine.on button:first-child{background:var(--accent);color:#fff;border-color:var(--accent)}
+.preset.mine.on{border-color:var(--accent)}
+#viewBtn.on{border-color:var(--accent-lt);color:var(--accent-lt)}
 .preset.mine{display:inline-flex;padding:0;border:1px solid var(--accent-dk);border-radius:999px;overflow:hidden}
 .preset.mine button{border:0;border-radius:0;font-size:12px;padding:4px 8px}
 .preset.mine .pdel{color:var(--muted);padding:4px 7px}
@@ -511,6 +514,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <button role="tab" data-view="pos">Positioning</button>
     <button role="tab" data-view="ma">Moving Averages</button>
     <button role="tab" data-view="journal">Journal</button>
+    <button role="tab" data-view="port">Portfolios</button>
   </nav>
 
   <div id="err" class="err"></div>
@@ -1013,6 +1017,30 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     </ul></details></div>
   </div><!-- /viewMa -->
 
+  <div id="viewPort" hidden>
+    <div class="panel" style="border-left:3px solid var(--warn)"><b>Descriptive history, not a forecast or advice.</b> <span class="mu">Weights are yours. The starter profiles are examples to edit, not recommendations. Figures assume the mix is rebalanced to its weights every day, using Binance USDT-M perpetual daily closes.</span></div>
+    <div class="panel"><div class="row" style="gap:10px;flex-wrap:wrap;align-items:center">
+      <div id="pfoTabs" class="row" style="gap:6px;flex-wrap:wrap"></div>
+      <label>Window <select id="pfoLb"><option value="30">30 days</option><option value="90" selected>90 days</option><option value="180">180 days</option><option value="365">365 days</option></select></label>
+      <label>Capital $ <input id="pfoCap" type="number" min="0" value="10000" style="width:90px"></label>
+      <button id="pfoNew">+ New</button><button id="pfoDup">Duplicate</button><button id="pfoDel">Delete</button><button id="pfoRst" title="Restore the three starter profiles">Reset starters</button>
+      <button id="pfoTv">Copy as TradingView list</button><button id="pfoCsv">CSV</button>
+      <span id="pfoSt" class="mu"></span>
+    </div></div>
+    <div class="panel"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><input id="pfoName" style="width:160px" aria-label="Profile name"><input id="pfoNote" style="flex:1;min-width:200px" placeholder="Note (what this mix is for)"><input id="pfoCoin" placeholder="Add coin, e.g. SOL" style="width:130px"><button id="pfoAdd">Add</button><button id="pfoNorm" title="Scale weights to 100%">Normalise to 100%</button><span id="pfoSum" class="mu"></span></div>
+      <div style="overflow:auto;margin-top:8px"><table class="pftbl"><thead><tr><th>Coin</th><th>Weight %</th><th>Amount $</th><th>Units</th><th>Price</th><th>Return</th><th>Vol (ann.)</th><th>Max DD</th><th>Corr BTC</th><th>Risk share</th><th>Sector</th><th></th></tr></thead><tbody id="pfoBody"></tbody></table></div>
+      <div id="pfoFlags" style="margin-top:8px"></div></div>
+    <div class="panel"><h4 style="margin:0 0 6px">Equity curve vs BTC (rebased to 100)</h4><div id="pfoChart"></div></div>
+    <div class="panel"><h4 style="margin:0 0 6px">All profiles side by side</h4><div style="overflow:auto"><table class="pftbl"><thead><tr><th>Profile</th><th>Coins</th><th>Return</th><th>vs BTC</th><th>Vol (ann.)</th><th>Max DD</th><th>Worst day</th><th>Best day</th><th>Corr BTC</th><th>Eff. coins</th><th>Top weight</th></tr></thead><tbody id="pfoCmp"></tbody></table></div></div>
+    <div class="panel"><details data-help="port"><summary>How to read the Portfolios tab</summary><ul>
+      <li>A profile is a list of coins with weights. Three starter examples (conservative, balanced, aggressive) are included; edit them freely, add your own, or duplicate one to compare variants. They are stored only in this browser.</li>
+      <li>The statistics replay the last N days of daily closes with the mix rebalanced to its weights each day. Real portfolios drift and pay fees, so treat the figures as a description of the past, not a forecast.</li>
+      <li><b>Vol (ann.)</b> is the daily standard deviation times √365. <b>Max DD</b> is the worst peak-to-trough fall inside the window. <b>Corr BTC</b> is the correlation of daily returns with BTC.</li>
+      <li><b>Risk share</b> is each coin's share of the portfolio's variance. A coin with 10% weight can carry 25% of the risk. Compare it with the weight column.</li>
+      <li><b>Eff. coins</b> is 1 ÷ Σ(weight²): the number of equally weighted coins that would be as concentrated. Flags warn about a dominant coin, one sector, thin volume and heavy funding.</li>
+      <li>If a coin has less history than the window, the window shrinks to the shortest history and the status line says so. Coins not on Binance USDT-M perpetuals cannot be priced.</li>
+    </ul></details></div>
+  </div>
   <div id="viewJournal" hidden>
     <div class="seg jtabs" id="jTabs" style="margin:0 0 10px"><button data-v="Score" class="on">Scoreboard</button><button data-v="Live">Live log</button><button data-v="Lab">Study lab</button><button data-v="Runner">Runner results</button></div>
     <div class="jpane" id="jtScore">
@@ -2965,6 +2993,7 @@ function render(){
   if ($('pinStar').checked) rows.sort((a, b) => WATCH.has(b.sym) - WATCH.has(a.sym));   // stable: keeps the sort within each group
   const sig = JSON.stringify([S.show, S.mf, S.incOnly, S.sort, S.tf, $('sector').value, $('search').value, $('mcap').value, $('newOnly').checked, $('oiThr').value, $('oiN').value, $('pageSize').value, S.setupOnly, $('trigF').value, $('trigN').value, $('mtfF').value, $('starOnly').checked, $('pinStar').checked, $('gradeF').value, $('minLiq').value, $('extremeFund').value, $('rsF').value, $('bmF').value]);
   if (sig !== S.sig){ S.sig = sig; S.page = 0; }            // any filter/sort change → back to page 1
+  try { markPresets(); } catch {}
   const size = +$('pageSize').value || rows.length || 1, pages = Math.max(1, Math.ceil(rows.length / size));
   S.page = Math.min(S.page, pages - 1);
   const start = S.page * size, pageRows = rows.slice(start, start + size);
@@ -3097,9 +3126,9 @@ function exportCSV(){
 /* ---------- Views ---------- */
 function setView(v){
   S.view = v;
-  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div'; $('viewTa').hidden = v !== 'ta'; $('viewPos').hidden = v !== 'pos'; $('viewMa').hidden = v !== 'ma';
+  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div'; $('viewTa').hidden = v !== 'ta'; $('viewPos').hidden = v !== 'pos'; $('viewMa').hidden = v !== 'ma'; $('viewPort').hidden = v !== 'port';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Technical Analysis', liq: 'Liquidation Map', pos: 'Positioning', ma: 'Moving Averages', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
+  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Technical Analysis', liq: 'Liquidation Map', pos: 'Positioning', ma: 'Moving Averages', port: 'Portfolios', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   clearTimeout(LAZY.t); if (v !== 'journal' && LAZY.loaded) LAZY.t = setTimeout(jUnload, 45000);
@@ -3110,6 +3139,7 @@ function setView(v){
   if (v === 'liq') liqEnter();
   if (v !== 'pos') btStop(); else posEnter();
   if (v === 'ma') maEnter();
+  if (v === 'port') pfoEnter();
   if (v === 'sectors' && !SEC.rows.length && !SEC.loading) loadSectors();
   if (v === 'ta' && !ANA.sym && ANA.recent && ANA.recent[0]) anaOpen(ANA.recent[0]);
   if (v === 'ta') anaEnter();
@@ -3494,6 +3524,142 @@ $('maTv').onclick = () => tvCopy(maShown().map(r => r.sym));
 $('tvBtn').onclick = () => tvCopy(filtered().map(r => r.sym));
 $('pfTv').onclick = () => tvCopy(pfShown().map(r => r.sym));
 $('peTv').onclick = () => tvCopy([...$('peBody').querySelectorAll('tr[data-sym]')].map(tr => tr.dataset.sym));
+
+/* ---------- Portfolios ---------- */
+const PFO_KEY = 'onslaught-port';
+const PFO_START = () => [
+  {name: 'Conservative', note: 'Example only: mostly BTC and ETH.', holdings: [{base: 'BTC', w: 60}, {base: 'ETH', w: 30}, {base: 'BNB', w: 10}]},
+  {name: 'Balanced', note: 'Example only: majors plus a few large alts.', holdings: [{base: 'BTC', w: 40}, {base: 'ETH', w: 25}, {base: 'SOL', w: 10}, {base: 'BNB', w: 10}, {base: 'HYPE', w: 10}, {base: 'XRP', w: 5}]},
+  {name: 'Aggressive', note: 'Example only: more alts, less BTC.', holdings: [{base: 'BTC', w: 20}, {base: 'ETH', w: 15}, {base: 'SOL', w: 15}, {base: 'HYPE', w: 15}, {base: 'ZEC', w: 10}, {base: 'BNB', w: 10}, {base: 'SUI', w: 8}, {base: 'TAO', w: 7}]}
+];
+const PFO = {profiles: [], active: 0, lb: 90, cap: 10000, px: {}, miss: {}, uni: [], loading: false, t: 0};
+function pfoSave(){ try { localStorage.setItem(PFO_KEY, JSON.stringify({profiles: PFO.profiles, active: PFO.active, lb: PFO.lb, cap: PFO.cap})); } catch {} }
+function pfoRestore(){
+  try { const o = JSON.parse(localStorage.getItem(PFO_KEY) || 'null');
+    if (o && Array.isArray(o.profiles) && o.profiles.length){ PFO.profiles = o.profiles.map(p => ({name: String(p.name || 'Profile').slice(0, 40), note: String(p.note || '').slice(0, 200), holdings: (Array.isArray(p.holdings) ? p.holdings : []).map(h => ({base: String(h.base || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20), w: Math.max(0, +h.w || 0)})).filter(h => h.base)})); PFO.active = Math.min(Math.max(0, o.active | 0), PFO.profiles.length - 1); PFO.lb = [30, 90, 180, 365].includes(o.lb) ? o.lb : 90; PFO.cap = Math.max(0, +o.cap || 10000); return; } } catch {}
+  PFO.profiles = PFO_START();
+}
+pfoRestore();
+const pfoCur = () => PFO.profiles[PFO.active];
+function pfoRow(base){ const u = PFO.uni; return u.find(r => r.base === base) || u.find(r => r.base === '1000' + base) || null; }
+const pfoMean = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
+function pfoCov(a, b){ const n = Math.min(a.length, b.length); if (n < 3) return NaN; const ma = pfoMean(a.slice(-n)), mb = pfoMean(b.slice(-n)); let s = 0; for (let i = 0; i < n; i++) s += (a[a.length - n + i] - ma) * (b[b.length - n + i] - mb); return s / (n - 1); }
+function pfoStats(rets){ // rets: daily returns array
+  const n = rets.length; if (n < 3) return null;
+  let eq = 1, pk = 1, dd = 0; for (const r of rets){ eq *= 1 + r; if (eq > pk) pk = eq; dd = Math.min(dd, eq / pk - 1); }
+  const sd = Math.sqrt(pfoCov(rets, rets));
+  return {ret: eq - 1, vol: sd * Math.sqrt(365), dd, worst: Math.min(...rets), best: Math.max(...rets), eq};
+}
+/* returns {dates, per:{base:[r…]}, port:[r…], btc:[r…], win, short} for one profile */
+function pfoCalc(p, lb){
+  const bases = [...new Set(p.holdings.map(h => h.base).filter(b => PFO.px[b]))];
+  const miss = p.holdings.map(h => h.base).filter(b => !PFO.px[b]);
+  if (!PFO.px.BTC || !bases.length) return {miss, ok: false};
+  const all = [...new Set([...bases, 'BTC'])];
+  let dates = null; for (const b of all){ const d = [...PFO.px[b].keys()]; dates = dates ? dates.filter(x => PFO.px[b].has(x)) : d; }
+  dates.sort((a, b) => a - b);
+  const want = lb + 1, have = dates.length, win = Math.min(want, have);
+  if (win < 6) return {miss, ok: false, short: true};
+  const dd = dates.slice(-win), per = {};
+  for (const b of all){ const r = []; for (let i = 1; i < dd.length; i++) r.push(PFO.px[b].get(dd[i]) / PFO.px[b].get(dd[i - 1]) - 1); per[b] = r; }
+  const tw = p.holdings.filter(h => PFO.px[h.base]).reduce((a, h) => a + h.w, 0);
+  const port = dd.slice(1).map((_, i) => { let s = 0; for (const h of p.holdings){ if (PFO.px[h.base] && tw > 0) s += h.w / tw * per[h.base][i]; } return s; });
+  return {ok: true, dates: dd, per, port, btc: per.BTC, miss, win: win - 1, short: win < want, tw};
+}
+function pfoAnalyse(p, lb){
+  const c = pfoCalc(p, lb); if (!c.ok) return c;
+  const ps = pfoStats(c.port), bs = pfoStats(c.btc); const vp = pfoCov(c.port, c.port);
+  const wsum = c.tw, rows = p.holdings.map(h => {
+    const r = c.per[h.base], w = wsum > 0 ? h.w / wsum : 0; if (!r) return {base: h.base, w, nodata: true};
+    const st = pfoStats(r), cb = pfoCov(r, c.btc) / Math.sqrt(pfoCov(r, r) * pfoCov(c.btc, c.btc));
+    return {base: h.base, w, st, corr: cb, risk: vp > 0 ? w * pfoCov(r, c.port) / vp : NaN};
+  });
+  const ws = rows.map(r => r.w).filter(w => w > 0), hhi = ws.reduce((a, w) => a + w * w, 0);
+  return Object.assign(c, {ps, bs, rows, eff: hhi ? 1 / hhi : 0, top: Math.max(0, ...ws), corrP: pfoCov(c.port, c.btc) / Math.sqrt(vp * pfoCov(c.btc, c.btc))});
+}
+async function pfoLoad(force){
+  if (PFO.loading) return; PFO.loading = true; $('pfoSt').textContent = 'Loading…';
+  try {
+    PFO.uni = await getUniverse();
+    const need = new Set(['BTC']); PFO.profiles.forEach(p => p.holdings.forEach(h => need.add(h.base)));
+    const jobs = [...need].filter(b => force || !PFO.px[b]); let i = 0, done = 0;
+    const worker = async () => { while (i < jobs.length){ const b = jobs[i++], u = pfoRow(b);
+      if (!u){ delete PFO.px[b]; PFO.miss[b] = 1; } else { try { const k = await getKlines(u.sym, '1d', true, KDEEP); const m = new Map(); k.forEach(x => m.set(x[0], x[4])); PFO.px[b] = m; delete PFO.miss[b]; } catch { PFO.miss[b] = 1; } }
+      done++; $('pfoSt').textContent = `Loading ${done}/${jobs.length}…`; } };
+    await Promise.all(Array.from({length: Math.min(CONCURRENCY, 4)}, worker));
+    PFO.t = Date.now();
+  } catch(e){ $('pfoSt').textContent = 'Could not load: ' + (e && e.message || e); }
+  PFO.loading = false; pfoRender();
+}
+function pfoEnter(){ pfoRender(); if (!PFO.t || Date.now() - PFO.t > 6e5) pfoLoad(); }
+function pfoChart(p, a){
+  if (!a.ok){ return '<span class="mu">No data yet.</span>'; }
+  const W = 760, H = 220, pad = 34, mk = r => { let e = 100; const o = [e]; r.forEach(x => { e *= 1 + x; o.push(e); }); return o; };
+  const sp = mk(a.port), sb = mk(a.btc), all = sp.concat(sb), lo = Math.min(...all), hi = Math.max(...all), n = sp.length;
+  const X = i => pad + (W - pad - 8) * i / Math.max(1, n - 1), Y = v => 10 + (H - 26) * (1 - (v - lo) / ((hi - lo) || 1));
+  const path = s => s.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1)).join('');
+  const fd = t => new Date(t).toISOString().slice(5, 10);
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto" role="img" aria-label="Equity curve">
+    <line x1="${pad}" x2="${W - 8}" y1="${Y(100)}" y2="${Y(100)}" stroke="var(--line)" stroke-dasharray="3 3"/>
+    <text x="2" y="${Y(hi) + 4}" fill="var(--mu,#999)" font-size="10">${hi.toFixed(0)}</text><text x="2" y="${Y(lo) + 4}" fill="var(--mu,#999)" font-size="10">${lo.toFixed(0)}</text>
+    <path d="${path(sb)}" fill="none" stroke="#f7931a" stroke-width="1.5"/><path d="${path(sp)}" fill="none" stroke="var(--bull)" stroke-width="2"/>
+    <text x="${pad}" y="${H - 2}" fill="var(--mu,#999)" font-size="10">${fd(a.dates[0])}</text><text x="${W - 8}" y="${H - 2}" text-anchor="end" fill="var(--mu,#999)" font-size="10">${fd(a.dates[a.dates.length - 1])}</text>
+    <text x="${W - 120}" y="14" fill="var(--bull)" font-size="11">● ${esc(p.name)}</text><text x="${W - 60}" y="14" fill="#f7931a" font-size="11">● BTC</text></svg>`;
+}
+function pfoRender(){
+  const p = pfoCur(); if (!p) return;
+  $('pfoTabs').innerHTML = PFO.profiles.map((q, i) => `<button class="${i === PFO.active ? 'on' : ''}" data-i="${i}">${esc(q.name)}</button>`).join('');
+  $('pfoLb').value = PFO.lb; if (document.activeElement !== $('pfoCap')) $('pfoCap').value = PFO.cap;
+  if (document.activeElement !== $('pfoName')) $('pfoName').value = p.name; if (document.activeElement !== $('pfoNote')) $('pfoNote').value = p.note;
+  const sum = p.holdings.reduce((a, h) => a + h.w, 0); $('pfoSum').textContent = `Total ${sum.toFixed(1)}%` + (Math.abs(sum - 100) > 0.05 ? ' (not 100%: shares are scaled)' : '');
+  const a = pfoAnalyse(p, PFO.lb), flags = [];
+  const byBase = {}; if (a.rows) a.rows.forEach(r => { byBase[r.base] = r; });
+  $('pfoBody').innerHTML = p.holdings.map((h, i) => { const r = byBase[h.base] || {}, u = pfoRow(h.base), px = u ? u.price : NaN, share = sum > 0 ? h.w / sum : 0, amt = PFO.cap * share, st = r.st;
+    return `<tr><td><b>${esc(h.base)}</b>${u ? '' : ' <span class="dn" title="Not found among Binance USDT-M perpetuals">no data</span>'}</td>
+      <td><input data-w="${i}" type="number" min="0" step="0.5" value="${h.w}" style="width:72px"></td>
+      <td>${amt ? '$' + amt.toLocaleString(undefined, {maximumFractionDigits: 0}) : '—'}</td><td>${px ? (amt / px).toLocaleString(undefined, {maximumSignificantDigits: 4}) : '—'}</td><td>${px ? fmtPrice(px) : '—'}</td>
+      <td class="${st && st.ret >= 0 ? 'up' : 'dn'}">${st ? fmtPct(st.ret * 100) : '—'}</td><td>${st ? (st.vol * 100).toFixed(0) + '%' : '—'}</td><td class="dn">${st ? fmtPct(st.dd * 100) : '—'}</td>
+      <td>${Number.isFinite(r.corr) ? r.corr.toFixed(2) : '—'}</td><td>${Number.isFinite(r.risk) ? (r.risk * 100).toFixed(0) + '%' : '—'}</td><td>${esc(tagsOf(u ? u.base : h.base).join(', '))}</td>
+      <td><button data-rm="${i}" title="Remove">✕</button></td></tr>`; }).join('') || '<tr><td colspan="12" class="mu">No coins yet. Add one above.</td></tr>';
+  if (a.ok){
+    const top = p.holdings.slice().sort((x, y) => y.w - x.w);
+    if (a.top > 0.5) flags.push(`${top[0].base} is ${(a.top * 100).toFixed(0)}% of the mix.`);
+    if (a.rows.length) { const top2 = a.rows.map(r => r.w).sort((x, y) => y - x).slice(0, 2).reduce((x, y) => x + y, 0); if (a.rows.length > 2 && top2 > 0.75) flags.push(`Top two coins are ${(top2 * 100).toFixed(0)}% of the mix.`); }
+    const sec = {}; p.holdings.forEach(h => { const t = tagsOf(h.base)[0]; sec[t] = (sec[t] || 0) + h.w / (sum || 1); }); Object.entries(sec).forEach(([t, w]) => { if (w > 0.6 && t !== 'Other' && p.holdings.length > 2) flags.push(`${(w * 100).toFixed(0)}% sits in one sector (${t}).`); });
+    a.rows.forEach(r => { if (r.w > 0 && Number.isFinite(r.risk) && r.risk > r.w * 1.8 && r.risk > 0.2) flags.push(`${r.base} is ${(r.w * 100).toFixed(0)}% of the weight but ${(r.risk * 100).toFixed(0)}% of the risk.`); });
+    p.holdings.forEach(h => { const u = pfoRow(h.base); if (u && u.qv < 5e7) flags.push(`${h.base} trades only $${posM(u.qv)} a day: thin for size.`); if (u && u.fund != null && Math.abs(u.fund) >= 0.05) flags.push(`${h.base} funding is ${u.fund.toFixed(3)}% per period: ${u.fund > 0 ? 'longs are paying' : 'shorts are paying'}.`); });
+  }
+  const miss = p.holdings.filter(h => !PFO.px[h.base] && !PFO.loading).map(h => h.base); if (miss.length) flags.push(`No Binance perpetual data for: ${miss.join(', ')} (excluded from the statistics).`);
+  $('pfoFlags').innerHTML = a.ok ? `<div class="mu">${a.short ? `Window shortened to ${a.win} days (shortest history). ` : `${a.win}-day window. `}Portfolio: <b class="${a.ps.ret >= 0 ? 'up' : 'dn'}">${fmtPct(a.ps.ret * 100)}</b> vs BTC <b class="${a.bs.ret >= 0 ? 'up' : 'dn'}">${fmtPct(a.bs.ret * 100)}</b> · vol ${(a.ps.vol * 100).toFixed(0)}% · max drawdown ${fmtPct(a.ps.dd * 100)} · ${a.eff.toFixed(1)} effective coins</div>` + (flags.length ? '<ul style="margin:6px 0 0 18px">' + flags.map(f => `<li>${esc(f)}</li>`).join('') + '</ul>' : '<div class="mu">No concentration flags.</div>') : `<div class="mu">${PFO.loading ? 'Loading daily history…' : 'No statistics yet.'}${flags.length ? ' ' + esc(flags.join(' ')) : ''}</div>`;
+  $('pfoChart').innerHTML = pfoChart(p, a);
+  $('pfoCmp').innerHTML = PFO.profiles.map((q, i) => { const b = pfoAnalyse(q, PFO.lb); if (!b.ok) return `<tr><td>${esc(q.name)}</td><td>${q.holdings.length}</td><td colspan="9" class="mu">${PFO.loading ? 'loading…' : 'no data'}</td></tr>`;
+    return `<tr class="${i === PFO.active ? 'on' : ''}"><td><b>${esc(q.name)}</b></td><td>${q.holdings.length}</td><td class="${b.ps.ret >= 0 ? 'up' : 'dn'}">${fmtPct(b.ps.ret * 100)}</td><td class="${b.ps.ret - b.bs.ret >= 0 ? 'up' : 'dn'}">${fmtPct((b.ps.ret - b.bs.ret) * 100)}</td><td>${(b.ps.vol * 100).toFixed(0)}%</td><td class="dn">${fmtPct(b.ps.dd * 100)}</td><td class="dn">${fmtPct(b.ps.worst * 100)}</td><td class="up">${fmtPct(b.ps.best * 100)}</td><td>${b.corrP.toFixed(2)}</td><td>${b.eff.toFixed(1)}</td><td>${(b.top * 100).toFixed(0)}%</td></tr>`; }).join('');
+  const st = PFO.t ? `Data ${new Date(PFO.t).toLocaleTimeString()}` : ''; if (!PFO.loading) $('pfoSt').textContent = st;
+}
+function pfoAddCoin(){
+  const raw = $('pfoCoin').value.toUpperCase().replace(/USDT(\.P)?$/, '').replace(/[^A-Z0-9]/g, ''); if (!raw) return;
+  const p = pfoCur(); if (p.holdings.some(h => h.base === raw)){ toast(`${raw} is already in this profile.`); return; }
+  const u = PFO.uni.length ? pfoRow(raw) : true; if (!u){ toast(`${raw} is not a Binance USDT-M perpetual.`); return; }
+  p.holdings.push({base: raw, w: 5}); $('pfoCoin').value = ''; pfoSave(); pfoRender(); pfoLoad();
+}
+(function pfoWire(){
+  const on = (id, ev, f) => { const e = $(id); if (e) e.addEventListener(ev, f); };
+  on('pfoTabs', 'click', e => { const b = e.target.closest('button[data-i]'); if (!b) return; PFO.active = +b.dataset.i; pfoSave(); pfoRender(); });
+  on('pfoLb', 'change', e => { PFO.lb = +e.target.value; pfoSave(); pfoRender(); });
+  on('pfoCap', 'input', e => { PFO.cap = Math.max(0, +e.target.value || 0); pfoSave(); pfoRender(); });
+  on('pfoName', 'input', e => { pfoCur().name = e.target.value.slice(0, 40) || 'Profile'; pfoSave(); $('pfoTabs').innerHTML = PFO.profiles.map((q, i) => `<button class="${i === PFO.active ? 'on' : ''}" data-i="${i}">${esc(q.name)}</button>`).join(''); });
+  on('pfoNote', 'input', e => { pfoCur().note = e.target.value.slice(0, 200); pfoSave(); });
+  on('pfoBody', 'change', e => { const i = e.target.dataset.w; if (i == null) return; pfoCur().holdings[+i].w = Math.max(0, +e.target.value || 0); pfoSave(); pfoRender(); });
+  on('pfoBody', 'click', e => { const b = e.target.closest('button[data-rm]'); if (!b) return; pfoCur().holdings.splice(+b.dataset.rm, 1); pfoSave(); pfoRender(); });
+  on('pfoAdd', 'click', pfoAddCoin); on('pfoCoin', 'keydown', e => { if (e.key === 'Enter') pfoAddCoin(); });
+  on('pfoNorm', 'click', () => { const p = pfoCur(), s = p.holdings.reduce((a, h) => a + h.w, 0); if (s > 0) p.holdings.forEach(h => { h.w = Math.round(h.w / s * 1000) / 10; }); pfoSave(); pfoRender(); });
+  on('pfoNew', 'click', () => { PFO.profiles.push({name: 'My profile', note: '', holdings: [{base: 'BTC', w: 50}, {base: 'ETH', w: 50}]}); PFO.active = PFO.profiles.length - 1; pfoSave(); pfoRender(); });
+  on('pfoDup', 'click', () => { const p = pfoCur(); PFO.profiles.push({name: (p.name + ' copy').slice(0, 40), note: p.note, holdings: p.holdings.map(h => ({...h}))}); PFO.active = PFO.profiles.length - 1; pfoSave(); pfoRender(); });
+  on('pfoDel', 'click', () => { if (PFO.profiles.length < 2){ toast('Keep at least one profile.'); return; } if (!confirm(`Delete "${pfoCur().name}"?`)) return; PFO.profiles.splice(PFO.active, 1); PFO.active = 0; pfoSave(); pfoRender(); });
+  on('pfoRst', 'click', () => { const have = new Set(PFO.profiles.map(p => p.name)); PFO_START().forEach(p => { if (!have.has(p.name)) PFO.profiles.push(p); else PFO.profiles[PFO.profiles.findIndex(q => q.name === p.name)] = p; }); pfoSave(); pfoRender(); pfoLoad(); });
+  on('pfoTv', 'click', () => tvCopy(pfoCur().holdings.map(h => { const u = pfoRow(h.base); return u ? u.sym : null; }).filter(Boolean)));
+  on('pfoCsv', 'click', () => { const p = pfoCur(), sum = p.holdings.reduce((a, h) => a + h.w, 0) || 1; csvDownload(`portfolio-${p.name.replace(/\W+/g, '-')}.csv`, ['coin', 'weight_pct', 'amount_usd', 'price'], p.holdings.map(h => { const u = pfoRow(h.base); return [h.base, h.w, (PFO.cap * h.w / sum).toFixed(2), u ? u.price : '']; })); });
+})();
 
 /* ---------- Sector Flow ---------- */
 const SEC = {coins: null, rows: [], open: new Set(), sort: {k: 'shareD', dir: -1}, loading: false, t: null};
@@ -4911,11 +5077,12 @@ const BUILTIN = [
 ];
 function curPreset(layout){ const v = {show: S.show, setupOnly: S.setupOnly, mf: {...S.mf}};
   if (layout){ v.tf = S.tf; v.sort = {...S.sort}; v.mode = UI.mode || 'full'; v.dens = UI.dens; v.hidden = [...UI.hidden]; } /* a layout also keeps timeframe, sort and columns */ for (const f of PRESET_FIELDS){ const el = $(f); v[f] = el.type === 'checkbox' ? el.checked : el.value; } return v; }
-function applyPreset(v){
+function applyPreset(v, name){
+  UI.lastLayout = name || null;
   S.show = v.show || 'all'; [...$('showSeg').children].forEach(x => x.classList.toggle('on', x.dataset.v === S.show));
   S.setupOnly = !!v.setupOnly; S.incOnly = false;
   S.mf = {...(v.mf || {})}; document.querySelectorAll('.mf').forEach(sel => sel.value = S.mf[sel.dataset.k] || '');
-  for (const f of PRESET_FIELDS){ const el = $(f); if (!el) continue; if (el.type === 'checkbox') el.checked = !!v[f]; else if (f === 'mcap' && v.mcap == null && !v.tf){ /* old saved views keep the current market-cap filter */ } else el.value = v[f] || ''; }
+  for (const f of PRESET_FIELDS){ const el = $(f); if (!el) continue; if (el.type === 'checkbox') el.checked = !!v[f]; else if (f === 'mcap' && v.mcap == null && !v.tf){ /* old saved views keep the current market-cap filter */ } else el.value = v[f] || (f === 'mcap' ? '0' : ''); }
   if (v.sort) S.sort = {...v.sort};
   if (v.mode) UI.mode = v.mode;
   if (v.dens) UI.dens = v.dens;
@@ -4929,6 +5096,29 @@ function renderPresets(){
   const cp = customPresets();
   $('presetList').innerHTML = BUILTIN.map((p, i) => `<button class="preset" data-pb="${i}">${p.name}</button>`).join('') +
     cp.map((p, i) => `<span class="preset mine"><button data-pc="${i}">${esc(p.name)}</button><button class="pdel" data-pd="${i}" aria-label="Delete preset ${esc(p.name)}">✕</button></span>`).join('');
+  try { markPresets(); } catch {}
+}
+/* Which view is selected: the one whose settings match the screen right now. The most specific match wins; after an edit the button says so. */
+function presetOn(v){
+  const norm = o => JSON.stringify(Object.entries(o || {}).filter(([, x]) => x).sort());
+  if ((v.show || 'all') !== S.show || !!v.setupOnly !== !!S.setupOnly || norm(v.mf) !== norm(S.mf)) return false;
+  for (const f of PRESET_FIELDS){ const el = $(f); if (!el || (f === 'mcap' && v.mcap == null && !v.tf)) continue; const want = v[f] ?? (el.type === 'checkbox' ? false : ''); if ((el.type === 'checkbox' ? el.checked : el.value) !== want && !(want === '' && el.value === '0')) return false; }
+  if (v.tf && v.tf !== S.tf) return false;
+  if (v.sort && (v.sort.k !== S.sort.k || v.sort.dir !== S.sort.dir)) return false;
+  if (v.mode && v.mode !== (UI.mode || 'full')) return false;
+  if (v.dens && v.dens !== UI.dens) return false;
+  if (Array.isArray(v.hidden) && norm(Object.fromEntries(v.hidden.map(k => [k, 1]))) !== norm(Object.fromEntries([...UI.hidden].map(k => [k, 1])))) return false;
+  return true;
+}
+function markPresets(){
+  const cp = customPresets(), all = BUILTIN.map((p, i) => ({n: p.name, v: p.v, sel: `[data-pb="${i}"]`})).concat(cp.map((p, i) => ({n: p.name, v: p.v, sel: `[data-pc="${i}"]`})));
+  let best = null; for (const p of all) if (presetOn(p.v) && (!best || Object.keys(p.v).length > Object.keys(best.v).length)) best = p;
+  const picked = UI.lastLayout && all.find(p => p.n === UI.lastLayout && presetOn(p.v)); if (picked) best = picked;   // the one you just chose wins when several fit
+  $('presetList').querySelectorAll('.preset').forEach(x => x.classList.remove('on'));
+  if (best){ const b = $('presetList').querySelector(best.sel); if (b) (b.closest('.preset') || b).classList.add('on'); }
+  const name = best ? best.n : UI.lastLayout ? UI.lastLayout + ' (edited)' : '';
+  $('viewBtn').textContent = name ? `View · ${name.length > 26 ? name.slice(0, 25) + '…' : name} ▾` : 'View ▾';
+  $('viewBtn').classList.toggle('on', !!best);
 }
 /* Quick search (Ctrl+K) */
 function openPalette(){
@@ -6710,7 +6900,7 @@ $('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.
   if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Crypto Scanner scan that includes this coin to open its trade plan.'); return; }
   const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
 $('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
-try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'pos' || v === 'ma' || v === 'macro' || v === 'div' || v === 'ta') setView(v); } catch {}
+try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'pos' || v === 'ma' || v === 'port' || v === 'macro' || v === 'div' || v === 'ta') setView(v); } catch {}
 $('alertBtn').onclick = toggleAlerts; paintAlertBtn();
 for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
 for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
@@ -6921,8 +7111,8 @@ $('colList').onchange = e => { const k = e.target.dataset.col; if (!k) return; e
 $('densSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; UI.dens = b.dataset.v; saveView(); applyCols(); };
 $('presetList').onclick = e => {
   const b = e.target.closest('[data-pb]'), c = e.target.closest('[data-pc]'), d = e.target.closest('[data-pd]');
-  if (b) applyPreset(BUILTIN[+b.dataset.pb].v);
-  if (c) applyPreset(customPresets()[+c.dataset.pc].v);
+  if (b) applyPreset(BUILTIN[+b.dataset.pb].v, BUILTIN[+b.dataset.pb].name);
+  if (c) applyPreset(customPresets()[+c.dataset.pc].v, customPresets()[+c.dataset.pc].name);
   if (d){ const cp = customPresets(); cp.splice(+d.dataset.pd, 1); try { localStorage.setItem(PRESET_KEY, JSON.stringify(cp)); } catch {} renderPresets(); }
 };
 $('presetSave').onclick = () => { const n = $('presetName').value.trim(); if (!n){ $('presetName').focus(); return; }
@@ -6994,7 +7184,7 @@ async function applyHash(){
   const h = new URLSearchParams(location.hash.replace(/^#/, '')); if (!h.has('t') && !h.has('c')) return;
   history.replaceState(null, '', location.pathname + location.search);
   const t = h.get('t'), tf = h.get('tf'), c = (h.get('c') || '').toUpperCase(), d = +h.get('d') < 0 ? -1 : 1;
-  if (['trend', 'map', 'sectors', 'macro', 'div', 'ta', 'liq', 'pos', 'ma', 'journal'].includes(t) && !(t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c))) setView(t);
+  if (['trend', 'map', 'sectors', 'macro', 'div', 'ta', 'liq', 'pos', 'ma', 'journal', 'port'].includes(t) && !(t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c))) setView(t);
   if (t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c)){ anaOpen(c, tf); return; }
   if (TFS.includes(tf) && tf !== S.tf) $('tfSeg').querySelector(`[data-v="${tf}"]`)?.click();
   if (/^[A-Z0-9]{3,20}USDT$/.test(c)){
@@ -7630,6 +7820,14 @@ journal: ['Como funciona o journal', `<ul>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
 
 <li><b>Sinais contra um controlo aleatório</b>: por cada novo sinal o diário segue também uma moeda aleatória na mesma vela e lado sem sinal, com o mesmo stop e alvo. O cartão compara os dois por momento e diz se a diferença está dentro do ruído; avalia depois de cerca de 150 momentos emparelhados. O diário guarda agora até 12 000 entradas.</li>
+</ul>`],
+port: ['Como ler o separador Portfolios', `<ul>
+<li>Um perfil é uma lista de moedas com pesos. Há três exemplos iniciais (conservador, equilibrado, agressivo); edite-os, crie os seus ou duplique um para comparar variantes. Ficam guardados só neste browser.</li>
+<li>As estatísticas repetem os últimos N dias de fechos diários com a mistura reequilibrada para os pesos todos os dias. Carteiras reais derivam e pagam comissões, por isso os números descrevem o passado, não são uma previsão.</li>
+<li><b>Vol (ann.)</b> é o desvio-padrão diário vezes √365. <b>Max DD</b> é a pior queda pico-vale na janela. <b>Corr BTC</b> é a correlação dos retornos diários com o BTC.</li>
+<li><b>Risk share</b> é a parte de cada moeda na variância da carteira. Uma moeda com 10% de peso pode ter 25% do risco.</li>
+<li><b>Eff. coins</b> é 1 ÷ Σ(peso²): o número de moedas de pesos iguais com a mesma concentração. Os avisos assinalam moeda dominante, um só setor, volume baixo e funding elevado.</li>
+<li>Se uma moeda tem menos histórico que a janela, a janela encolhe para o histórico mais curto. Moedas sem perpétuo USDT-M na Binance não têm preço.</li>
 </ul>`],
 ma: ['Como ler o separador Moving Averages', `<ul>
 <li>Para as principais moedas por volume, o separador calcula nove médias (EMA 12, 25, 50, 100, 200 e SMA 12, 25, 50, 200) em 1H, 4H, 1D e 1W, a partir de velas fechadas. A grelha permite exigir que o preço esteja acima ou abaixo de qualquer uma delas, em qualquer timeframe, em simultâneo.</li>
