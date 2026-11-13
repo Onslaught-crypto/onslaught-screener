@@ -3600,12 +3600,12 @@ function pfoChart(p, a){
   const X = i => pad + (W - pad - 8) * i / Math.max(1, n - 1), Y = v => 10 + (H - 26) * (1 - (v - lo) / ((hi - lo) || 1));
   const path = s => s.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1)).join('');
   const fd = t => new Date(t).toISOString().slice(5, 10);
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto" role="img" aria-label="Equity curve">
+  return `<div class="row" style="gap:16px;margin-bottom:4px;font-size:12px"><span style="color:var(--bull)">● ${esc(p.name)} <b>${(sp[n - 1] - 100).toFixed(1)}%</b></span><span style="color:#f7931a">● BTC <b>${(sb[n - 1] - 100).toFixed(1)}%</b></span></div><svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto" role="img" aria-label="Equity curve">
     <line x1="${pad}" x2="${W - 8}" y1="${Y(100)}" y2="${Y(100)}" stroke="var(--line)" stroke-dasharray="3 3"/>
     <text x="2" y="${Y(hi) + 4}" fill="var(--mu,#999)" font-size="10">${hi.toFixed(0)}</text><text x="2" y="${Y(lo) + 4}" fill="var(--mu,#999)" font-size="10">${lo.toFixed(0)}</text>
     <path d="${path(sb)}" fill="none" stroke="#f7931a" stroke-width="1.5"/><path d="${path(sp)}" fill="none" stroke="var(--bull)" stroke-width="2"/>
     <text x="${pad}" y="${H - 2}" fill="var(--mu,#999)" font-size="10">${fd(a.dates[0])}</text><text x="${W - 8}" y="${H - 2}" text-anchor="end" fill="var(--mu,#999)" font-size="10">${fd(a.dates[a.dates.length - 1])}</text>
-    <text x="${W - 120}" y="14" fill="var(--bull)" font-size="11">● ${esc(p.name)}</text><text x="${W - 60}" y="14" fill="#f7931a" font-size="11">● BTC</text></svg>`;
+    </svg>`;
 }
 function pfoRender(){
   const p = pfoCur(); if (!p) return;
