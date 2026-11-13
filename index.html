@@ -326,6 +326,7 @@ body.compact .stat{padding:7px 10px} body.compact .stat .v{font-size:18px}
 .presetlist{display:flex;flex-wrap:wrap;gap:5px}
 .preset{font-size:12px;padding:4px 9px;border-radius:999px}
 .preset.on,.preset.mine.on button:first-child{background:var(--accent);color:#fff;border-color:var(--accent)}
+#pfoTabs button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600} #pfoCmp tr.on td{background:rgba(138,82,156,.18)}
 .preset.mine.on{border-color:var(--accent)}
 #viewBtn.on{border-color:var(--accent-lt);color:var(--accent-lt)}
 .preset.mine{display:inline-flex;padding:0;border:1px solid var(--accent-dk);border-radius:999px;overflow:hidden}
@@ -3608,7 +3609,7 @@ function pfoChart(p, a){
 }
 function pfoRender(){
   const p = pfoCur(); if (!p) return;
-  $('pfoTabs').innerHTML = PFO.profiles.map((q, i) => `<button class="${i === PFO.active ? 'on' : ''}" data-i="${i}">${esc(q.name)}</button>`).join('');
+  $('pfoTabs').innerHTML = PFO.profiles.map((q, i) => `<button class="${i === PFO.active ? 'on' : ''}" data-i="${i}" aria-pressed="${i === PFO.active}">${esc(q.name)}</button>`).join('');
   $('pfoLb').value = PFO.lb; if (document.activeElement !== $('pfoCap')) $('pfoCap').value = PFO.cap;
   if (document.activeElement !== $('pfoName')) $('pfoName').value = p.name; if (document.activeElement !== $('pfoNote')) $('pfoNote').value = p.note;
   const sum = p.holdings.reduce((a, h) => a + h.w, 0); $('pfoSum').textContent = `Total ${sum.toFixed(1)}%` + (Math.abs(sum - 100) > 0.05 ? ' (not 100%: shares are scaled)' : '');
@@ -3647,7 +3648,7 @@ function pfoAddCoin(){
   on('pfoTabs', 'click', e => { const b = e.target.closest('button[data-i]'); if (!b) return; PFO.active = +b.dataset.i; pfoSave(); pfoRender(); });
   on('pfoLb', 'change', e => { PFO.lb = +e.target.value; pfoSave(); pfoRender(); });
   on('pfoCap', 'input', e => { PFO.cap = Math.max(0, +e.target.value || 0); pfoSave(); pfoRender(); });
-  on('pfoName', 'input', e => { pfoCur().name = e.target.value.slice(0, 40) || 'Profile'; pfoSave(); $('pfoTabs').innerHTML = PFO.profiles.map((q, i) => `<button class="${i === PFO.active ? 'on' : ''}" data-i="${i}">${esc(q.name)}</button>`).join(''); });
+  on('pfoName', 'input', e => { pfoCur().name = e.target.value.slice(0, 40) || 'Profile'; pfoSave(); $('pfoTabs').innerHTML = PFO.profiles.map((q, i) => `<button class="${i === PFO.active ? 'on' : ''}" data-i="${i}" aria-pressed="${i === PFO.active}">${esc(q.name)}</button>`).join(''); });
   on('pfoNote', 'input', e => { pfoCur().note = e.target.value.slice(0, 200); pfoSave(); });
   on('pfoBody', 'change', e => { const i = e.target.dataset.w; if (i == null) return; pfoCur().holdings[+i].w = Math.max(0, +e.target.value || 0); pfoSave(); pfoRender(); });
   on('pfoBody', 'click', e => { const b = e.target.closest('button[data-rm]'); if (!b) return; pfoCur().holdings.splice(+b.dataset.rm, 1); pfoSave(); pfoRender(); });
