@@ -1651,7 +1651,7 @@ function jIndepHtml(){
     <div class="mu" style="font-size:12px;margin:4px 0 8px">Conclusions need at least 30 moments in a timeframe. Each scan now logs at most ${J_PER} signals per kind and side (most liquid first), so the count grows by distinct moments, not by one wave repeated.${thin ? ' 4H and 1D are thin because the journal only logs the timeframe the scanner is on.' : ''}</div>
     <button id="jLogMore" title="Switches the scanner to 4H, scans, then 1D, scans, then returns to where you were. Takes a couple of minutes.">Log 4H and 1D now</button> <span class="mu" id="jLogMoreSt" style="font-size:12px"></span>`;
 }
-document.addEventListener('click', async e => { if (!e.target.closest('#jLogMore')) return;
+if (typeof document !== 'undefined') document.addEventListener('click', async e => { if (!e.target.closest('#jLogMore')) return;
   const st = $('jLogMoreSt'), back = S.tf, btn = e.target.closest('#jLogMore'); btn.disabled = true;
   try { if (!$('jOn').checked){ st.textContent = 'Turn on journaling in Settings first.'; return; }
     for (const tf of ['4h', '1d']){ st.textContent = 'Scanning ' + tf.toUpperCase() + '…'; while (S.scanning) await new Promise(r => setTimeout(r, 500)); const b = $('tfSeg').querySelector(`[data-v="${tf}"]`); if (b) b.click(); await new Promise(r => setTimeout(r, 1200)); while (S.scanning) await new Promise(r => setTimeout(r, 500)); }
@@ -1693,7 +1693,7 @@ function renderToday(market, c){
     <div><h4>Strongest bearish divergences</h4><div class="tl">${dvS.length ? dvS.map(dchip).join('') : '<span class="mu">' + (DIV.t ? 'None right now.' : (DIV.scanning || S.scanning || (S.rows && S.rows.length)) ? 'Scanning divergences…' : 'Updates after each Scan.') + '</span>'}</div></div></div></div>
     <div class="todaynote">Setups are ranked by 24h volume (most liquid first). Number next to each divergence = strength score. ${todayEvidence()}</div>`;
 }
-document.addEventListener('click', e => { const b = e.target.closest('#todayBody [data-dv]'); if (b){ const [sym, tf] = b.dataset.dv.split('|'); anaOpen(sym, tf); return; }
+if (typeof document !== 'undefined') document.addEventListener('click', e => { const b = e.target.closest('#todayBody [data-dv]'); if (b){ const [sym, tf] = b.dataset.dv.split('|'); anaOpen(sym, tf); return; }
   if (e.target.closest('#todayBody [data-act=divscan]')){ divScan(); } });
 /* ---------- Shared scoring (used by the page and the PC runner) ----------
  d = evaluate() result or null; oi = OI history; mtf = {'1d','4h','1h': dir|null} or null; fund = funding %; c = {oiN, oiThr, trigN, fundHot, fundCold} */
