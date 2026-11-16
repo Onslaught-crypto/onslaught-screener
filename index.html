@@ -516,6 +516,7 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
     <button role="tab" data-view="ma">Moving Averages</button>
     <button role="tab" data-view="journal">Journal</button>
     <button role="tab" data-view="port">Portfolios</button>
+    <button role="tab" data-view="auc">Auction</button>
   </nav>
 
   <div id="err" class="err"></div>
@@ -1040,6 +1041,27 @@ footer{color:var(--muted);font-size:12px;margin-top:12px}
       <li><b>Risk share</b> is each coin's share of the portfolio's variance. A coin with 10% weight can carry 25% of the risk. Compare it with the weight column.</li>
       <li><b>Eff. coins</b> is 1 ÷ Σ(weight²): the number of equally weighted coins that would be as concentrated. Flags warn about a dominant coin, one sector, thin volume and heavy funding.</li>
       <li>If a coin has less history than the window, the window shrinks to the shortest history and the status line says so. Coins not on Binance USDT-M perpetuals cannot be priced.</li>
+    </ul></details></div>
+  </div>
+  <div id="viewAuc" hidden>
+    <div class="panel" style="border-left:3px solid var(--warn)"><b>Context and tests, not signals.</b> <span class="mu">Daily volume profiles are built from 1H candles (each candle's volume spread evenly over its high-low range). Value area = 70% of the day's volume around the point of control (POC). The three tests below ask whether each idea from the auction-market book beats a plain baseline on Binance perpetuals.</span></div>
+    <div class="panel"><div class="row" style="gap:10px;flex-wrap:wrap;align-items:center">
+      <label>Coins <select id="aucN"><option value="20">Top 20</option><option value="40" selected>Top 40</option><option value="60">Top 60</option></select></label>
+      <label>History <select id="aucH"><option value="41" selected>~40 days (fast)</option><option value="365">1 year (slow the first time)</option></select></label>
+      <label>Bias <select id="aucF"><option value="all">All</option><option value="up">Up</option><option value="down">Down</option><option value="mixed">Mixed</option></select></label>
+      <button id="aucRun" class="primary">Load and test</button><button id="aucTv">Copy as TradingView list</button><span id="aucSt" class="mu"></span>
+    </div></div>
+    <div class="panel"><h4 style="margin:0 0 6px">Today's context per coin</h4>
+      <div style="overflow:auto"><table class="pftbl"><thead><tr><th>Coin</th><th>Last close</th><th title="Today's value area against yesterday's">Today vs yesterday</th><th title="2 of the last 3 day-to-day value relationships point the same way">3-day bias</th><th>Price vs yesterday's value</th><th>To POC</th><th title="Anchored to 00:00 UTC. Thresholds are ours and untested.">VWAP regime</th><th>VWAP dist</th></tr></thead><tbody id="aucBody"></tbody></table></div>
+      <div id="aucNote" class="mu" style="margin-top:6px"></div></div>
+    <div class="panel"><h4 style="margin:0 0 6px">Tests against a baseline</h4><div id="aucLabs" class="mu">Press Load and test.</div></div>
+    <div class="panel"><details data-help="auc"><summary>How to read the Auction tab</summary><ul>
+      <li><b>Value area</b> is where 70% of a day's volume traded; the <b>POC</b> is the busiest price. <b>VAH/VAL</b> are the value area's top and bottom. Days are cut at 00:00 UTC.</li>
+      <li><b>Today vs yesterday</b>: higher, lower, inside, or overlapping and moving up or down (by POC). <b>3-day bias</b> is up or down when 2 of the last 3 relationships agree, otherwise mixed.</li>
+      <li><b>VWAP regime</b> uses the distance from the day's VWAP, its slope over 3 hours and how often price crossed it. Trend = few crosses and price on the same side the VWAP is moving. Rotating = 3 or more crosses. The thresholds are ours and have not been tested.</li>
+      <li><b>Value migration test</b>: after a bias, does the day close in that direction more often than days do in general? <b>80% rule test</b>: the day opens outside yesterday's value, then closes back inside for 2 hours; how often does price reach the opposite edge by 24:00 UTC, compared with a random hour in the same day aiming at the same distance? Average worst and best excursion are in units of that distance. <b>Naked POC test</b>: a POC that price stayed away from for a full day; does price touch it within 4 days more often than a level the same distance on the other side?</li>
+      <li><b>Read the verdicts carefully.</b> Coins move together, so the effective sample is the number of days, not the number of events; the verdict uses days. A gap must clear 2 standard errors and hold in both halves of the history to be called interesting, and even then it only earns a forward test. 40 days is a short sample from one market regime.</li>
+      <li>Not included yet: candle delta, open interest with the profile, hour-of-day volume and a macro-event guard.</li>
     </ul></details></div>
   </div>
   <div id="viewJournal" hidden>
@@ -3127,9 +3149,9 @@ function exportCSV(){
 /* ---------- Views ---------- */
 function setView(v){
   S.view = v;
-  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div'; $('viewTa').hidden = v !== 'ta'; $('viewPos').hidden = v !== 'pos'; $('viewMa').hidden = v !== 'ma'; $('viewPort').hidden = v !== 'port';
+  $('viewTrend').hidden = v !== 'trend'; $('viewSectors').hidden = v !== 'sectors'; $('viewJournal').hidden = v !== 'journal'; $('viewMap').hidden = v !== 'map'; $('viewLiq').hidden = v !== 'liq'; $('viewMacro').hidden = v !== 'macro'; $('viewDiv').hidden = v !== 'div'; $('viewTa').hidden = v !== 'ta'; $('viewPos').hidden = v !== 'pos'; $('viewMa').hidden = v !== 'ma'; $('viewPort').hidden = v !== 'port'; $('viewAuc').hidden = v !== 'auc';
   [...$('tabs').children].forEach(b => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
-  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Technical Analysis', liq: 'Liquidation Map', pos: 'Positioning', ma: 'Moving Averages', port: 'Portfolios', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
+  $('viewName').textContent = {macro: 'Macro', div: 'Divergences', ta: 'Technical Analysis', liq: 'Liquidation Map', pos: 'Positioning', ma: 'Moving Averages', port: 'Portfolios', auc: 'Auction', map: 'Market Map', trend: 'Crypto Scanner', sectors: 'Sector Flow', journal: 'Signal Journal'}[v];
   try { localStorage.setItem('onslaught-view', v); } catch {}
   if (v === 'sectors') renderSectors();
   clearTimeout(LAZY.t); if (v !== 'journal' && LAZY.loaded) LAZY.t = setTimeout(jUnload, 45000);
@@ -3141,6 +3163,7 @@ function setView(v){
   if (v !== 'pos') btStop(); else posEnter();
   if (v === 'ma') maEnter();
   if (v === 'port') pfoEnter();
+  if (v === 'auc') aucEnter();
   if (v === 'sectors' && !SEC.rows.length && !SEC.loading) loadSectors();
   if (v === 'ta' && !ANA.sym && ANA.recent && ANA.recent[0]) anaOpen(ANA.recent[0]);
   if (v === 'ta') anaEnter();
@@ -3660,6 +3683,134 @@ function pfoAddCoin(){
   on('pfoRst', 'click', () => { const have = new Set(PFO.profiles.map(p => p.name)); PFO_START().forEach(p => { if (!have.has(p.name)) PFO.profiles.push(p); else PFO.profiles[PFO.profiles.findIndex(q => q.name === p.name)] = p; }); pfoSave(); pfoRender(); pfoLoad(); });
   on('pfoTv', 'click', () => tvCopy(pfoCur().holdings.map(h => { const u = pfoRow(h.base); return u ? u.sym : null; }).filter(Boolean)));
   on('pfoCsv', 'click', () => { const p = pfoCur(), sum = p.holdings.reduce((a, h) => a + h.w, 0) || 1; csvDownload(`portfolio-${p.name.replace(/\W+/g, '-')}.csv`, ['coin', 'weight_pct', 'amount_usd', 'price'], p.holdings.map(h => { const u = pfoRow(h.base); return [h.base, h.w, (PFO.cap * h.w / sum).toFixed(2), u ? u.price : '']; })); });
+})();
+
+/* ---------- Auction: daily value profiles, VWAP regime and baseline tests ---------- */
+const AUC = {rows: [], ctx: [], labs: null, loading: false, t: 0, cfg: {n: 40, h: 41, f: 'all'}};
+try { Object.assign(AUC.cfg, JSON.parse(localStorage.getItem('onslaught-auc') || '{}')); } catch {}
+function aucProf(cs, bin){
+  let lo = Infinity, hi = -Infinity, tot = 0; for (const k of cs){ if (k[3] < lo) lo = k[3]; if (k[2] > hi) hi = k[2]; tot += k[5]; }
+  const nb = Math.max(1, Math.ceil((hi - lo) / bin) + 1), v = new Float64Array(nb);
+  for (const k of cs){ const a = Math.floor((k[3] - lo) / bin), b = Math.floor((k[2] - lo) / bin), s = k[5] / (b - a + 1); for (let i = a; i <= b; i++) v[i] += s; }
+  let p = 0; for (let i = 1; i < nb; i++) if (v[i] > v[p]) p = i;
+  let a = p, b = p, acc = v[p]; while (acc < 0.7 * tot && (a > 0 || b < nb - 1)){ const up = b < nb - 1 ? v[b + 1] : -1, dn = a > 0 ? v[a - 1] : -1; if (up >= dn){ b++; acc += v[b]; } else { a--; acc += v[a]; } }
+  return {poc: lo + (p + 0.5) * bin, vah: lo + (b + 1) * bin, val: lo + a * bin, o: cs[0][1], c: cs[cs.length - 1][4], h: hi, l: lo};
+}
+function aucDays(k){
+  const by = new Map(); for (const x of k){ const d = Math.floor(x[0] / 864e5); if (!by.has(d)) by.set(d, []); by.get(d).push(x); }
+  const ds = [...by.keys()].sort((a, b) => a - b); if (!ds.length) return {days: [], today: null};
+  const bin = Math.max(1e-12, 0.0005 * k[k.length - 1][4]), days = [];
+  const nowD = Math.floor(Date.now() / 864e5);
+  let today = null;
+  for (const d of ds){ const cs = by.get(d); if (d === nowD){ today = {cs, d}; continue; } if (cs.length === 24){ const p = aucProf(cs, bin); p.d = d; p.cs = cs; days.push(p); } }
+  if (today) today.prof = aucProf(today.cs, bin);
+  return {days, today, bin};
+}
+function aucRel(p, c){ if (c.val > p.vah) return 'higher'; if (c.vah < p.val) return 'lower'; if (c.val >= p.val && c.vah <= p.vah) return 'inside'; return c.poc >= p.poc ? 'ovUp' : 'ovDn'; }
+const aucDir = r => r === 'higher' || r === 'ovUp' ? 1 : r === 'lower' || r === 'ovDn' ? -1 : 0;
+const AUC_TXT = {higher: 'Higher', lower: 'Lower', inside: 'Inside', ovUp: 'Overlap, moving up', ovDn: 'Overlap, moving down'};
+function aucBias(rels){ const u = rels.filter(r => aucDir(r) > 0).length, d = rels.filter(r => aucDir(r) < 0).length; return u >= 2 ? 1 : d >= 2 ? -1 : 0; }
+function aucVwap(cs){
+  let pv = 0, vv = 0; const vw = [], side = [];
+  for (const k of cs){ pv += (k[2] + k[3] + k[4]) / 3 * k[5]; vv += k[5]; const w = vv ? pv / vv : k[4]; vw.push(w); side.push(k[4] >= w ? 1 : -1); }
+  let cr = 0; for (let i = 1; i < side.length; i++) if (side[i] !== side[i - 1]) cr++;
+  const n = cs.length - 1, px = cs[n][4], dist = (px - vw[n]) / vw[n] * 100;
+  if (cs.length < 4) return {reg: 'Too early', dist, cr};
+  const slope = (vw[n] - vw[n - 3]) / vw[n] * 100;
+  let reg = 'Unclear'; if (cr <= 1 && Math.abs(dist) >= 0.4 && Math.sign(slope) === Math.sign(dist)) reg = dist > 0 ? 'Trend up' : 'Trend down'; else if (cr >= 3) reg = 'Rotating';
+  return {reg, dist, cr, slope};
+}
+function aucCtx(sym, info){
+  const {days, today} = info; if (days.length < 5) return null;
+  const rels = []; for (let j = 1; j < days.length; j++) rels.push(aucRel(days[j - 1], days[j]));
+  const y = days[days.length - 1], bias = aucBias(rels.slice(-3));
+  const last = (today ? today.cs : y.cs); const px = last[last.length - 1][4];
+  const rt = today && today.cs.length >= 4 ? aucRel(y, today.prof) : null;
+  const pos = px > y.vah ? 'Above value' : px < y.val ? 'Below value' : 'Inside value';
+  const v = aucVwap(today ? today.cs : y.cs);
+  return {sym, px, bias, rt, pos, toPoc: (y.poc - px) / px * 100, vw: v, forming: !!today};
+}
+function aucLabs(all){   // all: [{sym, info}]
+  const L1 = [], L2 = [], L3 = []; let upN = 0, upD = 0, dnN = 0, dnD = 0, dayMin = Infinity, dayMax = -Infinity;
+  for (const {info} of all){ const d = info.days; for (let j = 4; j < d.length; j++){ const up = d[j].c > d[j].o ? 1 : 0, dn = d[j].c < d[j].o ? 1 : 0; upN += up; upD++; dnN += dn; dnD++; dayMin = Math.min(dayMin, d[j].d); dayMax = Math.max(dayMax, d[j].d); } }
+  const upR = upN / (upD || 1), dnR = dnN / (dnD || 1), mid = (dayMin + dayMax) / 2;
+  for (const {info} of all){
+    const d = info.days, rels = []; for (let j = 1; j < d.length; j++) rels[j] = aucRel(d[j - 1], d[j]);
+    for (let j = 4; j < d.length; j++){ const b = aucBias([rels[j - 1], rels[j - 2], rels[j - 3]]); if (!b) continue;
+      const ret = (d[j].c - d[j].o) / d[j].o * b; L1.push({d: d[j].d, hit: ret > 0 ? 1 : 0, exp: b > 0 ? upR : dnR, ret}); }
+    for (let j = 1; j < d.length; j++){      /* 80% rule */
+      const cs = d[j].cs, pv = d[j - 1], o = cs[0][1]; if (!(o > pv.vah || o < pv.val)) continue;
+      let e = -1; for (let i = 0; i < 22; i++) if (cs[i][4] <= pv.vah && cs[i][4] >= pv.val && cs[i + 1][4] <= pv.vah && cs[i + 1][4] >= pv.val){ e = i + 1; break; }
+      if (e < 0) continue; const dir = o > pv.vah ? -1 : 1, tgt = dir > 0 ? pv.vah : pv.val, p = cs[e][4], D = Math.abs(tgt - p); if (D / p < 0.002) continue;
+      const reach = (h, pe) => { let mfe = 0, mae = 0; for (let i = h + 1; i < 24; i++){ const fav = dir > 0 ? cs[i][2] - pe : pe - cs[i][3], adv = dir > 0 ? pe - cs[i][3] : cs[i][2] - pe; mae = Math.max(mae, adv / D); if (fav >= D) return {hit: 1, mfe: Math.max(mfe, fav / D), mae}; mfe = Math.max(mfe, fav / D); } return {hit: 0, mfe, mae}; };
+      const r = reach(e, p); let bs = 0, bn = 0; for (let h = 0; h < 23; h++){ bs += reach(h, cs[h][4]).hit; bn++; }
+      L2.push({d: d[j].d, hit: r.hit, exp: bs / bn, mae: r.mae, mfe: r.mfe});
+    }
+    const hrs = []; d.forEach(x => x.cs.forEach(k => hrs.push(k))); const idx = new Map(); hrs.forEach((k, i) => idx.set(k[0], i));
+    for (let j = 1; j + 1 < d.length; j++){     /* naked POC */
+      const poc = d[j].poc, nx = d[j + 1]; if (poc >= nx.l && poc <= nx.h) continue; const c = nx.c, D = Math.abs(poc - c); if (D / c < 0.003) continue;
+      const s = idx.get(nx.cs[23][0]); if (s == null || s + 96 >= hrs.length) continue;
+      const fut = hrs.slice(s + 1, s + 97), touch = lv => fut.some(k => k[3] <= lv && k[2] >= lv), mirror = c + (c - poc);
+      L3.push({d: nx.d, hit: touch(poc) ? 1 : 0, exp: touch(mirror) ? 1 : 0});
+    }
+  }
+  const sum = (A, ex) => {
+    if (!A.length) return {n: 0}; const days = new Set(A.map(x => x.d)).size, rate = A.reduce((a, x) => a + x.hit, 0) / A.length, base = A.reduce((a, x) => a + x.exp, 0) / A.length, diff = rate - base;
+    const half = f => { const s = A.filter(f); return s.length ? s.reduce((a, x) => a + x.hit - x.exp, 0) / s.length : NaN; }, h1 = half(x => x.d <= mid), h2 = half(x => x.d > mid);
+    const bb = Math.min(0.95, Math.max(0.05, base)), se = Math.sqrt(bb * (1 - bb) / Math.max(1, days)); let v;
+    if (days < 15) v = 'Too few days to say anything.'; else if (Math.abs(diff) < 2 * se) v = 'No edge shown: the gap is inside the noise.'; else if (Math.sign(h1) === Math.sign(diff) && Math.sign(h2) === Math.sign(diff)) v = 'Gap beyond noise in both halves. Worth a forward test, not a rule.'; else v = 'Gap beyond noise but not stable across halves.';
+    const o = {n: A.length, days, rate, base, diff, h1, h2, se, v}; if (ex) ex(o, A); return o;
+  };
+  return {
+    mig: sum(L1, (o, A) => { o.ret = A.reduce((a, x) => a + x.ret, 0) / A.length * 100; }),
+    r80: sum(L2, (o, A) => { o.mae = A.reduce((a, x) => a + x.mae, 0) / A.length; o.mfe = A.reduce((a, x) => a + x.mfe, 0) / A.length; }),
+    nak: sum(L3)
+  };
+}
+const aucP = v => Number.isFinite(v) ? (v * 100).toFixed(1) + '%' : '—', aucD = v => Number.isFinite(v) ? (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + ' pts' : '—';
+function aucLabCard(name, what, o, extra){
+  if (!o.n) return `<div class="panel" style="margin:6px 0"><b>${name}</b><div class="mu">${what}</div><div class="mu">No events in this history.</div></div>`;
+  return `<div class="panel" style="margin:6px 0"><b>${name}</b><div class="mu">${what}</div>
+    <div style="overflow:auto"><table class="pftbl"><thead><tr><th>Events</th><th>Days</th><th>Result</th><th>Baseline</th><th>Gap</th><th>±2 SE (days)</th><th>First half</th><th>Second half</th>${extra ? '<th>' + extra[0] + '</th>' : ''}</tr></thead>
+    <tbody><tr><td>${o.n}</td><td>${o.days}</td><td>${aucP(o.rate)}</td><td>${aucP(o.base)}</td><td class="${o.diff >= 0 ? 'up' : 'dn'}">${aucD(o.diff)}</td><td>${(2 * o.se * 100).toFixed(1)} pts</td><td>${aucD(o.h1)}</td><td>${aucD(o.h2)}</td>${extra ? '<td>' + extra[1] + '</td>' : ''}</tr></tbody></table></div>
+    <div style="margin-top:4px"><b>${esc(o.v)}</b></div></div>`;
+}
+function aucRender(){
+  const F = AUC.cfg.f, rows = AUC.ctx.filter(r => F === 'all' || (F === 'up' && r.bias > 0) || (F === 'down' && r.bias < 0) || (F === 'mixed' && r.bias === 0));
+  $('aucBody').innerHTML = rows.map(r => `<tr><td><b>${esc(r.sym.replace(/USDT$/, ''))}</b></td><td>${fmtPrice(r.px)}</td><td>${r.rt ? AUC_TXT[r.rt] : '<span class="mu">forming</span>'}</td><td class="${r.bias > 0 ? 'up' : r.bias < 0 ? 'dn' : ''}">${r.bias > 0 ? '▲ Up' : r.bias < 0 ? '▼ Down' : 'Mixed'}</td><td>${r.pos}</td><td class="${r.toPoc >= 0 ? 'up' : 'dn'}">${fmtPct(r.toPoc)}</td><td>${r.vw.reg}</td><td>${fmtPct(r.vw.dist)}</td></tr>`).join('') || '<tr><td colspan="8" class="mu">Nothing to show yet.</td></tr>';
+  const c = AUC.ctx, up = c.filter(r => r.bias > 0).length, dn = c.filter(r => r.bias < 0).length;
+  $('aucNote').textContent = c.length ? `${c.length} coins: ${up} with an up bias, ${dn} down, ${c.length - up - dn} mixed. Showing ${rows.length}.` : '';
+  const L = AUC.labs; if (!L) return;
+  $('aucLabs').innerHTML = aucLabCard('1. Value migration', 'After a 3-day up or down bias, does the day close in that direction more often than days do in general (up bias against all days that closed up, down against all that closed down)?', L.mig, ['Avg day return in the bias direction', Number.isFinite(L.mig.ret) ? (L.mig.ret >= 0 ? '+' : '') + L.mig.ret.toFixed(2) + '%' : '—'])
+    + aucLabCard('2. The 80% rule', 'Day opens outside yesterday\'s value area, then two hourly closes back inside: does price reach the opposite edge by 24:00 UTC, against a random hour of the same day aiming at the same distance?', L.r80, ['Avg worst / best move (× distance)', Number.isFinite(L.r80.mae) ? L.r80.mae.toFixed(2) + ' / ' + L.r80.mfe.toFixed(2) : '—'])
+    + aucLabCard('3. Naked POC', 'A POC price stayed away from for a whole day: does price touch it within 4 days more often than a level the same distance on the other side?', L.nak);
+}
+async function aucRun(){
+  if (AUC.loading) return; AUC.loading = true; $('aucRun').disabled = true;
+  try {
+    const uni = await getUniverse(), n = AUC.cfg.n, list = uni.slice().sort((a, b) => b.qv - a.qv).slice(0, n); AUC.rows = list;
+    const out = []; let i = 0, done = 0;
+    const worker = async () => { while (i < list.length){ const u = list[i++]; try {
+      const k = AUC.cfg.h > 100 ? await getKlinesYear(u.sym, '1h', true) : await getKlines(u.sym, '1h', true, KDEEP);
+      const info = aucDays(k); if (info.days.length >= 8) out.push({sym: u.sym, info}); } catch {}
+      done++; $('aucSt').textContent = `Loading ${done}/${list.length}…`; } };
+    await Promise.all(Array.from({length: Math.min(CONCURRENCY, 4)}, worker));
+    out.sort((a, b) => list.findIndex(u => u.sym === a.sym) - list.findIndex(u => u.sym === b.sym));
+    AUC.ctx = out.map(o => aucCtx(o.sym, o.info)).filter(Boolean);
+    $('aucSt').textContent = 'Testing…'; await new Promise(r => setTimeout(r, 30));
+    AUC.labs = aucLabs(out); AUC.t = Date.now();
+    $('aucSt').textContent = `${out.length} coins, ${out.length ? Math.round(out.reduce((a, o) => a + o.info.days.length, 0) / out.length) : 0} days each · ${new Date().toLocaleTimeString()}`;
+  } catch(e){ $('aucSt').textContent = 'Could not load: ' + (e && e.message || e); }
+  AUC.loading = false; $('aucRun').disabled = false; aucRender();
+}
+function aucEnter(){ $('aucN').value = AUC.cfg.n; $('aucH').value = AUC.cfg.h; $('aucF').value = AUC.cfg.f; aucRender(); if (!AUC.t && !AUC.loading) aucRun(); }
+(function aucWire(){
+  const on = (id, ev, f) => { const e = $(id); if (e) e.addEventListener(ev, f); }, sv = () => { try { localStorage.setItem('onslaught-auc', JSON.stringify(AUC.cfg)); } catch {} };
+  on('aucRun', 'click', aucRun);
+  on('aucN', 'change', e => { AUC.cfg.n = +e.target.value; sv(); });
+  on('aucH', 'change', e => { AUC.cfg.h = +e.target.value; sv(); });
+  on('aucF', 'change', e => { AUC.cfg.f = e.target.value; sv(); aucRender(); });
+  on('aucTv', 'click', () => { const F = AUC.cfg.f; tvCopy(AUC.ctx.filter(r => F === 'all' || (F === 'up' && r.bias > 0) || (F === 'down' && r.bias < 0) || (F === 'mixed' && r.bias === 0)).map(r => r.sym)); });
 })();
 
 /* ---------- Sector Flow ---------- */
@@ -6901,7 +7052,7 @@ $('secBody').onclick = e => { if (e.target.closest('a')) return; const coin = e.
   if (coin){ if (S.rows.find(r => r.sym === coin.dataset.coin)) openDrawer(coin.dataset.coin); else toast('Run a Crypto Scanner scan that includes this coin to open its trade plan.'); return; }
   const tr = e.target.closest('[data-sec]'); if (!tr) return; const k = tr.dataset.sec; SEC.open.has(k) ? SEC.open.delete(k) : SEC.open.add(k); renderSectors(); };
 $('secBars').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; SEC.open.add(b.dataset.sec); renderSectors(); document.querySelector(`#secBody tr[data-sec="${b.dataset.sec}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'}); };
-try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'pos' || v === 'ma' || v === 'port' || v === 'macro' || v === 'div' || v === 'ta') setView(v); } catch {}
+try { const v = localStorage.getItem('onslaught-view'); if (v === 'sectors' || v === 'journal' || v === 'map' || v === 'liq' || v === 'pos' || v === 'ma' || v === 'port' || v === 'auc' || v === 'macro' || v === 'div' || v === 'ta') setView(v); } catch {}
 $('alertBtn').onclick = toggleAlerts; paintAlertBtn();
 for (const id of ['starOnly','pinStar']) $(id).onchange = () => { saveSettings(); render(); };
 for (const id of ['alertWhat','alertStar','alertSound']) $(id).onchange = saveSettings;
@@ -7185,7 +7336,7 @@ async function applyHash(){
   const h = new URLSearchParams(location.hash.replace(/^#/, '')); if (!h.has('t') && !h.has('c')) return;
   history.replaceState(null, '', location.pathname + location.search);
   const t = h.get('t'), tf = h.get('tf'), c = (h.get('c') || '').toUpperCase(), d = +h.get('d') < 0 ? -1 : 1;
-  if (['trend', 'map', 'sectors', 'macro', 'div', 'ta', 'liq', 'pos', 'ma', 'journal', 'port'].includes(t) && !(t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c))) setView(t);
+  if (['trend', 'map', 'sectors', 'macro', 'div', 'ta', 'liq', 'pos', 'ma', 'journal', 'port', 'auc'].includes(t) && !(t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c))) setView(t);
   if (t === 'ta' && /^[A-Z0-9]{3,20}USDT$/.test(c)){ anaOpen(c, tf); return; }
   if (TFS.includes(tf) && tf !== S.tf) $('tfSeg').querySelector(`[data-v="${tf}"]`)?.click();
   if (/^[A-Z0-9]{3,20}USDT$/.test(c)){
@@ -7821,6 +7972,13 @@ journal: ['Como funciona o journal', `<ul>
 <li>Só regista o que foi analisado nos teus scans: se o screener estiver fechado, os sinais desse período perdem-se. Deixa o auto-refresh ligado para construir a amostra mais depressa. Os dados ficam neste browser; usa Backup / Restore para os mover.</li>
 
 <li><b>Sinais contra um controlo aleatório</b>: por cada novo sinal o diário segue também uma moeda aleatória na mesma vela e lado sem sinal, com o mesmo stop e alvo. O cartão compara os dois por momento e diz se a diferença está dentro do ruído; avalia depois de cerca de 150 momentos emparelhados. O diário guarda agora até 12 000 entradas.</li>
+</ul>`],
+auc: ['Como ler o separador Auction', `<ul>
+<li><b>Value area</b> é onde se negociou 70% do volume do dia; o <b>POC</b> é o preço mais negociado. <b>VAH/VAL</b> são o topo e a base da value area. Os dias cortam às 00:00 UTC.</li>
+<li><b>Today vs yesterday</b>: higher, lower, inside, ou sobreposto a subir ou a descer (pelo POC). O <b>3-day bias</b> é up ou down quando 2 das últimas 3 relações coincidem, senão mixed.</li>
+<li><b>VWAP regime</b> usa a distância ao VWAP do dia, a sua inclinação em 3 horas e quantas vezes o preço o cruzou. Os limiares são nossos e não foram testados.</li>
+<li><b>Os três testes</b> comparam cada ideia com uma base simples: migração de valor (o dia fecha na direção do bias mais vezes que o normal?), regra dos 80% (abre fora da value area de ontem, fecha 2 horas dentro: chega ao lado oposto até às 24:00 UTC mais vezes que uma hora aleatória com a mesma distância?) e POC virgem (toca-se no POC em 4 dias mais vezes que num nível à mesma distância do outro lado?).</li>
+<li><b>Leia os veredictos com cuidado.</b> As moedas movem-se juntas, por isso a amostra efetiva é o número de dias. Uma diferença tem de passar 2 erros-padrão e manter-se nas duas metades do histórico para ser interessante, e mesmo assim só justifica um teste a seguir. 40 dias é uma amostra curta de um só regime.</li>
 </ul>`],
 port: ['Como ler o separador Portfolios', `<ul>
 <li>Um perfil é uma lista de moedas com pesos. Há três exemplos iniciais (conservador, equilibrado, agressivo); edite-os, crie os seus ou duplique um para comparar variantes. Ficam guardados só neste browser.</li>
